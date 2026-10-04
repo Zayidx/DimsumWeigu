@@ -1,0 +1,76 @@
+{
+  "judul": "Pindahkan dan Sesuaikan Seeder dari Proyek POS Sumber ke Proyek Baru",
+  "bahasa": "Bahasa Indonesia",
+  "tujuan": "Pada project baru, buat/adaptasikan seeder dengan mengambil data dan konfigurasi dari file seeder yang sudah ada di project POS sumber ini. Gunakan isi seeder sumber sebagai acuan untuk membawa data bisnis yang sama, termasuk menu, harga, resep/pemakaian bahan dan kemasan, serta akun dan hak akses.",
+  "project_sumber": {
+    "lokasi_repository": "C:\\Users\\zayidx\\Documents\\point-of-sales",
+    "remote": "git@github.com:aryadwiputra/point-of-sales.git",
+    "instruksi": "Buka repository POS sumber di lokasi yang tersedia dan baca implementasi seeder serta data terkaitnya sebelum mengubah project baru. Jika project sumber tidak tersedia, jangan mengarang data; jelaskan file mana yang perlu disediakan. Jangan menganggap database project baru sebagai sumber data.",
+    "file_seeder_utama": [
+      "database/seeders/DatabaseSeeder.php",
+      "database/seeders/DimsumWeiguSeeder.php",
+      "database/seeders/DemoSeeder.php",
+      "database/seeders/DemoOutletSeeder.php",
+      "database/seeders/FeatureDemoSeeder.php",
+      "database/seeders/FeatureCoverageSeeder.php",
+      "database/seeders/OperationalCoreSeeder.php",
+      "database/seeders/SampleDataSeeder.php",
+      "database/seeders/TestDataSeeder.php",
+      "database/seeders/OutletCashierSeeder.php",
+      "database/seeders/PaymentSettingSeeder.php",
+      "database/seeders/DineInSettingsSeeder.php",
+      "database/seeders/PermissionSeeder.php",
+      "database/seeders/RoleSeeder.php",
+      "database/seeders/UserSeeder.php"
+    ],
+    "sumber_pendukung": [
+      "database/factories/ untuk memahami data yang dibangkitkan oleh seeder",
+      "app/Models/ untuk field, relasi, dan aturan model",
+      "database/migrations/ untuk struktur tabel dan foreign key"
+    ],
+    "prioritas_data": [
+      "DimsumWeiguSeeder.php untuk profil usaha, kategori, satuan, konversi, metode pembayaran, kategori pengeluaran, outlet, dan gudang.",
+      "TestDataSeeder.php untuk daftar menu, harga, bahan, resep, stok, dan pemakaian per porsi yang secara eksplisit didefinisikan di sana. Bawa nilainya sesuai sumber, tetapi tandai sebagai data lokal/uji bila memang demikian pada sumber.",
+      "UserSeeder.php, RoleSeeder.php, dan PermissionSeeder.php untuk akun awal, role, dan permission. Jangan menyalin password atau secret; gunakan mekanisme kredensial aman project baru.",
+      "Seeder lain yang dipanggil oleh DatabaseSeeder.php atau diperlukan untuk data yang diminta. Bedakan data setup awal dari demo, coverage, sample, dan data uji agar pemanggilannya di project baru tetap sesuai tujuan masing-masing."
+    ]
+  },
+  "instruksi": [
+    "Baca seluruh file seeder sumber yang tercantum pada project_sumber, lalu telusuri model, migration, factory, dan seeder lain yang dipanggil atau menjadi dependensinya.",
+    "Gunakan data dan konfigurasi di seeder project sumber sebagai acuan; jangan mengambil atau menebak data dari database project baru dan jangan menggantinya dengan data contoh/factory yang tidak mencerminkan sumber.",
+    "Petakan tabel, foreign key, pivot, urutan dependensi, dan kolom yang wajib sebelum menulis kode.",
+    "Sertakan seluruh data master produk/menu dan tampilkan harga jual setiap menu secara persis. Jika harga memiliki variasi berdasarkan outlet, daftar harga, ukuran, waktu, atau promo, pertahankan setiap variasi beserta konteks dan masa berlakunya.",
+    "Sertakan kategori menu, satuan, opsi/varian, dan relasi harga yang digunakan agar menu dapat ditampilkan dan dijual seperti pada database sumber.",
+    "Sertakan resep/BOM setiap menu secara lengkap: bahan yang dipakai, jumlah pemakaian, satuan, konversi satuan, versi resep, dan relasinya ke menu. Jangan menyimpulkan resep dari nama produk.",
+    "Sertakan bahan pendukung penyajian dan kemasan yang tercatat pada resep/BOM atau aturan operasional, misalnya sumpit, kotak kecil, saus, sendok, kantong, dan item sejenis. Pertahankan jumlah per menu dan satuannya; jangan menghilangkan item kecil hanya karena bukan bahan makanan utama.",
+    "Sertakan data stok awal per gudang/outlet dan relasi produk-gudang jika memang diperlukan untuk membuat salinan operasional. Pertahankan sumber stok dan jangan mengubah stok global agar tidak berbeda dari stok per gudang.",
+    "Sertakan akun pengguna yang diperlukan beserta nama, email/login, status, relasi outlet/gudang, role, dan permission-nya agar struktur akses sama. Jangan menyalin password hash atau rahasia; buat kredensial awal yang aman dan jelaskan bahwa password harus diatur ulang.",
+    "Buat atau adaptasikan Laravel Seeder di database/seeders project baru berdasarkan seeder sumber. Sesuaikan nama tabel, kolom, model, relasi, dan format hanya bila struktur project baru berbeda, sambil mempertahankan nilai bisnis sumber sejauh didukung skemanya.",
+    "Pertahankan nilai data dan relasi. Untuk primary key, gunakan ID eksplisit bila aman dan dibutuhkan untuk mempertahankan relasi; jika tidak, simpan pemetaan ID lama ke ID baru.",
+    "Buat seeder idempotent agar dapat dijalankan ulang tanpa menggandakan data. Jangan menghapus, truncate, atau menimpa data yang sudah ada secara membabi buta.",
+    "Jangan sertakan atau menampilkan password, API key, token, credential gateway pembayaran, secret, atau data autentikasi sensitif. Gunakan placeholder aman atau seeder akun standar proyek untuk data tersebut.",
+    "Pertahankan integritas stok dan keuangan. Jangan mengubah atau membuat ulang transaksi historis dengan nilai yang berbeda; jika data transaksi dimasukkan, pertahankan seluruh snapshot, timestamp, relasi, dan ledger terkait.",
+    "Jangan memasukkan log sementara, cache, session, queue jobs, file biner, atau data yang skemanya memang bersifat runtime. Untuk gambar/file, dokumentasikan path dan kebutuhan file tanpa menyalin konten rahasia.",
+    "Ikuti seeder dan konvensi yang sudah ada. Integrasikan pemanggilan seeder baru ke DatabaseSeeder hanya jika aman untuk setup lokal dan tidak membuat data bisnis sensitif otomatis pada production atau test.",
+    "Jangan jalankan seeder, migrate:fresh, db:wipe, truncate, atau perintah yang mengubah database project sumber. Jangan menyalin .env.",
+    "Setelah implementasi, sebutkan seeder sumber yang dipakai, bagian yang berhasil/tidak dapat dipindahkan karena perbedaan schema, file yang dibuat/diubah pada project baru, serta langkah menjalankan seeder di project baru.",
+    "Validasi sintaks dan kecocokan dengan migration/model project baru. Jika perlu mencoba seeder, gunakan database uji/terisolasi."
+  ],
+  "batasan": {
+    "framework": "Laravel yang digunakan proyek ini",
+    "sumber_data": "File seeder, model, migration, dan factory pada repository POS sumber yang ditunjuk",
+    "cakupan": "Snapshot data bisnis yang diperlukan untuk mereplikasi aplikasi, terutama menu dan harga, resep/BOM termasuk item kemasan kecil, stok per lokasi, serta akun dan hak akses; jelaskan pengecualian data sensitif atau runtime",
+    "keamanan": "Rahasia dan kredensial tidak boleh disalin ke source code atau output",
+    "integritas": "Tidak boleh merusak data, stok, transaksi historis, atau ledger"
+  },
+  "hasil_yang_diharapkan": [
+    "Seeder Laravel pada project baru yang diadaptasi dari seeder project sumber dan dapat dibaca serta dipelihara",
+    "Urutan seeding yang menghormati foreign key dan relasi",
+    "Daftar setiap menu dengan harga jualnya dan konteks harga yang berlaku",
+    "Daftar resep/pemakaian per menu, termasuk bahan pendukung seperti sumpit dan kotak kecil beserta jumlah dan satuannya",
+    "Daftar akun, role, permission, serta outlet/gudang yang terhubung tanpa membocorkan password atau secret",
+    "Ringkasan tabel dan jumlah data yang direplikasi",
+    "Pemetaan seeder sumber ke seeder baru, termasuk perbedaan schema yang perlu ditangani",
+    "Instruksi menjalankan seeder pada database project baru"
+  ]
+}

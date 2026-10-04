@@ -2,6 +2,7 @@
 
 namespace App\Livewire\PublicSite;
 
+use App\Queries\PublicSite\HomepageData;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
@@ -243,21 +244,17 @@ class Home extends Component
 
     public function render(): View
     {
+        $data = app(HomepageData::class)->get();
+
         return view('livewire.public-site.home', [
-            'business' => [
-                'name' => config('app.name', 'Weigu Dimsum & Gyoza'),
-                'description' => 'Dimsum hangat, dibuat dengan bahan pilihan dan penuh perhatian.',
-            ],
-            'products' => collect(),
+            ...$data,
             'menuCategories' => self::MENU_CATEGORIES,
-            'displayBranches' => self::FALLBACK_BRANCHES,
-            'phone' => '0895343256336',
-            'email' => 'Weiguowner@gmail.com',
+            'displayBranches' => $data['outlets']->isNotEmpty() ? $data['outlets'] : self::FALLBACK_BRANCHES,
             'whatsappNumber' => '62895343256336',
             'gofoodUrl' => 'https://gofood.co.id/',
         ])->layout('layouts.application', [
-            'title' => config('app.name', 'Weigu Dimsum & Gyoza').' — Dimsum Hangat, Dibuat dengan Hati',
-            'description' => 'Dimsum hangat dan lezat untuk menemani waktu makan Anda.',
+            'title' => ($data['business']['name'] ?: 'Dimsum').' — Dimsum Hangat, Dibuat dengan Hati',
+            'description' => ($data['business']['name'] ?: 'Dimsum').' menyajikan dimsum hangat dan lezat untuk menemani waktu makan Anda.',
         ]);
     }
 }

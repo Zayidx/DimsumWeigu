@@ -2,6 +2,9 @@
 
 return [
 
+    'absolute_session_lifetime' => env('SESSION_ABSOLUTE_LIFETIME', 720),
+    'public_registration' => env('AUTH_PUBLIC_REGISTRATION', false),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

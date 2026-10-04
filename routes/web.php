@@ -2,5 +2,115 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Livewire\PublicSite\Home;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\PasswordResetController;
+use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\CashierShiftController;
+use App\Http\Controllers\OutletContextController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Middleware\EnsureOutletContext;
+use App\Livewire\Catalog\ProductsIndex;
+use App\Livewire\Pos\Checkout;
+use App\Livewire\Inventory\InventoryIndex;
+use App\Livewire\Catalog\CategoriesIndex;
+use App\Livewire\Sales\TransactionsIndex;
+use App\Http\Controllers\TransactionController;
+use App\Livewire\Purchasing\SuppliersIndex;
+use App\Livewire\Purchasing\SupplierReturnsIndex;
+use App\Livewire\Customers\CustomersIndex;
+use App\Livewire\Purchasing\PurchaseOrdersIndex;
+use App\Livewire\Purchasing\GoodsReceivingsIndex;
+use App\Livewire\Finance\PayablesIndex;
+use App\Livewire\Finance\ReceivablesIndex;
+use App\Livewire\Inventory\StockTransfersIndex;
+use App\Livewire\Inventory\StockOpnamesIndex;
+use App\Livewire\Admin\UsersIndex;
+use App\Livewire\Admin\RolesIndex;
+use App\Livewire\Reports\SalesReport;
+use App\Livewire\Reports\ProfitReport;
+use App\Livewire\Reports\InventoryReport;
+use App\Livewire\Reports\AgingReport;
+use App\Livewire\Admin\AuditLogsIndex;
+use App\Livewire\Admin\NotificationsIndex;
+use App\Livewire\Catalog\UnitsIndex;
+use App\Livewire\Admin\StoreSettingsIndex;
+use App\Livewire\Admin\BankAccountsIndex;
+use App\Http\Controllers\Auth\ConfirmPasswordController;
+use App\Http\Controllers\PaymentSettingsController;
 
 Route::get('/', Home::class)->name('home');
+
+// Allow an authenticated user redirected after denied access to sign in again.
+Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
+Route::post('/login', [AuthenticatedSessionController::class, 'store'])->middleware('throttle:10,1')->name('login.store');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/forgot-password', [PasswordResetController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetController::class, 'send'])->middleware('throttle:6,1')->name('password.email');
+    Route::get('/reset-password/{token}', [PasswordResetController::class, 'edit'])->name('password.reset');
+    Route::post('/reset-password', [PasswordResetController::class, 'update'])->middleware('throttle:6,1')->name('password.update');
+    Route::middleware(['registration.enabled', 'throttle:6,60'])->group(function () {
+        Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
+        Route::post('/register', [RegisteredUserController::class, 'store'])->name('register.store');
+    });
+});
+
+Route::middleware(['auth', 'account.active'])->group(function () {
+    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
+    Route::get('/confirm-password', [ConfirmPasswordController::class, 'create'])->name('password.confirm');
+    Route::post('/confirm-password', [ConfirmPasswordController::class, 'store'])->middleware('throttle:8,1')->name('password.confirm.store');
+    Route::get('/profile/password/force', [ProfileController::class, 'forcePassword'])->name('profile.password.force');
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->middleware('throttle:8,1')->name('profile.password.update');
+
+    Route::middleware('password.change')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+        Route::delete('/profile/sessions/{sessionId}', [ProfileController::class, 'destroySession'])->name('profile.sessions.destroy');
+        Route::get('/outlet/select', [OutletContextController::class, 'select'])->name('outlet.select');
+        Route::post('/outlet/switch', [OutletContextController::class, 'switch'])->name('outlet.switch');
+        Route::get('/dashboard', DashboardController::class)->middleware(['permission:dashboard-access', EnsureOutletContext::class])->name('dashboard');
+        Route::get('/products', ProductsIndex::class)->middleware([EnsureOutletContext::class, 'permission:products-access'])->name('products.index');
+        Route::get('/categories', CategoriesIndex::class)->middleware([EnsureOutletContext::class, 'permission:categories-access'])->name('categories.index');
+        Route::get('/units', UnitsIndex::class)->middleware([EnsureOutletContext::class, 'permission:units-access'])->name('units.index');
+        Route::get('/transactions', TransactionsIndex::class)->middleware([EnsureOutletContext::class, 'permission:transactions-access'])->name('transactions.index');
+        Route::get('/transactions/{transaction}', [TransactionController::class, 'show'])->middleware([EnsureOutletContext::class, 'permission:transactions-access'])->whereNumber('transaction')->name('transactions.show');
+        Route::get('/transactions/{transaction}/receipt', [TransactionController::class, 'receipt'])->middleware([EnsureOutletContext::class, 'permission:transactions-access'])->whereNumber('transaction')->name('transactions.receipt');
+        Route::get('/customers', CustomersIndex::class)->middleware([EnsureOutletContext::class, 'permission:customers-access'])->name('customers.index');
+        Route::get('/suppliers', SuppliersIndex::class)->middleware([EnsureOutletContext::class, 'permission:suppliers-access'])->name('suppliers.index');
+        Route::get('/supplier-returns', SupplierReturnsIndex::class)->middleware([EnsureOutletContext::class, 'permission:supplier-returns-access'])->name('supplier-returns.index');
+        Route::get('/expenses', \App\Livewire\Finance\ExpensesIndex::class)->middleware([EnsureOutletContext::class, 'permission:expenses-access'])->name('expenses.index');
+        Route::get('/waste', \App\Livewire\Inventory\WasteIndex::class)->middleware([EnsureOutletContext::class, 'permission:waste-access'])->name('waste.index');
+        Route::get('/cash-management', \App\Livewire\Finance\CashManagementIndex::class)->middleware([EnsureOutletContext::class, 'password.confirm', 'permission:cash-management-access'])->name('cash-management.index');
+        Route::get('/purchase-orders', PurchaseOrdersIndex::class)->middleware([EnsureOutletContext::class, 'permission:purchase-orders-access'])->name('purchase-orders.index');
+        Route::get('/goods-receivings', GoodsReceivingsIndex::class)->middleware([EnsureOutletContext::class, 'permission:goods-receivings-access'])->name('goods-receivings.index');
+        Route::get('/payables', PayablesIndex::class)->middleware([EnsureOutletContext::class, 'permission:payables-access'])->name('payables.index');
+        Route::get('/receivables', ReceivablesIndex::class)->middleware([EnsureOutletContext::class, 'permission:receivables-access'])->name('receivables.index');
+        Route::get('/pos', Checkout::class)->middleware([EnsureOutletContext::class, 'permission:pos-access'])->name('pos.index');
+        Route::get('/inventory', InventoryIndex::class)->middleware([EnsureOutletContext::class, 'permission:inventory-access'])->name('inventory.index');
+        Route::get('/stock-transfers', StockTransfersIndex::class)->middleware([EnsureOutletContext::class, 'permission:transfers-access'])->name('transfers.index');
+        Route::get('/stock-opnames', StockOpnamesIndex::class)->middleware([EnsureOutletContext::class, 'permission:stock-opnames-access'])->name('stock-opnames.index');
+        Route::get('/users', UsersIndex::class)->middleware(['password.confirm', 'permission:users-access'])->name('users.index');
+        Route::get('/roles', RolesIndex::class)->middleware(['password.confirm', 'role:super-admin'])->name('roles.index');
+        Route::get('/reports/sales', SalesReport::class)->middleware([EnsureOutletContext::class, 'permission:reports-access'])->name('reports.sales');
+        Route::get('/reports/profit', ProfitReport::class)->middleware([EnsureOutletContext::class, 'permission:reports-access'])->name('reports.profit');
+        Route::get('/reports/inventory', InventoryReport::class)->middleware([EnsureOutletContext::class, 'permission:reports-access'])->name('reports.inventory');
+        Route::get('/reports/aging', AgingReport::class)->middleware([EnsureOutletContext::class, 'permission:reports-access'])->name('reports.aging');
+        Route::get('/audit-logs', AuditLogsIndex::class)->middleware([EnsureOutletContext::class, 'permission:audit-logs-access'])->name('audit-logs.index');
+        Route::get('/notifications', NotificationsIndex::class)->middleware([EnsureOutletContext::class, 'permission:notifications-access'])->name('notifications.index');
+        Route::get('/settings/store', StoreSettingsIndex::class)->middleware([EnsureOutletContext::class, 'password.confirm', 'permission:store-settings-access'])->name('settings.store');
+        Route::get('/settings/payments', [PaymentSettingsController::class,'edit'])->middleware([EnsureOutletContext::class,'password.confirm','permission:payment-settings-access'])->name('settings.payments');
+        Route::put('/settings/payments', [PaymentSettingsController::class,'update'])->middleware([EnsureOutletContext::class,'password.confirm','permission:payment-settings-update','throttle:10,1'])->name('settings.payments.update');
+        Route::get('/settings/bank-accounts', BankAccountsIndex::class)->middleware([EnsureOutletContext::class,'password.confirm','permission:bank-accounts-access'])->name('settings.bank-accounts');
+        Route::middleware([EnsureOutletContext::class, 'permission:cashier-shifts-access'])->prefix('shifts')->name('shifts.')->group(function () {
+            Route::get('/', [CashierShiftController::class, 'index'])->name('index');
+            Route::get('/open', [CashierShiftController::class, 'create'])->name('create')->middleware('permission:cashier-shifts-open');
+            Route::post('/open', [CashierShiftController::class, 'store'])->name('store')->middleware(['permission:cashier-shifts-open', 'throttle:12,1']);
+            Route::post('/close', [CashierShiftController::class, 'close'])->name('close')->middleware(['password.confirm', 'permission:cashier-shifts-close', 'throttle:8,1']);
+            Route::get('/{shift}/force-close', [CashierShiftController::class, 'forceForm'])->whereNumber('shift')->name('force-form')->middleware(['password.confirm', 'permission:cashier-shifts-force-close']);
+            Route::post('/{shift}/force-close', [CashierShiftController::class, 'forceClose'])->whereNumber('shift')->name('force-close')->middleware(['password.confirm', 'permission:cashier-shifts-force-close', 'throttle:8,1']);
+        });
+    });
+});
