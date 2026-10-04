@@ -1,0 +1,299 @@
+{
+  "document_type": "project_creation_prompt",
+  "language": "id",
+  "project_name": "Point of Sales / Dikasir",
+  "source_project": {
+    "repository": "aryadwiputra/point-of-sales",
+    "license": "MIT",
+    "description": "Sistem POS open-source untuk transaksi retail/restoran, multi-outlet dan multi-gudang, inventory, finance, CRM, dine-in, laporan, dan integrasi operasional.",
+    "business_profile_example": "Dimsum Weigu",
+    "instruction": "Gunakan proyek ini hanya sebagai sumber requirement bisnis. Buat aplikasi baru yang bersih pada direktori/proyek baru. Jangan meneruskan, membersihkan, atau bergantung pada source code proyek lama. Pelajari README.md, AGENTS.md, docs/architecture-overview.md, docs/configuration.md, docs/feature-index.md, seluruh docs/features/*.md, docs/demo-data.md, dan docs/testing-manual.md sebelum implementasi. Jika requirement di dokumen berbeda, catat perbedaannya dan utamakan alur bisnis yang sedang berjalan serta data model yang ada sebagai sumber kebenaran."
+  },
+  "objective": "Bangun aplikasi POS baru menggunakan Laravel native dan Livewire sejak awal. Pertahankan fitur, alur kerja, aturan bisnis, struktur data, kontrol akses, integrasi, dan identitas visual produk sumber. Gunakan arsitektur server-rendered Laravel Blade dan Livewire; jangan gunakan Inertia atau React.",
+  "technology": {
+    "backend": "Wajib PHP 8.2 atau lebih baru dengan Laravel 12.x; jangan gunakan Laravel 13 atau versi mayor lain.",
+    "interactive_ui": "Wajib Laravel Livewire 3.x dan Blade; gunakan Alpine.js yang disediakan/dikelola melalui integrasi Livewire hanya untuk interaksi browser yang memang diperlukan. Jangan gunakan Livewire 4 atau versi mayor lain.",
+    "database": "MySQL sebagai basis produksi; SQLite untuk pengujian bila semua perilaku yang diuji kompatibel.",
+    "authentication_and_permissions": ["Laravel session authentication", "Laravel Sanctum untuk API token", "Spatie Laravel Permission untuk role dan permission", "Laravel password confirmation untuk aksi sensitif"],
+    "css": "Pertahankan tampilan Tailwind yang ada. Siapkan CSS produksi statis yang sudah tersedia sebagai file aplikasi; styling dan interaksi dasar harus dapat berjalan tanpa proses bundling frontend.",
+    "required_framework_constraints": {"laravel/framework": "^12.0", "livewire/livewire": "^3.0", "php": "^8.2"},
+    "suggested_php_packages": ["livewire/livewire", "laravel/sanctum", "spatie/laravel-permission", "barryvdh/laravel-dompdf", "maatwebsite/excel", "picqer/php-barcode-generator", "simplesoftwareio/simple-qrcode", "laravolt/indonesia", "dedoc/scramble"],
+    "dependency_policy": "Pilih versi stabil yang kompatibel, periksa advisory keamanan Composer sebelum rilis, dan jangan menambah dependensi yang membutuhkan runtime/build Node. Catat kebutuhan ekstensi PHP, termasuk intl bila format angka/mata uang menggunakan ICU."
+  },
+  "absolute_constraints": [
+    "Jangan memasang, menjalankan, atau mewajibkan Node.js, npm, npx, Vite, webpack, Mix, atau proses bundling berbasis Node pada development, CI, deployment, maupun production.",
+    "Jangan membuat package.json, package-lock.json, yarn.lock, pnpm-lock.yaml, vite.config.js, atau alur instalasi frontend berbasis npm.",
+    "Jangan membuat layanan samping Node.js. Semua operasi server dijalankan oleh PHP/Laravel, Composer, queue worker PHP, dan scheduler Laravel.",
+    "JavaScript kecil yang berjalan di browser diperbolehkan hanya untuk fitur browser seperti IndexedDB, WebUSB, kamera, atau state UI. JavaScript browser tidak boleh membutuhkan runtime Node atau proses build; utamakan Livewire/Alpine dan file statis.",
+    "Jangan menggunakan stack Inertia, React, SPA framework, atau mengganti alur kerja menjadi API-only frontend.",
+    "Jangan menghapus atau menyederhanakan fitur, langkah transaksi, validasi, permission, audit, proteksi stok, atau cakupan outlet demi mempercepat implementasi.",
+    "Jangan mengubah aturan model/domain yang ada tanpa alasan teruji. Pertahankan nama dan relasi entitas domain agar integrasi antarmodul dan makna data tetap konsisten.",
+    "Jangan mengklaim fitur selesai sebelum kode, otorisasi, skenario gagal, pengujian, dan dokumentasinya selesai. Jangan meninggalkan tombol palsu, route kosong, data contoh permanen, atau placeholder pada modul produksi."
+  ],
+  "product_and_ui": {
+    "users": "Kasir, manager, finance, warehouse, dan super-admin pada satu atau banyak cabang; juga pelanggan yang mengakses menu dine-in dan portal melalui tautan/token publik.",
+    "visual_direction": "Pertahankan identitas UI/UX sumber: dashboard bersih dengan sidebar, header/topbar, kartu putih/slate, aksen indigo/primary, cyan/accent, emerald/success, amber/warning, rose/danger, border rounded, spacing, tipografi, dark mode, responsivitas, navigasi, modal, tabel, empty state, toast, dan konfirmasi yang setara.",
+    "dashboard_template": {
+      "required_template": "Mazer Admin Dashboard",
+      "template_location": "Folder template Mazer akan disediakan di dalam folder kerja proyek baru. Cari dan inspeksi folder yang disediakan saat mulai; jangan mengasumsikan nama atau path foldernya.",
+      "requirements": [
+        "Wajib gunakan template Mazer yang disediakan sebagai dasar layout dashboard admin, termasuk sidebar, navbar/header, menu aktif, breadcrumb bila tersedia, kartu, tabel, tombol, form, modal, notifikasi, responsive behavior dan asset visualnya.",
+        "Sebelum integrasi, baca struktur folder, dokumentasi, lisensi dan asset template. Petakan layout, style, icon/font, komponen dan script yang sudah tersedia; gunakan file statis lokal dari template yang memang diperlukan.",
+        "Integrasikan layout dan komponennya ke Blade/Livewire secara native. Semua menu, filter, modal, pagination, form, toast dan aksi harus berfungsi; jangan hanya menempel screenshot/template statis.",
+        "Hubungkan sidebar dan menu Mazer dengan route serta permission aplikasi. Pertahankan nama menu, urutan, workflow, kontrol akses, isi halaman dan data proyek sumber; gunakan Mazer untuk tampilan dashboard admin.",
+        "Jangan menjalankan atau mewajibkan proses build frontend untuk template. Jangan mengunduh dependency saat deploy. Bila folder Mazer menyertakan file CSS/JS/fonts/icons hasil distribusi, sajikan secara lokal sebagai asset statis dan dokumentasikan lisensi serta file yang digunakan.",
+        "Jangan membiarkan CSS/JS Mazer merusak tampilan POS kasir, halaman publik, auth, profil atau portal customer. Gunakan layout dan asset scope terpisah; POS tetap cepat untuk layar kasir.",
+        "Sesuaikan warna brand dan state dark/light/responsive ke aplikasi sambil menghormati komponen Mazer. Uji seluruh ukuran layar, menu permission, navigasi keyboard, kontras, dan layout halaman panjang sebelum menyatakan selesai.",
+        "Jika folder template tidak ditemukan atau asset penting tidak tersedia, berhenti pada integrasi dashboard, laporkan nama/path yang dicari dan yang ditemukan, lalu lanjutkan pekerjaan independen tanpa membuat ulang Mazer atau memakai template lain."
+      ]
+    },
+    "interaction_rules": ["Jaga nama menu, label, urutan kerja, shortcut, filter, pagination, status, isi form, dan umpan balik sesuai aplikasi sumber.", "Tombol dan menu mengikuti permission, tetapi server tetap harus memeriksa authorization di setiap request Livewire/action.", "Pertahankan layout terpisah untuk POS, dashboard admin, autentikasi, profil, halaman publik, dan portal pelanggan.", "Sediakan bahasa Indonesia dan Inggris dengan locale id sebagai default; pilihan bahasa user/session harus konsisten di seluruh halaman.", "Pertahankan tema terang/gelap dan tampilan desktop, tablet, serta ponsel tanpa mengorbankan alur kasir cepat.", "Ikon menggunakan SVG inline atau aset lokal berlisensi yang sesuai; jangan bergantung pada paket ikon frontend yang memerlukan bundler."]
+  },
+  "functional_scope": {
+    "public_site": ["Homepage profil usaha, menu produk/layanan, outlet, jam operasional, fitur, dokumentasi, roadmap, dan kontribusi open-source.", "Halaman menu dine-in publik melalui QR/token meja, keranjang pesanan, catatan pelanggan, pengiriman pesanan, pembatasan ketersediaan produk, dan halaman status pesanan.", "Halaman publik transaksi/invoice dan portal pelanggan yang dilindungi token; pelanggan dapat melihat invoice dan membayar piutang sesuai metode yang tersedia."],
+    "authentication_and_profile": ["Login, logout, registrasi publik yang default-nya mati, lupa/reset password, konfirmasi password, proteksi bot berupa honeypot dan waktu submit minimum.", "Rate limit autentikasi, sesi aman, rotasi session saat login, pembatasan masa sesi absolut, password kuat, serta halaman profil untuk data akun, avatar, kata sandi, sesi, dan hapus akun.", "Verifikasi email dimatikan pada aplikasi sumber; jangan memasang middleware verified wajib.", "Super-admin awal dikonfigurasi melalui SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD, bukan kredensial yang dipublikasikan untuk produksi."] ,
+    "dashboard_and_access": ["Ringkasan dashboard berdasarkan role, outlet, transaksi, target, kasir, inventori, dan notifikasi yang memang boleh dilihat user.", "Navigasi dashboard mengikuti permission dan role. Sediakan halaman akses ditolak yang membantu user meminta akses tanpa mengungkap data terlarang.", "Tour/panduan kontekstual, notifikasi stok rendah dan aging piutang/hutang, notifikasi operasional, status shift, profil toko, outlet aktif, locale, dan versi aplikasi.", "Users, roles, permissions, assignment outlet/default outlet, avatar, bulk delete, perlindungan akun sendiri dan super-admin terakhir, serta audit trail."],
+    "pos_and_sales": ["Pencarian produk menggunakan barcode atau kata kunci; scan barcode kamera jika browser mendukung.", "Keranjang multi-item dengan ubah kuantitas, hapus, pelanggan, catatan, hold, resume, hapus hold, dan validasi stok.", "Checkout tunai, transfer bank, QRIS/payment gateway Midtrans dan Xendit, serta pay-later/receivable jika diaktifkan. Ikuti status pembayaran dan webhook terverifikasi.", "Diskon transaksi/produk mengikuti batas permission dan approval; hitung PPN exclusive atau inclusive per item dan harga server menjadi sumber kebenaran.", "Multi-satuan, price list, voucher, promosi, loyalty redeem/earn, dan harga final dihitung server.", "Transaksi dine-in yang diterima oleh kasir harus menghasilkan transaksi penjualan, pengurangan stok, profit, ledger, dan hubungan ke pesanan secara atomik.", "Riwayat dan detail transaksi, invoice, receipt 58/80mm, shipping label, tautan invoice publik bertoken, pembayaran sebagian/pending/paid/refund bila sesuai alur.", "Sales return dengan persetujuan/penyelesaian, alasan, refund/kredit, stok kembali sesuai tujuan, dan audit."],
+    "cashier_shift_and_cash": ["Buka shift kasir per gudang/outlet dengan kas awal dan snapshot stok opsional sesuai konfigurasi.", "Hanya shift aktif pada konteks outlet/gudang yang benar boleh menjalankan operasi POS.", "Tutup shift dengan rekonsiliasi kas, expected cash, cash movement, selisih, ringkasan transaksi, dan status audit.", "Manajemen cash handover dan pickup dengan approval/konfirmasi serta ledger kas gudang/outlet."],
+    "catalog_and_inventory": ["Kategori dan produk dengan gambar, SKU, barcode, harga beli/jual, pajak, unit, min/max/reorder stock, status aktif, dan pencarian/filter.", "Inventory per gudang melalui pivot product_warehouse; tampilkan jumlah global sebagai agregat yang dijaga konsisten.", "Setiap mutasi stok memperbarui product_warehouse dan products.stock di transaksi database yang sama. product_warehouse adalah sumber kebenaran operasional.", "Lock row product_warehouse menggunakan lockForUpdate sebelum pengurangan stok. Semua jalur POS, retur, transfer, receiving, adjustment, batch, dan produksi menjaga invariants stok.", "Stock mutation history/ledger dengan tipe, kuantitas, stok sebelum/sesudah, referensi, gudang, user, dan audit trail.", "Stock opname per gudang dengan draft, perhitungan selisih, review/finalisasi, larangan duplikasi, dan audit.", "Multi-warehouse: gudang utama pusat PUSAT yang bukan outlet penjualan, gudang cabang, dan gudang stok; transfer mengikuti draft → kirim → terima dan update stok sumber/tujuan atomik.", "Batch dan tanggal kedaluwarsa; keluarkan batch dengan FEFO, cegah stok expired, dan tampilkan peringatan batch hampir habis masa berlaku.", "Composite product/kit mengurangi komponen sesuai resep; kebutuhan komponen diperiksa dan dikunci dalam transaksi yang sama.", "Unit dan konversi multi-satuan (pcs/box/kg/karton), konversi kuantitas dan harga konsisten pada penjualan/pembelian/stok.", "Reorder point, notifikasi stok rendah, laporan reconcile produk global vs jumlah per gudang, dan draft PO dari item di bawah reorder point."],
+    "purchasing_and_finance": ["Supplier dan import/export supplier.", "Purchase order dengan draft → ordered → partial receiving → completed/cancelled; item, gudang, harga, pajak, biaya dan audit.", "Goods receiving dengan penerimaan parsial, QC, batch/expiry, idempotency, stok, dan pembuatan payable.", "Supplier return menjaga referensi receiving/PO, alasan, kuantitas, batch, stok dan hutang supplier.", "Payables/hutang supplier, pembayaran parsial, status, bukti, aging dan histori pembayaran.", "Receivables/piutang pelanggan, pembayaran parsial, aging, statement, catatan penagihan, tautan bayar publik bertoken, dan audit.", "Pengelolaan kategori biaya, pengeluaran operasional, waste, dan biaya produksi sesuai outlet/gudang.", "Semua perhitungan keuangan disimpan dengan presisi yang sesuai dan seluruh perubahan status pembayaran dilakukan atomik serta tercatat."],
+    "pricing_crm_and_loyalty": ["Aturan harga/promosi: diskon, quantity break, bundle, buy-X-get-Y, periode, batas penggunaan, kombinasi yang diperbolehkan, dan preview harga.", "Multi-price list per kelompok pelanggan dengan tanggal aktif dan item harga khusus.", "Customer vouchers, validasi eligibility, masa berlaku, kuota, redeem sekali sesuai aturan, dan audit.", "Manajemen customer dan alamat/wilayah Indonesia; profile, histori pembelian dan consent komunikasi.", "Member tiers regular/silver/gold/platinum, saldo dan riwayat poin, earn/redeem, nilai dan pembulatan konsisten.", "Segment pelanggan manual dan otomatis, aturan dan sinkronisasi keanggotaan yang terjadwal.", "CRM campaign, log pengiriman, reminder piutang, jadwal, status, persetujuan, pencegahan duplikasi, dan opt-out/consent."],
+    "dine_in": ["Area dine-in, meja dengan bentuk/posisi/layout drag-drop grid, kapasitas, status, QR/token meja, menu publik dan pengiriman order.", "Payment online untuk dine-in dinonaktifkan; pay_at_counter saja diterima.", "Order status submitted/accepted/completed/rejected/cancelled, item/catatan/subtotal, permission proses, batas outlet, dan alasan penolakan.", "Order acceptance memerlukan shift kasir/gudang yang sesuai dan memproses transaksi serta stok dalam DB transaction dengan row lock."],
+    "settings_and_integrations": ["Profil toko: nama, alamat, telepon, email, website, kota, logo, NPWP, NIB, pajak default, dan profile per outlet dengan fallback global.", "Target penjualan bulanan, printer (58/80mm), auto-print, test print, koneksi thermal, dan cash drawer.", "Payment settings cash, bank transfer, Midtrans, Xendit, mode sandbox/production, credential terenkripsi, verifikasi callback/webhook, idempotency, dan audit.", "Bank account payment transfer: urut, aktif/nonaktif, audit, dan password confirmation saat perubahan sensitif.", "WhatsApp dipakai untuk reminder dan kampanye CRM, menampilkan status, pengaturan aktif, koneksi, QR/login bila tersedia, dan sesi yang persisten. Implementasikan hanya dengan PHP/Laravel atau API resmi/layanan non-Node yang layak; jangan menambahkan layanan Node. Verifikasi terlebih dahulu apakah koneksi QR yang setara dapat didukung secara stabil oleh integrasi PHP yang terawat. Jika ada batasan teknis dari provider, jelaskan di dokumentasi dan pertahankan kontrak provider agar layanan bisa diganti tanpa mengubah workflow CRM.", "Import/export CSV/Excel untuk produk, customer, supplier, ingredients, resep, transaksi, opening stock, template unduh, validasi per baris, laporan error parsial, dan permission khusus."],
+    "reports_and_documents": ["Sales report dengan rentang tanggal, filter outlet/gudang/kasir/metode, ringkasan dan ekspor.", "Profit report, margin dan analisis biaya.", "Sales by menu, performa per jam/kasir, customer berulang, advanced insights dan laporan operasional.", "Laporan aging receivable/payable, stok, transfer, opname, pembelian, waste, cash management, audit log, dan aktivitas CRM sesuai permission.", "PDF invoice/receipt 58/80mm, dokumen shipping, barcode, invoice public, statement piutang/hutang; pertahankan layout brand dan nomor referensi."],
+    "api_and_mobile": ["REST API versi /api/v1 berbasis Sanctum untuk login/logout/me/register, produk, customer, kategori, gudang, supplier dan alur mobile POS: shift, katalog/scan, cart CRUD, hold/resume, checkout, sync transaksi, histori/detail.", "Gunakan ability token spesifik; products/customers/categories memakai {module}-access, -create, -edit, -delete; warehouse memakai warehouses-access/create/update/delete; semua method supplier memakai suppliers-access; semua endpoint /pos memakai pos-access. Endpoint auth hanya butuh auth token. Token login berisi permission user ditambah user:read; token registrasi publik hanya user:read. Test token harus menetapkan ability secara eksplisit.", "API tidak boleh melewati validasi, outlet scoping, stock locks, server-side pricing, shift aktif, idempotency, atau permission web.", "Dokumentasi OpenAPI dan proteksi dokumentasi dengan token konfigurasi bila diaktifkan."],
+    "offline_and_hardware": ["Offline mode menyimpan antrean checkout pada IndexedDB browser hanya setelah cart server-side telah dibuat saat online. Cart offline kosong tidak boleh berpura-pura berfungsi.", "Saat online kembali, flush otomatis dengan indikator antrean dan hasil per transaksi; server menentukan harga/stok/permission/shift. Idempotency client_uuid mencegah transaksi duplikat.", "ESC/POS thermal printer 58/80mm melalui browser WebUSB di browser kompatibel, auto-print setelah transaksi yang sesuai, drawer kick hanya pada transaksi tunai, dan fallback window.print(). Jangan mengandalkan kontrol perangkat USB dari PHP server karena perangkat terpasang di klien.", "PWA responsive/installable dengan manifest, service worker dan cache aset aman tanpa build Node; cache jangan menyimpan data sensitif atau harga/stok stale sebagai kebenaran."],
+    "admin_and_observability": ["Audit log lintas modul untuk aksi penting/sensitif, before/after snapshot yang telah disaring dari password/token/credential rahasia, actor, outlet, event, target, timestamp, IP dan user-agent.", "Versi aplikasi APP_VERSION ditampilkan konsisten pada dashboard/POS.", "Notifikasi operasional dapat dibaca/ditandai satu/per-semua, diberi scope outlet dan permission.", "Laravel scheduler menjalankan reorder harian 02:00, refresh customer segments 01:00, CRM reminder 01:15, dan proses terjadwal lain hanya dengan idempotency; dokumentasikan queue dan cron setiap menit."]
+  },
+  "domain_model_inventory": ["User", "Role", "Permission", "Outlet", "Warehouse", "Setting", "Category", "Product", "ProductWarehouse", "ProductUnit", "Unit", "UnitConversion", "ProductBatch", "InventoryBalance", "InventoryLedger", "StockMutation", "StockTransfer", "StockTransferItem", "StockOpname", "StockOpnameItem", "Transaction", "TransactionDetail", "TransactionTender", "TransactionDetailBatchAllocation", "Profit", "CashierShift", "ShiftCashMovement", "WarehouseCashLedger", "Customer", "CustomerCredit", "LoyaltyPointHistory", "Supplier", "PurchaseOrder", "PurchaseOrderItem", "GoodsReceiving", "GoodsReceivingItem", "SupplierReturn", "SupplierReturnItem", "Payable", "PayablePayment", "Receivable", "ReceivablePayment", "PricingRule", "PricingRuleBundleItem", "PricingRuleBuyGetItem", "PricingRuleQtyBreak", "PriceList", "PriceListItem", "CustomerVoucher", "CustomerSegment", "CustomerSegmentMembership", "CustomerCampaign", "CustomerCampaignLog", "DineArea", "DiningTable", "DineOrder", "DineOrderItem", "SalesReturn", "SalesReturnItem", "PaymentSetting", "PaymentMethod", "BankAccount", "AuditLog", "OperationalNotification", "OutletExpense", "OutletWasteRecord", "OutletStockReturn", "OutletStockReturnItem", "Ingredient", "IngredientCategory", "RecipeVersion", "RecipeItem", "ProductionRequest", "ProductionRequestItem", "ProductionOrder", "ProductionOrderItem", "DiscountApprovalLog"],
+  "data_and_business_invariants": [
+    "product_warehouse.stock adalah stok operasional sumber kebenaran; products.stock adalah agregat global yang wajib sinkron setiap mutasi.",
+    "Semua update stok/transaksi keuangan/purchasing diproses dengan DB::transaction dan lockForUpdate pada baris yang terdampak sebelum pengurangan stok.",
+    "Gunakan warehouse_id dan outlet_id di transaksi/operasi sejak awal; semua daftar dan detail harus dibatasi ke outlet yang boleh diakses user serta outlet aktif/sesi/shift.",
+    "Outlet PUSAT bersifat gudang pusat non-sales, bukan outlet penjualan; jangan memasukkannya sebagai cabang kasir.",
+    "Harga dihitung ulang di server, pajak produk yang tidak ditentukan mengikuti tarif default, discount approval dan kupon diperiksa server, dan nilai tersimpan harus dapat diaudit.",
+    "Semua API, Livewire action, route action, job, webhook, import dan public token endpoint harus menjalankan validasi, permission, scoping, idempotency dan batas kuantitas yang sama.",
+    "Penghapusan data historis dibatasi: cegah delete supplier/warehouse/unit/area/akun yang direferensikan transaksi, stok, shift atau ledger; gunakan status nonaktif bila tepat.",
+    "Jaga kompatibilitas SQLite untuk test atau buat adapter test yang menguji perilaku database produksi; jangan mengandalkan SQL vendor tertentu tanpa coverage."
+  ],
+  "authorization_and_security": {
+    "roles_seeded": ["super-admin", "manager", "finance", "cashier", "warehouse"],
+    "principle": "Spatie permission granular per tindakan dan modul; cek izin di middleware/route dan ulangi di server-side Livewire/action. Visibility UI bukan kontrol keamanan.",
+    "middleware_and_controls": ["auth/session", "permission, role dan role_or_permission", "active_shift untuk mutasi POS/cart/hold/checkout", "step_up/password.confirm untuk role/user/payment settings/bank account/konfirmasi payment/aksi sensitif", "honeypot dan minimum submit timer untuk login/register/forgot password", "registration.enabled (default false)", "Sanctum abilities pada API", "locale middleware dengan prioritas user → session → cookie → Accept-Language", "secure headers", "absolute session lifetime 12 jam default", "CSRF, throttling, signed/tokenized public link, secure cookie HTTPS, file/image validation, mass-assignment protection, audit redaction, webhook signature/callback token, dan secret encryption"],
+    "authorization_edge_cases": ["Lindungi aksi langsung melalui Livewire DevTools/request tampering.", "User outlet terbatas tidak boleh melihat atau mutasi data outlet lain melalui ID forged.", "Cegah self-delete, delete super-admin terakhir, update role protected, cross-outlet shift/order, dan privilege escalation via nested form fields.", "Logika super-admin/manager/finance/cashier/warehouse harus diambil dari permission seed dan kebijakan yang jelas, bukan pengecekan nama tombol saja.", "Jangan bocorkan password, reset token, Sanctum token, API/payment secret, QR session credential atau data customer berlebihan ke audit, props, log dan snapshot Livewire."]
+  },
+  "database_and_migrations": {
+    "guidelines": ["Buat skema awal yang koheren untuk proyek baru, terstruktur berdasarkan domain atau fase implementasi dan mencakup kolom/foreign key/index/unique/nullable/default yang diperlukan.", "Nama migration harus menjelaskan tabel/fitur final secara ringkas, konsisten, dan berorientasi pada pembuatan skema. Hindari nama generik/bertumpuk seperti add_..., extend_..., change_again atau fix_later.", "Jangan membangun riwayat migration proyek baru seolah menambal database lama. Jika perubahan memang dibutuhkan saat development sebelum rilis, revisi migration awal secara terkontrol. Setelah dirilis, perubahan schema wajib berupa migration forward-only yang eksplisit dan reversible sejauh aman.", "Tentukan delete/cascade/restrict, unique index, decimal precision, timezone, status/enum strategy, idempotency key, compound indexes untuk outlet+date/status dan foreign key sebelum membangun UI.", "Seeder produksi hanya membuat struktur awal, permission, role, payment defaults, profil bisnis contoh bila diminta, outlet/gudang pusat yang diperlukan, dan akun awal dari environment.", "Demo data bersifat opt-in, jelas meminta force/konfirmasi saat destructive, dan tidak pernah dijalankan otomatis pada production.", "Jangan memigrasikan atau menimpa database sumber; proyek baru memiliki database serta backup/restore sendiri."]
+  },
+  "initial_seed_data": {
+    "business_profile": "Dimsum Weigu sebagai data usaha contoh yang bisa diganti, bukan konstanta aplikasi.",
+    "setup_chain": ["permission catalog dan reset permission cache", "roles and role permissions", "payment settings", "dine-in settings", "PUSAT central warehouse, outlet awal dan pivot stok yang dibutuhkan", "profil bisnis Dimsum Weigu yang bisa dikonfigurasi, empat outlet penjualan contoh dan branch warehouses", "initial users menggunakan SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD dari environment serta akun awal ber-password konfigurasi yang wajib diganti"],
+    "sensitive_defaults": "Dokumentasikan seluruh akun contoh secara lokal saja. Di shared/production environment wajib menetapkan SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD yang unik; jangan gunakan password contoh.",
+    "demo_dataset": "Opt-in saja; boleh mencakup outlet MAL, TKB, PUT, produk, transaksi, purchasing, CRM, dan dine-in untuk demonstrasi. Tidak pernah dijalankan di production."
+  },
+  "core_commands_and_operations": ["composer install", "php artisan key:generate", "php artisan migrate --seed", "php artisan storage:link", "php artisan serve", "php artisan queue:work", "php artisan schedule:run atau cron Laravel setiap menit", "php artisan test", "vendor/bin/pint", "php artisan inventory:reconcile [--fix]", "php artisan outlet:audit [--strict]", "php artisan outlet:legacy-audit", "php artisan reorder:generate", "php artisan crm:sync-segments", "php artisan crm:generate-reminders", "php artisan seed:demo [--force]", "php artisan scramble:cache/clear"],
+  "testing_requirements": {
+    "framework": "PHPUnit 12/Laravel feature tests; gunakan RefreshDatabase. Jalankan formatter Pint. Jangan pernah memakai Node/npm untuk test/build.",
+    "coverage": ["Migration fresh install/rollback/seeding dan schema/index/foreign keys.", "Authentication: login throttling, bot guard, registration default off, password reset, session rotation, step-up dan role.", "Permission untuk route dan Livewire action; forged outlet/object IDs; CSRF/abilities token.", "POS end-to-end: stock locks, global/pivot stock sync, concurrency/idempotency client_uuid, server price, promotion/tax/loyalty/voucher, tender/payment/pending/paid/webhook dan cash shift.", "Order/return, payment and stock lifecycle; batch FEFO, composite product, unit conversion, transfers, receiving, supplier return, opname.", "Purchase/payables/receivables/partial payment/aging, multi-outlet scoping, audit redaction, duplicate request and invalid transitions.", "Import/export CSV and Excel valid/invalid rows, file/image limits, PDF data/layout, scheduler idempotency and API abilities.", "Public invoice/portal/dine-in access tokens and throttling; QR menu/status/order submit; no online dine-in payment.", "No-JS/slow connection review for core pages; browser-level manual checks for camera/WebUSB/IndexedDB/PWA, QRIS webhook, WhatsApp provider and printing hardware."],
+    "test_fixtures": ["Set tax_rate=0 on products in tests unless a tax scenario is being tested.", "Create product with image/barcode/SKU/title/category/buy/sell/stock fields required by schema.", "Use PermissionSeeder then RoleSeeder and explicit verified test user if retained trait helper is needed; login role fixture should match production policy.", "Attach products to warehouses with stock pivot rows.", "Create active shift through CashierShiftService and bind its warehouse/outlet.", "Use deterministic counters/unique IDs instead of deprecated PHPUnit faker properties.", "Sanctum API tests need explicit abilities or actual tokens; do not assume authenticated user bypasses API middleware."]
+  },
+  "delivery_plan": [
+    "Phase 1: write a feature map against every source feature document; document states, routes, roles/permissions, records, payment/status transitions, outlet scope and integrations. Identify behavior that is undocumented by inspecting existing code/tests.",
+    "Phase 2: create clean Laravel project, Composer dependencies, base Blade/Livewire layouts, static CSS, locale, secure middleware, permission model, migration strategy, seeders, lint, CI and production deployment without Node/npm.",
+    "Phase 3: implement authentication/RBAC/users, outlet/gudang context, dashboard and setting base. Verify server authorization and multi-outlet visibility before implementing workflow pages.",
+    "Phase 4: implement domain services and full POS/shift/catalog/inventory transaction vertical slice, then purchasing, finance, pricing/loyalty, CRM/dine-in, reports/documents/API, imports, PWA/offline, printer and provider integrations.",
+    "Phase 5: after each vertical slice, complete feature tests and relevant manual checks, review visual styles against source screenshots and verify every existing permission/edge case before marking complete.",
+    "Phase 6: remove all forbidden frontend tooling references from Composer scripts, docs, CI, deployment, container files and operational commands. Fresh-install and deployment exercise must use PHP/Composer only.",
+    "Phase 7: produce complete docs for architecture, setup, database, module workflows, permission matrix, API, scheduled jobs, environment, backup/restore, no-Node deployment, WhatsApp/payment limitations, and manual QA. Provide a completed/not-completed feature matrix with evidence."
+  ],
+  "reference_documents": ["README.md", "AGENTS.md", "docs/README.md", "docs/getting-started.md", "docs/architecture-overview.md", "docs/configuration.md", "docs/feature-index.md", "docs/demo-data.md", "docs/backup-and-restore.md", "docs/testing-manual.md", "docs/screenshots.md", "docs/features/api-integration.md", "docs/features/app-versioning.md", "docs/features/audit-logs.md", "docs/features/cashier-shifts.md", "docs/features/crm-segments.md", "docs/features/customer-portal.md", "docs/features/customers-regions.md", "docs/features/dine-in.md", "docs/features/discount-approval.md", "docs/features/import-export.md", "docs/features/inventory-stock.md", "docs/features/member-management.md", "docs/features/mobile-pos.md", "docs/features/multi-warehouse.md", "docs/features/offline-mode.md", "docs/features/payables-suppliers.md", "docs/features/pos-transactions.md", "docs/features/promotions-loyalty.md", "docs/features/purchasing-chain.md", "docs/features/rbac-users-roles.md", "docs/features/receivables.md", "docs/features/reports-documents.md", "docs/features/sales-returns.md", "docs/features/settings-payments.md", "docs/features/tax-management.md", "docs/features/thermal-printer.md", "docs/features/unit-conversion.md", "docs/features/whatsapp-gateway.md"],
+  "completion_criteria": ["Proyek dibuat baru dan dapat di-install dari bersih hanya dengan PHP, Composer, database, dan perintah Artisan.", "Tidak ada runtime Node/npm, paket npm, lockfile npm, build Node, atau service Node dalam project, CI, deploy, atau requirement production.", "Semua fitur pada functional_scope memiliki halaman/action/service/database/authorization yang berfungsi, dokumentasi dan pengujian yang relevan; setiap pengecualian atau batasan integrasi dijelaskan secara terbuka.", "Alur sistem, rumus bisnis, status, permission, stock/finance integrity, model-domain, tampilan utama, serta responsive/dark mode sesuai source kecuali perubahan yang dijelaskan dan disetujui secara eksplisit.", "Fresh migration + seed aman; audit Composer bersih dari advisory yang diketahui; test/formatter lulus; scheduled jobs dan webhook diverifikasi; manual QA nyata untuk perangkat/provider yang tidak dapat disimulasikan.", "Dokumentasi status implementasi menyebut apa yang sudah dan belum dibuat, test yang dijalankan, asumsi yang dipilih dan batas verifikasi. Jangan pernah menjanjikan tidak ada bug secara absolut; minimalkan risiko dengan review, transaksi/lock, validasi dan coverage edge cases."
+  ],
+  "required_user_workflows": {
+    "login_to_dashboard_and_pos": [
+      "1. User opens the login page, submits email/password plus the honeypot/timer fields, and receives generic auth errors with throttling. Registration stays unavailable unless AUTH_PUBLIC_REGISTRATION is deliberately enabled.",
+      "2. On a valid login rotate the session ID, regenerate the CSRF token, apply user locale and redirect the user to their intended page or permission-filtered dashboard. Show the app version and only the notifications/outlet data the user is allowed to see.",
+      "3. The outlet selector shows only active outlets assigned to the user; super-admin may access all active outlets. Switching outlet stores active_outlet_id in session. If the user has an open shift in another outlet, reject the switch and require closing that shift first.",
+      "4. The user opens Settings > Warehouses or the POS. Warehouse options must be active, within outlet scope, and typed correctly: central PUSAT is a non-sales warehouse; branch warehouses may sell; stock warehouses cannot be treated as sales outlets.",
+      "5. Before POS actions, show whether a shift is open. If none exists, allow only users with cashier-shifts-open to start one; collect opening cash and choose a compatible warehouse/outlet. Persist the shift and its warehouse/outlet so the cashier cannot silently change its stock context.",
+      "6. Require that active shift for POS cart mutations, hold/resume and checkout. Display only sellable products with available stock in that shift warehouse; barcode search uses the same warehouse scope. Do not rely on a UI-only shift check.",
+      "7. Add products to the server-side cart and validate quantity, price list, unit conversion, customer, discount, promotions, loyalty, vouchers, PPN and stock on the server. The client may preview but never determines the authoritative price, tax or stock.",
+      "8. Allow the cashier to update/remove cart lines, hold a cart, resume the selected hold, or clear a hold. Revalidate held lines, outlet, shift, stock and pricing when resumed and again at checkout.",
+      "9. At checkout support the source payment methods: cash; bank transfer with an active bank account; split payment up to two tenders where the source allows it; Midtrans/Xendit QRIS or other enabled gateway; and pay-later/receivable. Require the right permissions/approval for discounts and payment confirmation.",
+      "10. Commit the transaction, details, tenders, tax, promotion redemptions, loyalty movement, profit, receivable/payment state, audit data, stock pivot/global aggregate, ledger and shift totals atomically as applicable. Lock affected stock and use a unique client_uuid/idempotency key so double click, retry or offline flush cannot duplicate a sale.",
+      "11. Redirect to print/receipt details after successful checkout. QRIS pending payments remain pending; do not print as paid or auto-print a pending transaction. Poll/webhook must safely move pending to paid exactly once. Print cash receipts and kick cash drawer only for eligible cash transactions; use 58/80mm settings and manual print fallback.",
+      "12. If the connection is lost, keep the documented limited offline behavior: previously prepared eligible checkout may queue in IndexedDB, while a new server cart cannot be fabricated offline. On reconnection send the same client_uuid, validate current server price/stock/shift, show each success/conflict, and retain unsynced items until safely resolved.",
+      "13. When work is finished, user with cashier-shifts-close enters actual cash, reviews calculated expected cash, sales, returns and movements, records discrepancy, and closes the shift. Do not permit new cart/checkout actions on that closed shift. Force-close requires its explicit permission and step-up password confirmation."
+    ],
+    "stock_and_purchasing": [
+      "Create/edit a product with required SKU/barcode/category/prices/tax/units/reorder values, then establish opening stock at a selected warehouse through a stock-opening workflow rather than direct edits to the aggregate field.",
+      "When receiving a purchase order, show ordered/received/outstanding quantities, allow partial receipt and QC/batch/expiry entry, then atomically update warehouse stock, global stock aggregate, ledger, PO progress and payable.",
+      "A stock transfer reserves no false destination stock: draft → send locks and subtracts source stock and records in_transit → receive adds destination stock once → cancellation follows source rules and cannot double restore. Check source/destination permissions and outlet scope on every step.",
+      "Stock opname snapshots the chosen warehouse, records physical count and variance, requires permitted review/finalization, prevents repeated finalization, and writes all corrections to pivot, aggregate, mutation ledger and audit in one transaction.",
+      "Supplier returns, customer returns, production/composite recipes and batch depletion must update the exact source/destination warehouse and batch allocations with row locks, status guards, idempotency and an audit reference."
+    ],
+    "admin_finance_crm_and_customer": [
+      "Admin creates or edits a user, assigns only existing roles, accessible outlets and exactly one sensible default outlet, then confirms password for sensitive create/update/delete; protect self-deletion and last super-admin.",
+      "Manager/finance roles see their permission-allowed dashboard, reports, payables, receivables and cash operations filtered by accessible outlet. Opening an object by a guessed ID from another outlet must return not-found/forbidden without leaking fields.",
+      "Finance records partial receivable/payable payments with amount bounds, payment method/reference, remaining balance, aging and audit; concurrent/replayed callbacks or payment actions may only settle each amount once.",
+      "CRM users maintain member data, tiers, point history, segments, vouchers and campaigns. Scheduled reminders/campaign sends honor outlet configuration, consent, enabled gateway, queue/idempotency, retry/backoff and visible delivery status.",
+      "Customer public invoice/payment/menu/order screens accept only valid scoped tokens, throttle sensitive endpoints, show only that customer's authorized data, and never reveal internal IDs/secrets or another customer's records."
+    ],
+    "required_role_experience": [
+      "Cashier: assigned outlet and sellable warehouse context; active shift; POS, holds, checkout, customer lookup and own/allowed shift details; no administrative stock or payment-secret controls without explicit permissions.",
+      "Warehouse: permitted warehouse stock, purchase receiving, transfer, batch, opname and relevant supplier operations; no POS payment approval unless explicitly granted.",
+      "Finance: allowed payment setup/reconciliation, reports, receivables/payables, payment confirmation and cash accounting; sensitive settings require step-up confirmation.",
+      "Manager: permitted outlet dashboard, catalog/operations/team and approval actions; all records remain outlet-scoped.",
+      "Super-admin: cross-outlet administration and protected account/role management, with step-up on sensitive actions and complete audit."
+    ]
+  },
+  "security_and_bug_prevention": {
+    "secure_defaults": [
+      "Deny by default: every route, Livewire public action, API endpoint, import/export, queued job and webhook must authenticate/authorize or deliberately declare a narrow public-token policy. Re-check authorization on every Livewire request and bind models through scoped queries rather than trusting client IDs.",
+      "Validate and normalize all input on the server. Reject arrays/objects where scalar values are expected, invalid enum/state transitions, negative or excessive quantities, foreign outlet/warehouse relations, oversized files, unsafe MIME/content and malicious CSV formula fields.",
+      "Use CSRF-protected forms, secure/HttpOnly/SameSite cookies, HTTPS in production, session rotation, throttling, password hashing, password reset expiry, bot guard, content/security headers, output escaping and safe file storage.",
+      "Never expose payment credentials, webhook tokens, reset/session/API tokens, WhatsApp secrets/session data or full audit snapshots to Blade, Livewire state, logs, browser storage, exports or exception messages. Encrypt secrets at rest and mask them in settings.",
+      "Use signed or high-entropy expiring tokens for public invoice/customer/QR access, rate limit public endpoints, scope each lookup by token and record ownership, and avoid sequential IDs as authorization.",
+      "Verify Midtrans/Xendit callbacks cryptographically using provider-defined signatures/tokens, event/reference/amount/currency and transaction status. Treat callbacks as repeatable and out of order; apply allowed transitions idempotently.",
+      "Escape user values rendered in HTML, Alpine expressions, QR URLs, CSV/Excel cells, filenames and PDF. Do not interpolate arbitrary customer text into executable JavaScript; use JSON-safe encoding and strict allowlists.",
+      "Limit upload types/sizes and image dimensions; store outside executable web roots where possible; authorize downloads and prevent path traversal."
+    ],
+    "transaction_safety": [
+      "Put checkout, stock decrease/increase, transfer, receiving, return, payment settlement, dine order acceptance, shift totals and point/voucher redemption inside appropriate database transactions.",
+      "Lock in a consistent documented order to reduce deadlocks: shift/order/cart or payment reference, then affected product_warehouse rows in stable product/warehouse ID order, then relevant batch/loyalty/financial rows. Retry only recognized deadlocks with a bounded retry count.",
+      "Check state transitions after acquiring the lock, not only before opening the transaction. A second request must not accept/reject/pay/return/receive/finalize/close the same record twice.",
+      "Use unique constraints as a final guard for client_uuid, provider event/reference, invoice, token and pivot relationships where uniqueness is required. Catch duplicate-key results and return the original result safely.",
+      "Keep products.stock equal to the aggregate stock in product_warehouse after each successful mutation. Add a read-only inventory reconciliation command and a separately authorized, audited repair mode.",
+      "Never swallow exceptions after partial mutation; rollback the whole business operation. Do not report success until the transaction commits."
+    ],
+    "verification_gate": [
+      "For each workflow test a normal success, unauthenticated request, missing permission, forged ID, cross-outlet/warehouse ID, invalid scalar/type, invalid status transition, duplicate/replayed request, concurrent request, stale price/stock, empty/edge quantity, and database rollback on failure.",
+      "Test direct Livewire method calls in addition to browser navigation; hiding a button is never sufficient. Test HTML forms and API endpoints against the same service/invariants.",
+      "Add database constraints and feature tests for status transitions, balances, aggregate stock, unique idempotency, totals/tax rounding and outlet isolation; test on both production DB engine and SQLite limitations.",
+      "Run automated tests, static analysis/formatter and Composer advisory audit on clean install. Use browser QA for responsive/dark visuals and actual physical/browser/provider QA for printer, barcode camera, offline IndexedDB, QRIS webhooks and WhatsApp.",
+      "Keep a traceability matrix from each source route/feature/permission/state to new Livewire component/action/service, migration, tests and manual QA. Do not mark a source workflow migrated until all rows have evidence.",
+      "No engineering process can prove absolute absence of defects. Treat zero known critical/high security defects, complete invariant/authorization coverage, repeated review and tested recovery as release gates; disclose remaining risks honestly."
+    ]
+  },
+  "direct_execution_instructions": {
+    "role": "Bertindak sebagai senior Laravel/POS engineer. Jalankan instruksi ini di proyek baru yang disediakan pengguna; berikan perubahan kode yang dapat dijalankan, bukan hanya rancangan, daftar saran, mockup, atau contoh parsial.",
+    "target_project_rules": [
+      "Jangan jadikan repositori sumber sebagai target implementasi. Periksa direktori kerja dan pastikan target adalah proyek baru yang memang disiapkan pengguna. Jangan menimpa source repository, database, file environment, atau data yang sudah ada.",
+      "Sebelum membuat file, catat path absolut root proyek baru, versi PHP, status Laravel/Composer, status database, folder template Mazer, serta keberadaan homepage-livewire-laravel.zip. Jangan mencetak nilai rahasia dari file .env.",
+      "Jika target belum memiliki skeleton, buat di direktori baru dengan Composer menggunakan constraint Laravel 12; jangan menjalankan composer create-project di folder repositori sumber atau di atas folder non-kosong.",
+      "Temukan folder Mazer yang telah disiapkan pengguna dengan memeriksa folder kerja secara terbatas. Jangan menebak path, membuat ulang template, memakai template lain, atau menghapus file template. Baca README/lisensi, identifikasi versi dan entrypoint HTML/aset lokalnya.",
+      "Temukan homepage-livewire-laravel.zip yang disediakan. Baca README di dalam arsip sebelum mengekstrak. Periksa daftar isi dan konflik file terlebih dahulu; gabungkan file sesuai struktur tanpa mengganti model, migration, config, layout, manifest atau asset proyek baru secara membabi buta.",
+      "Jika Mazer atau ZIP homepage tidak tersedia, laporkan path yang dicari dan lanjutkan bagian independen. Jangan mengaku telah mengintegrasikan item yang tidak tersedia."
+    ],
+    "required_execution_order": [
+      {
+        "phase": 1,
+        "name": "Inventarisasi requirement dan alur lama",
+        "commands": [
+          "Baca seluruh dokumen dalam reference_documents dan AGENTS.md jika tersedia.",
+          "Gunakan pencarian read-only untuk mencatat routes web/API, setiap halaman, controller/action, middleware, model-relasi, migration, seeder, service, jadwal, permission dan test yang berkaitan dengan semua functional_scope.",
+          "Bangun matriks traceability sebelum coding dengan kolom: fitur sumber, aktor, prasyarat, route/halaman, langkah UI, data dibaca/ditulis, status transisi, permission, outlet/gudang, integrasi, kegagalan yang mungkin, komponen/service baru dan bukti pengujian.",
+          "Jangan menebak alur dari nama route. Baca implementasi controller/service/model/test dan dokumen manual, lalu tulis ulang alur kasir/login/outlet/gudang/shift/POS/purchasing/finance/CRM yang eksplisit."
+        ],
+        "exit_criteria": "Setiap fitur dari indeks dan dokumen sumber sudah memiliki baris requirement dan konflik/ketidakjelasan tercatat sebelum modul terkait dibuat."
+      },
+      {
+        "phase": 2,
+        "name": "Buat skeleton Laravel native",
+        "commands": [
+          "Buat aplikasi Laravel 12 baru dengan PHP 8.2+ dan constraint Composer laravel/framework ^12.0.",
+          "Pasang Livewire ^3.0, Sanctum, Spatie Permission dan paket PHP yang dibutuhkan fitur berdasarkan kompatibilitas Laravel 12. Jangan memasang Inertia, React atau paket npm.",
+          "Tetapkan Composer scripts dev/test/build hanya memakai php, Composer, Artisan dan executable PHP lokal vendor/bin; hapus perintah yang menyalakan Vite/Node.",
+          "Siapkan konfigurasi MySQL, session/cookie HTTPS, cache, queue database, mail, filesystem public/private, locale id/en, timezone Asia/Jakarta, log dan .env.example tanpa rahasia.",
+          "Buat struktur app/Actions, app/Livewire, app/Models, app/Policies, app/Queries, app/Services, app/Support, resources/views/layouts, resources/views/livewire, routes, tests dan docs secara konsisten."
+        ],
+        "allowed_command_examples": [
+          "composer create-project laravel/laravel:^12.0 <direktori-proyek-baru> --no-interaction",
+          "composer require livewire/livewire:^3.0 laravel/sanctum spatie/laravel-permission",
+          "php artisan key:generate",
+          "php artisan migrate --seed",
+          "php artisan storage:link",
+          "php artisan serve",
+          "php artisan queue:work",
+          "php artisan schedule:run",
+          "php artisan test",
+          "vendor/bin/pint",
+          "composer audit"
+        ],
+        "exit_criteria": "Fresh Laravel 12 skeleton, Livewire 3 page, Composer install, migration, login form dasar dan feature test dapat berjalan tanpa frontend runtime/bundler."
+      },
+      {
+        "phase": 3,
+        "name": "Pasang template Mazer dan homepage",
+        "commands": [
+          "Jadikan Mazer yang disediakan sebagai layout dashboard admin. Gunakan file distribusi CSS/JavaScript/icon/font yang ada di folder tersebut dan salin aset yang diperlukan sebagai file statis lokal.",
+          "Integrasikan struktur Mazer ke Blade: sidebar/menu, header, konten, breadcrumb, footer, responsive state, modal, tabel, alert, form, toast dan theme. Ikat navigasi pada route Laravel, permission dan outlet context.",
+          "Jaga komponen POS sebagai layout layar kasir tersendiri agar Mazer admin tidak mengubah alur/kecepatan POS. Pisahkan asset dashboard, homepage, auth, pelanggan dan POS sesuai kebutuhan.",
+          "Ekstrak ZIP homepage ke root proyek baru setelah memeriksa konflik. Integrasikan route '/', Livewire Home, HomepageData, view dan partial menu, application layout, icon Blade, CSS, JS browser, logo dan gambar hero.",
+          "Gabungkan layout homepage dengan layout global bila sudah ada; pertahankan metadata, livewire styles/scripts, jalur StaticAssets dan aset homepage. Jangan menimpa manifest PWA tujuan.",
+          "Periksa folder produk/outlet/settings yang disediakan skeleton dan sesuaikan HomepageData dengan model proyek baru tanpa menghapus perilaku fallback menu/cabang, jam, peta, kontak dan form laporan WhatsApp."
+        ],
+        "exit_criteria": "Dashboard benar-benar memakai Mazer yang disediakan dan merender halaman Livewire; homepage publik dapat dibuka dengan aset lokal dan tidak mengganti schema/model global secara tak sengaja."
+      },
+      {
+        "phase": 4,
+        "name": "Skema, akun dan authorization",
+        "commands": [
+          "Rancang schema final dari awal untuk outlet, warehouse, user-outlet, products, product_warehouse, transaksi, details, shifts, customer, supplier, purchasing, financial records, CRM, dine-in dan audit.",
+          "Tulis migration bernama jelas berdasarkan tabel/domain yang dibuat; hindari awalan generik add_/extend_/change_again. Kelompokkan migration awal dengan timestamp terurut, foreign keys, indexes, unique constraints, decimal precision dan on-delete behavior.",
+          "Jaga nama model/domain dan maksud relasi dari domain_inventory. Buat migration baseline lengkap untuk instalasi baru, bukan rangkaian perubahan palsu yang menambal DB lama.",
+          "Seed permission catalog, role, relasi role-permission, payment defaults, dine-in defaults, outlet/gudang PUSAT dan cabang, profil Dimsum Weigu yang dapat dikonfigurasi, pivot stok serta user awal menggunakan environment credentials.",
+          "Pastikan seeder aman diulang atau mendeteksi existing rows; reset permission cache sebelum/sesudah sinkronisasi; pisahkan demo seeder destruktif dari DatabaseSeeder production.",
+          "Terapkan policy/gate dan middleware server-side sebelum UI; uji Livewire direct method, bukan hanya route/page. Terapkan outlet scoping pada query list, detail, actions, export, reports, API dan jobs."
+        ],
+        "exit_criteria": "Database kosong dapat dimigrasikan dan diseed sekali tanpa Node; role/permission tepat; user tidak dapat melihat/mengubah outlet atau gudang di luar assignment."
+      },
+      {
+        "phase": 5,
+        "name": "Implementasi alur vertikal",
+        "commands": [
+          "Implementasikan urutan login → redirect dashboard → pilih outlet yang diizinkan → pilih warehouse yang sesuai → buka shift dengan opening cash → POS catalog/cart → hold/resume → checkout → print/payment status → tutup shift.",
+          "Bangun tiap layar Livewire bersama query, validation, service/action, policy, Blade, empty/loading/error state, audit dan feature tests dalam satu vertical slice.",
+          "Setelah auth/roles/dashboard selesai, prioritaskan shift dan POS karena fitur lain bergantung pada konteks outlet/warehouse; lanjutkan catalog/inventory, transfer/opname, purchasing/receiving/supplier return, payables/receivables, promotions/loyalty, dine-in, CRM, reports, settings, API dan tools sesuai traceability matrix.",
+          "Untuk checkout, lakukan transaksi DB atomik; lock produk-gudang dan batch dalam urutan stabil; hitung ulang harga/pajak/promo di server; simpan transaction/details/tenders/profit/receivable/ledger/audit/shift totals bersama; cegah pengurangan stok atau redemption ganda.",
+          "Untuk hold/resume/offline, revalidasi shift, outlet, warehouse, stok dan harga. Sync offline memakai client_uuid unik; hasil retry mengembalikan transaksi awal atau konflik yang dapat dipahami, tanpa membuat duplikat.",
+          "Untuk pembayaran gateway, simpan credential terenkripsi, verifikasi callback provider, validasi reference/amount/currency/status dan proses event hanya sekali. Pending bukan paid dan tidak boleh tercetak sebagai lunas.",
+          "Untuk action sensitif, gunakan step-up konfirmasi password dan audit redacted. Jangan menyimpan secret/token/password di public Livewire property atau HTML."
+        ],
+        "exit_criteria": "Setiap modul functional_scope bekerja dari halaman hingga database/API/integrasi nyata dan semua mutasi melewati policy, validation serta domain service yang sesuai."
+      },
+      {
+        "phase": 6,
+        "name": "Dokumen, integrasi dan deployment",
+        "commands": [
+          "Implementasikan CSV/XLSX import/export dengan validasi tiap row dan error report, PDF dengan data terotorisasi, API Sanctum abilities, Scramble docs, webhook, customer portal token dan public dine-in QR flow.",
+          "Implementasikan browser WebUSB receipt printer, IndexedDB offline queue, PWA/cache, camera scan dan file asset hanya sebagai fitur browser; jangan mengontrol USB melalui server.",
+          "Untuk WhatsApp, inspeksi provider yang dapat digunakan tanpa Node. Jangan menghilangkan fitur diam-diam: dokumentasikan dukungan QR/session, metode koneksi, status provider, persetujuan/consent, konfigurasi, risiko dan batasan. Gunakan abstraction agar provider dapat ditukar.",
+          "Buat scheduler Laravel untuk reorder, segment sync, reminder/campaign dan proses berkala; jadwalkan cron php artisan schedule:run setiap menit, gunakan queue PHP worker, timeout, retry/backoff dan idempotency.",
+          "Ubah README, CI, deployment, container dan dokumentasi agar instalasi/production memakai PHP, Composer, database dan Artisan saja. Pastikan command development tidak menjalankan proses frontend bundler."
+        ],
+        "exit_criteria": "Integrasi memiliki credentials/configuration docs, error handling, security boundary, retry/idempotency dan instruksi deployment yang dapat diikuti tanpa Node."
+      },
+      {
+        "phase": 7,
+        "name": "Verifikasi dan serah terima",
+        "commands": [
+          "Jalankan composer validate, composer audit, php artisan route:list, php artisan migrate:fresh --seed hanya pada database test/development khusus, php artisan test, vendor/bin/pint --test dan pemeriksaan config/route/view cache.",
+          "Jalankan test dengan MySQL sebagaimana produksi untuk locking, unique constraints, JSON, numeric precision dan transaction behavior; jalankan suite SQLite hanya sebagai tambahan.",
+          "Telusuri semua file konfigurasi dan pipeline untuk memastikan tidak ada Node runtime, npm package manager, npm lockfile, Vite/webpack/Mix task, atau service Node yang dibutuhkan.",
+          "Lakukan review UI Mazer admin dan homepage responsif dengan viewport ponsel/tablet/desktop, dark/light, permission-filtered menus, keyboard/accessibility, images/fonts dan broken links.",
+          "Lakukan manual QA staging dengan printer fisik, kamera barcode, browser offline/reconnect, QRIS provider sandbox/webhook, WhatsApp provider dan outlet/gudang multi-user. Catat item yang tidak dapat diuji karena hardware/provider belum tersedia.",
+          "Perbarui traceability matrix menjadi status complete/partial/not started dengan lokasi kode, test yang lulus, hasil manual QA, batas integrasi dan risiko tersisa. Jangan klaim seluruh fitur selesai bila masih ada status partial/not started."
+        ],
+        "exit_criteria": "Instalasi bersih, seeder aman, suite automated yang relevan lulus, audit Composer ditinjau, larangan Node diverifikasi dari repo dan pipeline, serta daftar sisa risiko dan verifikasi manual diserahkan."
+      }
+    ],
+    "implementation_reporting_rules": [
+      "Berikan pembaruan singkat setelah setiap fase berisi berkas/modul yang selesai, keputusan yang mempengaruhi flow, hasil perintah validasi, kendala dan fase berikutnya.",
+      "Jika bug atau ketidakcocokan ditemukan, reproduksi melalui test yang bermakna, perbaiki sumbernya, jalankan ulang test terkait, dan sebutkan regresi yang diuji.",
+      "Jangan meminta persetujuan untuk pekerjaan normal yang telah ditugaskan. Bila kredensial eksternal, file Mazer/homepage, target directory atau keputusan provider benar-benar tidak ada, kerjakan bagian independen dan minta hanya informasi yang dibutuhkan.",
+      "Jangan mengarang hasil test, file template, integrasi, screenshot atau hardware validation. Cantumkan perintah yang benar-benar dijalankan dan hasilnya.",
+      "Sebelum menutup pekerjaan, laporkan struktur proyek, cara menjalankan secara lokal, migration/seed steps, akun local-only, konfigurasi provider, jadwal/queue, test coverage, fitur belum selesai dan path semua dokumentasi utama. Jangan sertakan rahasia."
+    ]
+  }
+}
