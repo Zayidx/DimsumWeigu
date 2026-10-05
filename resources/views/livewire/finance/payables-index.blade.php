@@ -1,7 +1,49 @@
 <div>
-    <div class="card"><div class="card-header"><h5 class="card-title mb-0">Hutang pemasok</h5><p class="small text-muted mb-0 mt-1">Hutang dibuat dari penerimaan yang lolos QC.</p></div><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Referensi</th><th>Pemasok</th><th>Jatuh tempo</th><th>Jumlah</th><th>Terbayar</th><th>Sisa</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
-        @forelse($payables as $payable)@php($remaining=(float)$payable->amount-(float)$payable->paid_amount)<tr><td><strong>{{ $payable->reference }}</strong><div class="small text-muted">{{ $payable->payments_count }} pembayaran</div></td><td>{{ $payable->supplier->name }}</td><td>{{ $payable->due_at?->format('d/m/Y') ?? '—' }}</td><td>Rp {{ number_format((float)$payable->amount,0,',','.') }}</td><td>Rp {{ number_format((float)$payable->paid_amount,0,',','.') }}</td><td>Rp {{ number_format($remaining,0,',','.') }}</td><td><span class="badge {{ $payable->status==='paid'?'bg-light-success text-success':'bg-light-warning text-warning' }}">{{ str($payable->status)->headline() }}</span></td><td>@if($remaining>0)@can('payables-pay')<button wire:click="openPayment({{ $payable->id }})" class="btn btn-sm btn-primary">Bayar</button>@endcan @endif</td></tr>
-        @empty<tr><td colspan="8" class="text-center py-5 text-muted">Belum ada hutang pemasok.</td></tr>@endforelse
-    </tbody></table></div>@if($payables->hasPages())<div class="card-footer">{{ $payables->links() }}</div>@endif</div>
-    @if($showForm)<div class="modal-backdrop show" style="z-index:1040" wire:click="closeForm"></div><div class="modal d-block" role="dialog" aria-modal="true" aria-labelledby="payable-payment-title" style="z-index:1050" wire:keydown.escape="closeForm"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form wire:submit="pay"><div class="modal-header"><h5 id="payable-payment-title" class="modal-title">Catat pembayaran pemasok</h5><button type="button" class="btn-close" wire:click="closeForm" aria-label="Tutup"></button></div><div class="modal-body"><div class="mb-3"><label for="payable-amount" class="form-label">Jumlah pembayaran (Rp)</label><input id="payable-amount" type="number" inputmode="decimal" min="0.01" step="0.01" wire:model="amount" class="form-control" required>@error('amount')<small class="text-danger">{{ $message }}</small>@enderror</div><div class="mb-3"><label for="payable-method" class="form-label">Metode</label><select id="payable-method" wire:model="method" class="form-select"><option value="bank-transfer">Transfer bank</option><option value="qris">QRIS</option><option value="cash">Tunai (memerlukan shift aktif di gudang ini)</option></select></div><div class="mb-3"><label for="payable-ref" class="form-label">Referensi</label><input id="payable-ref" wire:model="reference" class="form-control" maxlength="160"></div></div><div class="modal-footer"><button type="button" wire:click="closeForm" class="btn btn-light-secondary">Batal</button><button type="submit" class="btn btn-primary">Catat pembayaran</button></div></form></div></div></div>@endif
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Hutang pemasok</h5>
+            <p class="small text-muted mb-0 mt-1">Hutang tercatat setelah penerimaan barang lolos QC, termasuk bahan baku produksi.</p>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Referensi</th><th>Sumber</th><th>Pemasok</th><th>Jatuh tempo</th><th>Jumlah</th><th>Terbayar</th><th>Sisa</th><th>Status</th><th>Aksi</th></tr></thead>
+                <tbody>
+                    @forelse($payables as $payable)
+                        @php($remaining = (float) $payable->amount - (float) $payable->paid_amount)
+                        <tr>
+                            <td><strong>{{ $payable->reference }}</strong><div class="small text-muted">{{ $payable->payments_count }} pembayaran</div></td>
+                            <td>{{ $payable->ingredient_goods_receiving_id ? 'Bahan baku' : 'Produk' }}</td>
+                            <td>{{ $payable->supplier?->name ?? '—' }}</td>
+                            <td>{{ $payable->due_at?->format('d/m/Y') ?? '—' }}</td>
+                            <td>Rp {{ number_format((float) $payable->amount, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format((float) $payable->paid_amount, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($remaining, 0, ',', '.') }}</td>
+                            <td><span class="badge {{ $payable->status === 'paid' ? 'bg-light-success text-success' : 'bg-light-warning text-warning' }}">{{ str($payable->status)->headline() }}</span></td>
+                            <td>@if($remaining > 0)@can('payables-pay')<button wire:click="openPayment({{ $payable->id }})" class="btn btn-sm btn-primary">Bayar</button>@endcan @endif</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="text-center py-5 text-muted">Belum ada hutang pemasok.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        @if($payables->hasPages())<div class="card-footer">{{ $payables->links() }}</div>@endif
+    </div>
+
+    @if($showForm)
+        <div class="modal-backdrop show" style="z-index:1040" wire:click="closeForm"></div>
+        <div class="modal d-block" role="dialog" aria-modal="true" aria-labelledby="payable-payment-title" style="z-index:1050" wire:keydown.escape="closeForm">
+            <div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+                <form wire:submit="pay">
+                    <div class="modal-header"><h5 id="payable-payment-title" class="modal-title">Catat pembayaran pemasok</h5><button type="button" class="btn-close" wire:click="closeForm" aria-label="Tutup"></button></div>
+                    <div class="modal-body">
+                        <div class="mb-3"><label for="payable-amount" class="form-label">Jumlah pembayaran (Rp)</label><input id="payable-amount" type="number" inputmode="decimal" min="0.01" step="0.01" wire:model="amount" class="form-control" required>@error('amount')<small class="text-danger">{{ $message }}</small>@enderror</div>
+                        <div class="mb-3"><label for="payable-method" class="form-label">Metode</label><select id="payable-method" wire:model="method" class="form-select"><option value="bank-transfer">Transfer bank</option><option value="qris">QRIS</option><option value="cash">Tunai (memerlukan shift aktif di gudang ini)</option></select></div>
+                        <div class="mb-3"><label for="payable-ref" class="form-label">Referensi</label><input id="payable-ref" wire:model="reference" class="form-control" maxlength="160"></div>
+                    </div>
+                    <div class="modal-footer"><button type="button" wire:click="closeForm" class="btn btn-light-secondary">Batal</button><button type="submit" class="btn btn-primary">Catat pembayaran</button></div>
+                </form>
+            </div></div>
+        </div>
+    @endif
 </div>

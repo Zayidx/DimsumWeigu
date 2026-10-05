@@ -2,8 +2,8 @@
 
 namespace App\Services\Finance;
 
-use App\Models\CustomerCredit;
 use App\Models\CashierShift;
+use App\Models\CustomerCredit;
 use App\Models\Payable;
 use App\Models\PayablePayment;
 use App\Models\Receivable;
@@ -12,6 +12,7 @@ use App\Models\ShiftCashMovement;
 use App\Models\Transaction;
 use App\Models\TransactionTender;
 use App\Models\Warehouse;
+use App\Services\Cashier\CashierShiftService;
 use App\Services\Cashier\WarehouseCashLedgerService;
 use App\Support\AuditLogger;
 use App\Support\FixedDecimal;
@@ -28,15 +29,17 @@ class SettlementService
         abort_unless(auth()->user()?->can('payables-pay'), 403);
         $this->validatePayment($amount, $method, $idempotencyKey);
         $cents = FixedDecimal::money($amount);
+
         return DB::transaction(function () use ($payableId, $cents, $method, $idempotencyKey, $reference) {
             $existing = PayablePayment::query()->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 if ($existing->payable_id !== $payableId || FixedDecimal::money((string) $existing->amount) !== $cents || $existing->method !== $method) {
                     throw ValidationException::withMessages(['idempotencyKey' => __('Kunci pembayaran sudah digunakan untuk pembayaran lain.')]);
                 }
+
                 return $existing;
             }
-            $payable = Payable::query()->with('receiving.order.warehouse')->whereKey($payableId)->lockForUpdate()->firstOrFail();
+            $payable = Payable::query()->with(['receiving.order.warehouse', 'receiving.warehouse', 'ingredientReceiving.warehouse'])->whereKey($payableId)->lockForUpdate()->firstOrFail();
             $this->assertPayableAccess($payable);
             $outstanding = FixedDecimal::money((string) $payable->amount) - FixedDecimal::money((string) $payable->paid_amount);
             if (! in_array($payable->status, ['unpaid', 'partial'], true) || $cents > $outstanding) {
@@ -52,9 +55,10 @@ class SettlementService
                 'status' => $after === 0 ? 'paid' : 'partial',
             ])->save();
             if ($method === 'cash') {
-                $this->recordCashMovement($payable->receiving->warehouse, $cents, 'out', PayablePayment::class, $payment->id, 'supplier_payment', __('Pembayaran hutang pemasok :reference', ['reference' => $payable->reference]));
+                $this->recordCashMovement($this->payableWarehouse($payable), $cents, 'out', PayablePayment::class, $payment->id, 'supplier_payment', __('Pembayaran hutang pemasok :reference', ['reference' => $payable->reference]));
             }
             $this->audit->record('payable.payment_recorded', $payment, null, ['payable_id' => $payable->id, 'amount' => FixedDecimal::moneyText($cents), 'method' => $method, 'outstanding_after' => FixedDecimal::moneyText($after)]);
+
             return $payment;
         }, attempts: 3);
     }
@@ -64,12 +68,14 @@ class SettlementService
         abort_unless(auth()->user()?->can('receivables-collect'), 403);
         $this->validatePayment($amount, $method, $idempotencyKey);
         $cents = FixedDecimal::money($amount);
+
         return DB::transaction(function () use ($receivableId, $cents, $method, $idempotencyKey, $reference) {
             $existing = ReceivablePayment::query()->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 if ($existing->receivable_id !== $receivableId || FixedDecimal::money((string) $existing->amount) !== $cents || $existing->method !== $method) {
                     throw ValidationException::withMessages(['idempotencyKey' => __('Kunci pembayaran sudah digunakan untuk pembayaran lain.')]);
                 }
+
                 return $existing;
             }
             $receivable = Receivable::query()->with('transaction')->whereKey($receivableId)->lockForUpdate()->firstOrFail();
@@ -100,6 +106,7 @@ class SettlementService
                 'idempotency_key' => 'receivable-payment:'.$idempotencyKey, 'note' => __('Pembayaran piutang :reference', ['reference' => $receivable->reference]),
             ]);
             $this->audit->record('receivable.payment_collected', $payment, null, ['receivable_id' => $receivable->id, 'amount' => FixedDecimal::moneyText($cents), 'method' => $method, 'outstanding_after' => FixedDecimal::moneyText($after)]);
+
             return $payment;
         }, attempts: 3);
     }
@@ -117,7 +124,7 @@ class SettlementService
 
     private function assertPayableAccess(Payable $payable): void
     {
-        $warehouse = $payable->receiving?->order?->warehouse ?? $payable->receiving?->warehouse;
+        $warehouse = $this->payableWarehouse($payable);
         abort_unless($warehouse, 404);
         if ($warehouse->outlet_id) {
             abort_unless($warehouse->outlet_id === (int) session('active_outlet_id'), 404);
@@ -125,6 +132,13 @@ class SettlementService
         } else {
             abort_unless(auth()->user()?->hasRole('super-admin') || auth()->user()?->can('warehouses-access'), 404);
         }
+    }
+
+    private function payableWarehouse(Payable $payable): ?Warehouse
+    {
+        return $payable->receiving?->order?->warehouse
+            ?? $payable->receiving?->warehouse
+            ?? $payable->ingredientReceiving?->warehouse;
     }
 
     private function validatePayment(string $amount, string $method, string $key): void
@@ -143,7 +157,7 @@ class SettlementService
             'amount' => FixedDecimal::moneyText($cents), 'reference' => $referenceType.':'.$referenceId, 'note' => $note,
         ]);
         $this->cashLedger->append($warehouse->id, $shift->id, $ledgerType, $cents, $referenceType, $referenceId, $note);
-        $shift->expected_cash = FixedDecimal::moneyText(app(\App\Services\Cashier\CashierShiftService::class)->expectedCashCents($shift));
+        $shift->expected_cash = FixedDecimal::moneyText(app(CashierShiftService::class)->expectedCashCents($shift));
         $shift->save();
         $this->audit->record('cashier_shift.cash_movement_recorded', $movement, null, ['type' => $direction, 'amount' => FixedDecimal::moneyText($cents), 'source' => $referenceType]);
     }

@@ -21,6 +21,18 @@
     @if (Route::has('inventory.index') && auth()->user()->can('inventory-access'))
         <li class="sidebar-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}"><a href="{{ route('inventory.index') }}" class="sidebar-link"><i class="bi bi-boxes"></i><span>Inventori</span></a></li>
     @endif
+    @if (Route::has('ingredients.index') && auth()->user()->can('ingredients-access'))
+        <li class="sidebar-item {{ request()->routeIs('ingredients.*') ? 'active' : '' }}"><a href="{{ route('ingredients.index') }}" class="sidebar-link"><i class="bi bi-basket"></i><span>Master bahan</span></a></li>
+    @endif
+    @if (Route::has('recipes.index') && auth()->user()->can('recipes-access'))
+        <li class="sidebar-item {{ request()->routeIs('recipes.*') ? 'active' : '' }}"><a href="{{ route('recipes.index') }}" class="sidebar-link"><i class="bi bi-journal-text"></i><span>Resep &amp; HPP</span></a></li>
+    @endif
+    @if (Route::has('production-requests.index') && auth()->user()->can('production-requests-access'))
+        <li class="sidebar-item {{ request()->routeIs('production-requests.*') ? 'active' : '' }}"><a href="{{ route('production-requests.index') }}" class="sidebar-link"><i class="bi bi-clipboard2-pulse"></i><span>Permintaan produksi</span></a></li>
+    @endif
+    @if (Route::has('production-orders.index') && auth()->user()->can('production-orders-access'))
+        <li class="sidebar-item {{ request()->routeIs('production-orders.*') ? 'active' : '' }}"><a href="{{ route('production-orders.index') }}" class="sidebar-link"><i class="bi bi-gear-wide-connected"></i><span>Produksi</span></a></li>
+    @endif
     @if (Route::has('transfers.index') && auth()->user()->can('transfers-access'))
         <li class="sidebar-item {{ request()->routeIs('transfers.*') ? 'active' : '' }}"><a href="{{ route('transfers.index') }}" class="sidebar-link"><i class="bi bi-arrow-left-right"></i><span>Transfer stok</span></a></li>
     @endif

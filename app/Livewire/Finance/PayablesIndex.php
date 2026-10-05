@@ -4,7 +4,6 @@ namespace App\Livewire\Finance;
 
 use App\Models\Payable;
 use App\Services\Finance\SettlementService;
-use App\Support\FixedDecimal;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -13,11 +12,17 @@ use Livewire\WithPagination;
 class PayablesIndex extends Component
 {
     use WithPagination;
+
     public bool $showForm = false;
+
     public ?int $payableId = null;
+
     public string $amount = '';
+
     public string $method = 'bank-transfer';
+
     public string $reference = '';
+
     public string $idempotencyKey = '';
 
     public function openPayment(int $id): void
@@ -25,11 +30,21 @@ class PayablesIndex extends Component
         $this->permit('payables-pay');
         $payable = $this->query()->whereKey($id)->firstOrFail();
         $this->payableId = $id;
-        $this->amount = number_format((float)$payable->amount - (float)$payable->paid_amount, 2, '.', '');
-        $this->method = 'bank-transfer'; $this->reference = ''; $this->idempotencyKey = (string) Str::uuid(); $this->showForm = true;
+        $this->amount = number_format((float) $payable->amount - (float) $payable->paid_amount, 2, '.', '');
+        $this->method = 'bank-transfer';
+        $this->reference = '';
+        $this->idempotencyKey = (string) Str::uuid();
+        $this->showForm = true;
     }
 
-    public function closeForm(): void { $this->showForm = false; $this->payableId = null; $this->amount = ''; $this->reference = ''; $this->resetValidation(); }
+    public function closeForm(): void
+    {
+        $this->showForm = false;
+        $this->payableId = null;
+        $this->amount = '';
+        $this->reference = '';
+        $this->resetValidation();
+    }
 
     public function pay(SettlementService $settlements): void
     {
@@ -43,16 +58,27 @@ class PayablesIndex extends Component
     public function render()
     {
         $this->permit('payables-access');
+
         return view('livewire.finance.payables-index', ['payables' => $this->query()->with('supplier:id,name')->withCount('payments')->latest()->paginate(25)])
             ->layout('layouts.dashboard', ['title' => __('Hutang pemasok')]);
     }
 
     private function query(): Builder
     {
-        return Payable::query()->whereHas('receiving.warehouse', function (Builder $query) {
-            $query->where('outlet_id', (int) session('active_outlet_id'));
-            if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) $query->orWhereNull('outlet_id');
+        return Payable::query()->where(function (Builder $payables) {
+            foreach (['receiving.warehouse', 'ingredientReceiving.warehouse'] as $relation) {
+                $payables->orWhereHas($relation, function (Builder $warehouse) {
+                    $warehouse->where('outlet_id', (int) session('active_outlet_id'));
+                    if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) {
+                        $warehouse->orWhereNull('outlet_id');
+                    }
+                });
+            }
         });
     }
-    private function permit(string $permission): void { abort_unless(auth()->user()?->can($permission), 403); }
+
+    private function permit(string $permission): void
+    {
+        abort_unless(auth()->user()?->can($permission), 403);
+    }
 }

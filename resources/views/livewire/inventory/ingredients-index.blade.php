@@ -1,0 +1,25 @@
+<div>
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <p class="text-muted mb-0">Harga per satuan resep dipakai untuk menghitung estimasi HPP. Stok hanya berubah melalui penerimaan atau mutasi tercatat.</p>
+        @can('ingredients-create')<button class="btn btn-primary" wire:click="create"><i class="bi bi-plus-lg me-1"></i>Tambah bahan</button>@endcan
+    </div>
+    <div class="card">
+        <div class="card-header"><div class="row align-items-center g-2"><div class="col"><h5 class="card-title mb-0">Master bahan</h5></div><div class="col-12 col-md-5"><input type="search" wire:model.live.debounce.300ms="search" class="form-control" placeholder="Cari nama atau kode" aria-label="Cari bahan"></div></div></div>
+        <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Kode / Bahan</th><th>Kategori</th><th>Satuan resep</th><th class="text-end">Harga / satuan</th><th>Status</th><th></th></tr></thead><tbody>
+            @forelse($ingredients as $item)
+                <tr><td><strong>{{ $item->name }}</strong><div class="small text-muted">{{ $item->code }}</div>@if($item->description)<div class="small text-muted">{{ $item->description }}</div>@endif</td><td>{{ $item->category?->name ?? '—' }}</td><td>{{ $item->unit?->name }} ({{ $item->unit?->symbol }})</td><td class="text-end">Rp {{ number_format((float)$item->buy_price, 8, ',', '.') }}</td><td><span class="badge {{ $item->is_active ? 'bg-light-success text-success' : 'bg-light-secondary text-secondary' }}">{{ $item->is_active ? 'Aktif' : 'Nonaktif' }}</span></td><td class="text-end">@can('ingredients-update')<button class="btn btn-sm btn-outline-primary" wire:click="edit({{ $item->id }})">Ubah</button>@endcan</td></tr>
+            @empty<tr><td colspan="6" class="text-center py-5 text-muted">Belum ada bahan. Tambahkan bahan R&amp;D baru di sini.</td></tr>@endforelse
+        </tbody></table></div>
+        @if($ingredients->hasPages())<div class="card-footer">{{ $ingredients->links() }}</div>@endif
+    </div>
+
+    @if($showForm)<div class="modal-backdrop show" style="z-index:1040" wire:click="closeForm"></div><div class="modal d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="ingredient-modal-title" style="z-index:1050" wire:keydown.escape="closeForm"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><form wire:submit="save"><div class="modal-header"><h5 class="modal-title" id="ingredient-modal-title">{{ $ingredientId ? 'Ubah bahan' : 'Tambah bahan' }}</h5><button type="button" class="btn-close" wire:click="closeForm" aria-label="Tutup"></button></div><div class="modal-body">
+        <div class="mb-3"><label class="form-label" for="ingredient-code">Kode</label><input id="ingredient-code" wire:model="code" class="form-control" maxlength="48" required>@error('code')<div class="small text-danger">{{ $message }}</div>@enderror</div>
+        <div class="mb-3"><label class="form-label" for="ingredient-name">Nama bahan</label><input id="ingredient-name" wire:model="name" class="form-control" maxlength="150" required>@error('name')<div class="small text-danger">{{ $message }}</div>@enderror</div>
+        <div class="mb-3"><label class="form-label" for="ingredient-unit">Satuan untuk takaran resep</label><select id="ingredient-unit" wire:model="unitId" class="form-select" required><option value="">Pilih satuan</option>@foreach($units as $unit)<option value="{{ $unit->id }}">{{ $unit->name }} ({{ $unit->symbol }})</option>@endforeach</select>@error('unitId')<div class="small text-danger">{{ $message }}</div>@enderror</div>
+        <div class="mb-3"><label class="form-label" for="ingredient-category">Kategori</label><select id="ingredient-category" wire:model="categoryId" class="form-select"><option value="">Tanpa kategori</option>@foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select>@error('categoryId')<div class="small text-danger">{{ $message }}</div>@enderror</div>
+        <div class="mb-3"><label class="form-label" for="ingredient-price">Harga per satuan resep (Rp)</label><input id="ingredient-price" type="number" min="0" step="0.00000001" inputmode="decimal" wire:model="buyPrice" class="form-control" required>@error('buyPrice')<div class="small text-danger">{{ $message }}</div>@enderror</div>
+        <div class="mb-3"><label class="form-label" for="ingredient-description">Catatan</label><textarea id="ingredient-description" wire:model="description" class="form-control" rows="2" maxlength="2000"></textarea></div>
+        <label class="form-check"><input type="checkbox" wire:model="isActive" class="form-check-input"><span class="form-check-label">Bahan aktif untuk resep</span></label>
+    </div><div class="modal-footer"><button type="button" wire:click="closeForm" class="btn btn-light-secondary">Batal</button><button type="submit" class="btn btn-primary" wire:loading.attr="disabled">Simpan bahan</button></div></form></div></div></div>@endif
+</div>

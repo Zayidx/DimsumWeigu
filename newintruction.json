@@ -1,0 +1,1574 @@
+{
+  "project": {
+    "name": "Dimsum POS, Warehouse, Production & Finance Management System",
+    "type": "Existing Laravel Web Application Enhancement",
+    "primary_language": "Bahasa Indonesia",
+    "business_type": "Usaha Dimsum / Food Business",
+    "description": "Pengembangan dan penyempurnaan aplikasi Laravel yang sudah ada menjadi sistem terintegrasi untuk POS kasir, gudang, produksi, stok bahan, stok menu, purchasing, cash management, operasional outlet, HPP, dan laporan keuangan.",
+    "main_goal": [
+      "Mempertahankan fitur existing yang sudah berjalan dengan baik",
+      "Mendeteksi fitur yang sudah tersedia sebelum membuat fitur baru",
+      "Menghindari pengerjaan ulang fitur yang sudah sesuai requirement",
+      "Mengelola transaksi penjualan outlet",
+      "Mengelola stok bahan baku",
+      "Mengelola stok produk jadi",
+      "Mengelola proses produksi",
+      "Mengelola pembelian bahan",
+      "Mengontrol perpindahan stok gudang ke outlet",
+      "Mengontrol pengembalian stok outlet ke gudang",
+      "Mengontrol uang cash outlet dan gudang",
+      "Menghitung HPP secara akurat",
+      "Menghasilkan laporan keuangan dan stok",
+      "Menyediakan audit trail seluruh transaksi penting",
+      "Menjaga aplikasi tetap ringan, cepat, dan mudah dikembangkan"
+    ]
+  },
+
+  "ai_role": {
+    "role": [
+      "Senior Laravel Developer",
+      "Software Architect",
+      "Backend Engineer",
+      "Database Architect",
+      "Frontend Laravel Developer",
+      "Inventory System Architect",
+      "POS System Architect",
+      "Accounting System Designer",
+      "Performance Optimization Engineer",
+      "Security Engineer"
+    ],
+    "behavior": [
+      "Jangan langsung menulis ulang aplikasi.",
+      "Jangan menghapus fitur existing hanya karena tidak disebutkan di requirement.",
+      "Anggap aplikasi existing memiliki nilai dan harus dipertahankan selama tidak menyebabkan masalah.",
+      "Audit aplikasi terlebih dahulu sebelum implementasi.",
+      "Gunakan pendekatan incremental development.",
+      "Prioritaskan data integrity, historical accuracy, auditability, maintainability, security, dan performance."
+    ]
+  },
+
+  "existing_application_audit": {
+    "mandatory": true,
+    "instruction": "Sebelum membuat atau mengubah fitur apa pun, lakukan audit menyeluruh terhadap aplikasi Laravel existing.",
+    "inspection_targets": [
+      "routes/web.php",
+      "routes/api.php",
+      "Controllers",
+      "Models",
+      "Migrations",
+      "Database schema",
+      "Seeders",
+      "Factories",
+      "Middleware",
+      "Policies",
+      "Gates",
+      "Services",
+      "Repositories jika ada",
+      "Jobs",
+      "Events",
+      "Listeners",
+      "Blade views",
+      "Livewire components jika ada",
+      "Filament resources jika ada",
+      "JavaScript existing",
+      "CSS existing",
+      "Authentication",
+      "Authorization",
+      "Existing dashboard",
+      "Existing reports",
+      "Existing POS",
+      "Existing inventory",
+      "Existing stock logic",
+      "Existing financial logic",
+      "Existing export import",
+      "Existing backup system",
+      "Existing homepage"
+    ],
+    "required_output_before_coding": [
+      "Daftar fitur yang sudah tersedia.",
+      "Daftar fitur yang sudah tersedia dan sesuai requirement.",
+      "Daftar fitur yang tersedia tetapi belum lengkap.",
+      "Daftar fitur yang belum tersedia.",
+      "Daftar fitur existing tambahan yang tidak disebutkan requirement tetapi berguna.",
+      "Daftar potensi bug atau konflik business logic.",
+      "Daftar tabel database existing.",
+      "Daftar relasi database existing.",
+      "Daftar route utama.",
+      "Daftar permission atau role existing.",
+      "Daftar bagian aplikasi yang tidak boleh disentuh jika tidak diperlukan."
+    ],
+    "feature_decision_rules": {
+      "already_exists_and_correct": "Jangan dibuat ulang. Gunakan dan integrasikan fitur existing.",
+      "already_exists_but_incomplete": "Perbaiki atau extend fitur existing tanpa menulis ulang dari nol kecuali memang secara teknis tidak aman.",
+      "does_not_exist": "Buat fitur baru sesuai requirement.",
+      "existing_useful_extra_feature": "Pertahankan sebagai fitur tambahan.",
+      "existing_feature_conflicts_with_requirement": "Analisis dampaknya terlebih dahulu lalu modifikasi seminimal mungkin.",
+      "unused_but_harmless_feature": "Jangan dihapus tanpa alasan teknis yang jelas.",
+      "duplicate_feature": "Gunakan implementasi yang paling matang dan migrasikan secara aman jika diperlukan."
+    }
+  },
+
+  "existing_feature_protection": {
+    "rules": [
+      "Jangan menghapus fitur existing yang masih berguna.",
+      "Jangan menghapus database table existing hanya karena tidak ada di requirement baru.",
+      "Jangan menghapus column existing tanpa analisis dependency.",
+      "Jangan mengganti dashboard existing jika sudah berfungsi.",
+      "Jangan merombak UI halaman internal jika tidak diperlukan.",
+      "Jangan mengubah navigation existing secara besar-besaran.",
+      "Jangan menghapus fitur tambahan milik aplikasi existing.",
+      "Pertahankan backward compatibility sebanyak mungkin.",
+      "Gunakan migration untuk melakukan perubahan database.",
+      "Sebelum perubahan destruktif, buat backup."
+    ]
+  },
+
+  "technology_constraints": {
+    "framework": "Laravel",
+    "backend": "Laravel",
+    "preferred_rendering": "Laravel Blade",
+    "database_preference": [
+      "MySQL",
+      "MariaDB",
+      "PostgreSQL jika aplikasi existing memang menggunakannya"
+    ],
+    "frontend_preference": [
+      "Laravel Blade",
+      "CSS existing project",
+      "Bootstrap jika sudah digunakan",
+      "TailwindCSS jika sudah digunakan",
+      "Alpine.js hanya jika memang dibutuhkan",
+      "Livewire jika sudah tersedia atau memberikan keuntungan nyata"
+    ],
+    "javascript_policy": {
+      "preference": "Minimalkan JavaScript dependency.",
+      "browser_javascript": "JavaScript yang berjalan langsung di browser boleh dipertahankan bila diperlukan untuk fitur existing; jangan gunakan Node.js sebagai runtime, toolchain, atau dependency aplikasi.",
+      "nodejs_policy": {
+        "status": "DILARANG",
+        "rule": "Jangan menggunakan Node.js sama sekali untuk development, build asset, testing, menjalankan layanan aplikasi, deployment, atau operasional production.",
+        "prohibited_tools_and_runtime": [
+          "node dan nodejs runtime",
+          "npm, npx, pnpm, yarn, bun, dan package manager JavaScript lainnya",
+          "Vite, esbuild, atau bundler yang membutuhkan Node.js",
+          "Menambah atau memperbarui dependency npm dan package-lock.json",
+          "Menjalankan layanan backend atau service production dengan Node.js"
+        ],
+        "migration_requirements": [
+          "Audit seluruh penggunaan Node.js, npm, bundler, pipeline CI/deploy, dan layanan terpisah sebelum implementasi.",
+          "Ganti kapabilitas yang bergantung pada Node.js dengan solusi non-Node yang kompatibel dengan Laravel/PHP atau asset statis yang sudah dibangun.",
+          "Migrasikan secara bertahap per modul dan pertahankan perilaku, permission, validasi, offline, printing, scanning, dan integrasi existing.",
+          "Jangan menghapus atau mematikan Node.js-dependent feature sebelum pengganti non-Node lulus pemeriksaan parity dan regression.",
+          "Pastikan development, CI, deployment, dan production tidak lagi membutuhkan instalasi atau eksekusi Node.js sebelum menyatakan migrasi selesai."
+        ],
+        "existing_system_note": "Repositori saat ini masih memakai React/Inertia/Vite dan pipeline npm untuk asset, serta whatsapp-service berbasis Node.js. Semua itu adalah utang migrasi yang harus diaudit dan diganti bertahap; keberadaannya bukan pengecualian terhadap larangan ini."
+      },
+      "avoid": [
+        "Frontend SPA framework baru jika tidak diperlukan.",
+        "React hanya untuk fitur sederhana.",
+        "Vue hanya untuk fitur sederhana.",
+        "Dependency besar hanya untuk komponen kecil.",
+        "Library duplikat dengan fungsi yang sudah tersedia."
+      ]
+    },
+    "architecture": "Laravel Modular Monolith",
+    "api": "Gunakan REST API hanya jika memang diperlukan.",
+    "default_preference": "Gunakan kemampuan native Laravel sebanyak mungkin."
+  },
+
+  "laravel_rules": {
+    "required": [
+      "Gunakan Laravel migrations.",
+      "Gunakan Eloquent relationships.",
+      "Gunakan Form Request validation.",
+      "Gunakan Policies atau Gates untuk authorization.",
+      "Gunakan database transaction untuk transaksi kritikal.",
+      "Gunakan Service layer untuk business logic kompleks.",
+      "Gunakan Jobs hanya untuk pekerjaan yang pantas dilakukan async.",
+      "Gunakan Events dan Listeners jika memberikan separation of concern yang jelas.",
+      "Gunakan eager loading untuk menghindari N+1 query.",
+      "Gunakan pagination untuk dataset besar.",
+      "Gunakan indexes pada field yang sering dicari.",
+      "Gunakan caching secara selektif.",
+      "Gunakan config dan environment variable dengan benar.",
+      "Gunakan soft delete hanya jika sesuai use case.",
+      "Jangan meletakkan business logic kompleks di Blade."
+    ],
+    "avoid": [
+      "Fat Controller",
+      "Query database langsung dari Blade",
+      "Hardcoded role",
+      "Hardcoded outlet",
+      "Hardcoded payment method",
+      "Hardcoded category yang seharusnya configurable",
+      "Delete transaction secara permanen",
+      "Update stock manual tanpa ledger",
+      "Update cash balance manual tanpa ledger"
+    ]
+  },
+
+  "ui_ux_policy": {
+    "responsive": true,
+    "supported_devices": [
+      "Desktop",
+      "Laptop",
+      "Tablet",
+      "Mobile"
+    ],
+    "requirements": [
+      "Semua halaman baru harus responsive.",
+      "POS harus mudah digunakan pada tablet dan desktop.",
+      "Form harus tetap nyaman digunakan pada mobile.",
+      "Table besar harus memiliki responsive behavior.",
+      "Gunakan pagination untuk data besar.",
+      "Hindari rendering ribuan row sekaligus.",
+      "Gunakan modal secara terbatas.",
+      "Gunakan confirmation untuk aksi kritikal."
+    ],
+    "existing_ui_rule": [
+      "Dashboard existing tidak perlu didesain ulang.",
+      "UI UX internal existing yang sudah baik jangan dirombak.",
+      "Halaman existing hanya disesuaikan jika fitur baru membutuhkan komponen tambahan.",
+      "Ikuti style dan design system existing."
+    ]
+  },
+
+  "homepage_policy": {
+    "customize": true,
+    "scope": "Hanya halaman awal sebelum login.",
+    "instruction": "Custom landing page menjadi company profile atau profile usaha dimsum.",
+    "do_not_redesign": [
+      "Dashboard",
+      "POS existing",
+      "Internal admin UI",
+      "Internal management UI"
+    ],
+    "sections": [
+      "Hero",
+      "Logo dan Nama Usaha",
+      "Tentang Kami",
+      "Produk Unggulan",
+      "Galeri Produk",
+      "Outlet",
+      "Kontak",
+      "Jam Operasional",
+      "CTA Login"
+    ],
+    "style": [
+      "Modern",
+      "Clean",
+      "Food business friendly",
+      "Responsive",
+      "Fast loading",
+      "Tidak berlebihan menggunakan animasi"
+    ]
+  },
+
+  "performance_optimization": {
+    "priority": "High",
+    "goal": "Aplikasi harus ringan, cepat, hemat memory, hemat storage, dan tidak membebani server.",
+    "backend": [
+      "Gunakan eager loading dengan select column seperlunya.",
+      "Hindari N+1 query.",
+      "Gunakan pagination.",
+      "Gunakan chunk atau cursor untuk proses data besar.",
+      "Tambahkan database index yang tepat.",
+      "Gunakan aggregate query untuk laporan.",
+      "Hindari query berulang.",
+      "Gunakan cache untuk master data yang jarang berubah.",
+      "Gunakan cache untuk konfigurasi.",
+      "Gunakan Laravel config cache pada production.",
+      "Gunakan route cache jika compatible.",
+      "Gunakan view cache.",
+      "Gunakan queue hanya jika diperlukan."
+    ],
+    "database": [
+      "Hindari duplicate data besar.",
+      "Gunakan tipe data yang efisien.",
+      "Gunakan decimal untuk money dan quantity.",
+      "Gunakan foreign key.",
+      "Index foreign key dan kolom pencarian.",
+      "Gunakan archival strategy jika audit log atau data transaksi menjadi sangat besar.",
+      "Jangan menyimpan file besar langsung dalam database."
+    ],
+    "file_storage": [
+      "Simpan path file di database, bukan binary file.",
+      "Compress gambar upload.",
+      "Validasi ukuran file.",
+      "Gunakan WebP jika memungkinkan.",
+      "Gunakan thumbnail untuk preview.",
+      "Hindari duplicate upload.",
+      "Sediakan mekanisme cleanup temporary file."
+    ],
+    "frontend": [
+      "Minimalkan JavaScript.",
+      "Minimalkan CSS duplicate.",
+      "Lazy load image.",
+      "Gunakan image compression.",
+      "Jangan preload asset yang tidak digunakan.",
+      "Jangan menggunakan library besar untuk kebutuhan kecil.",
+      "Gunakan asset minification production.",
+      "Gunakan browser caching."
+    ],
+    "reporting": [
+      "Report berat harus menggunakan filter tanggal.",
+      "Gunakan server side pagination.",
+      "Jangan load seluruh histori sekaligus.",
+      "Export data besar menggunakan chunk."
+    ]
+  },
+
+  "roles": [
+    {
+      "name": "superadmin",
+      "description": "Memiliki akses penuh terhadap sistem.",
+      "capabilities": [
+        "Membuat akun",
+        "Mengubah akun",
+        "Menonaktifkan akun",
+        "Membuat role",
+        "Mengatur role",
+        "Mengatur permission",
+        "Mengatur akses halaman",
+        "Mengatur akses outlet",
+        "Mengatur master data",
+        "Melihat audit log"
+      ]
+    },
+    {
+      "name": "kasir",
+      "description": "Mengoperasikan POS outlet dan closing shift.",
+      "capabilities": [
+        "Membuat transaksi POS",
+        "Input diskon",
+        "Input nama pelanggan opsional",
+        "Memilih dine in atau take away",
+        "Input operational expense",
+        "Input waste atau barang rusak",
+        "Melakukan closing shift",
+        "Melakukan stock return",
+        "Melakukan cash handover"
+      ],
+      "restrictions": [
+        "Tidak boleh mengedit transaksi POS yang sudah completed.",
+        "Tidak boleh mengubah stock ledger langsung.",
+        "Tidak boleh mengubah financial transaction completed."
+      ]
+    },
+    {
+      "name": "gudang",
+      "description": "Mengelola inventory, produksi, penerimaan barang, transfer, QC, dan penerimaan cash outlet.",
+      "capabilities": [
+        "Membuat production request",
+        "Menerima bahan",
+        "QC bahan",
+        "Menginput stok aktual",
+        "Menjalankan proses produksi",
+        "Input actual consumption",
+        "Input production output",
+        "Transfer stok ke outlet",
+        "Menerima return outlet",
+        "Menerima cash outlet"
+      ]
+    },
+    {
+      "name": "akuntan",
+      "description": "Mengelola approval, purchasing, financial reporting, HPP, dan cash pickup.",
+      "capabilities": [
+        "Approve production request",
+        "Reject production request",
+        "Mencatat pembelian bahan",
+        "Melihat kebutuhan bahan",
+        "Melihat HPP",
+        "Melihat laporan keuangan",
+        "Melihat cash gudang",
+        "Mengambil cash dari gudang",
+        "Melihat variance"
+      ]
+    },
+    {
+      "name": "manajer",
+      "description": "Mengawasi performa outlet dan gudang.",
+      "capabilities": [
+        "Melihat dashboard",
+        "Melihat revenue",
+        "Melihat expense",
+        "Melihat stock",
+        "Melihat produksi",
+        "Melihat cash variance",
+        "Melihat stock variance",
+        "Melihat closing outlet"
+      ]
+    }
+  ],
+
+  "authorization": {
+    "model": "RBAC + Granular Permission + Location Scope",
+    "rule": "Role hanyalah kumpulan permission. Authorization final tetap berdasarkan permission.",
+    "permission_examples": [
+      "user.view",
+      "user.create",
+      "user.update",
+      "user.disable",
+      "role.manage",
+      "permission.manage",
+      "outlet.view",
+      "outlet.manage",
+      "inventory.view",
+      "inventory.adjust",
+      "inventory.transfer",
+      "production.view",
+      "production.create",
+      "production.approve",
+      "production.complete",
+      "purchase.view",
+      "purchase.create",
+      "goods_receipt.create",
+      "pos.view",
+      "pos.create",
+      "pos.void",
+      "finance.view",
+      "cash.view",
+      "cash.handover",
+      "cash.pickup",
+      "report.view",
+      "excel.export",
+      "excel.import",
+      "audit.view"
+    ],
+    "scope": [
+      "User dapat dibatasi pada outlet tertentu.",
+      "User dapat diberikan akses ke beberapa outlet.",
+      "Warehouse access juga dapat dibatasi jika nantinya terdapat beberapa gudang."
+    ]
+  },
+
+  "master_data": {
+    "entities": [
+      "users",
+      "roles",
+      "permissions",
+      "outlets",
+      "warehouses",
+      "suppliers",
+      "units",
+      "unit_conversions",
+      "ingredient_categories",
+      "ingredients",
+      "menu_categories",
+      "menus",
+      "payment_methods",
+      "expense_categories"
+    ],
+    "default_expense_categories": [
+      "Sewa",
+      "Lapak",
+      "Energy/Gas",
+      "Gaji Karyawan",
+      "Pembelanjaan Bahan",
+      "Pembelanjaan Operasional Outlet"
+    ],
+    "default_payment_methods": [
+      "Cash",
+      "QRIS 1",
+      "QRIS 2",
+      "QRIS 3",
+      "GoFood / Online"
+    ],
+    "rule": "Jika master data ini sudah tersedia pada aplikasi existing, gunakan tabel dan fitur existing selama strukturnya masih layak."
+  },
+
+  "inventory_architecture": {
+    "core_rule": "Semua perubahan stok harus melalui stock ledger.",
+    "forbidden": [
+      "Mengubah stok hanya dengan update angka stock tanpa histori.",
+      "Menghapus histori stok.",
+      "Memproses transaksi stok yang sama lebih dari satu kali."
+    ],
+    "inventory_types": [
+      "Raw Material Inventory",
+      "Finished Goods Inventory"
+    ],
+    "locations": [
+      "Warehouse",
+      "Outlet"
+    ],
+    "movement_types": [
+      "opening_stock",
+      "purchase_receipt",
+      "production_consumption",
+      "production_output",
+      "warehouse_to_outlet",
+      "outlet_to_warehouse",
+      "sale",
+      "waste",
+      "stock_adjustment",
+      "qc_reject"
+    ],
+    "recommended_stock_ledger_fields": [
+      "id",
+      "reference_number",
+      "location_type",
+      "location_id",
+      "item_type",
+      "item_id",
+      "movement_type",
+      "quantity",
+      "unit_id",
+      "unit_cost",
+      "total_cost",
+      "reference_type",
+      "reference_id",
+      "notes",
+      "created_by",
+      "created_at"
+    ],
+    "stock_balance_rule": "Current stock dihitung dari ledger atau menggunakan cached balance yang selalu direkonsiliasi dengan ledger."
+  },
+
+  "unit_system": {
+    "rule": "Setiap bahan memiliki base unit.",
+    "examples": [
+      {
+        "item": "Daging",
+        "base_unit": "gram",
+        "conversion": "1 kg = 1000 gram"
+      },
+      {
+        "item": "Minyak",
+        "base_unit": "ml",
+        "conversion": "1 liter = 1000 ml"
+      },
+      {
+        "item": "Kulit lumpia",
+        "base_unit": "pcs"
+      }
+    ]
+  },
+
+  "ingredient_costing": {
+    "method": "Moving Weighted Average Cost",
+    "rules": [
+      "Harga bahan dapat berubah setiap pembelian.",
+      "Harga terbaru tidak boleh mengubah transaksi historical.",
+      "Setiap receipt harus menyimpan unit cost.",
+      "Cost production harus menggunakan cost yang relevan pada saat production.",
+      "Simpan snapshot cost untuk menjaga historical accuracy."
+    ],
+    "formula": "(existing_stock_value + incoming_stock_value) / (existing_quantity + incoming_quantity)"
+  },
+
+  "recipe_system": {
+    "concept": "Bill of Materials / BOM",
+    "rule": "Recipe disimpan per satu unit menu.",
+    "example": {
+      "menu": "Dimsum Ayam",
+      "recipe_per_unit": [
+        {
+          "ingredient": "Daging Ayam",
+          "quantity": 80,
+          "unit": "gram"
+        },
+        {
+          "ingredient": "Tepung",
+          "quantity": 20,
+          "unit": "gram"
+        },
+        {
+          "ingredient": "Kulit Dimsum",
+          "quantity": 1,
+          "unit": "pcs"
+        }
+      ]
+    },
+    "versioning": {
+      "required": true,
+      "rules": [
+        "Recipe lama tidak ditimpa.",
+        "Perubahan komposisi membuat recipe version baru.",
+        "Production order menyimpan recipe version yang digunakan."
+      ]
+    }
+  },
+
+  "production_request_flow": {
+    "actor": "gudang",
+    "steps": [
+      "Gudang memilih menu.",
+      "Gudang memasukkan target jumlah produksi.",
+      "Sistem mengambil active recipe version.",
+      "Sistem menghitung kebutuhan bahan otomatis.",
+      "Sistem mengecek stok bahan existing.",
+      "Sistem menghitung kekurangan bahan.",
+      "Sistem menghitung estimated production cost.",
+      "Gudang submit request.",
+      "Akuntan menerima request.",
+      "Akuntan approve atau reject."
+    ],
+    "example": {
+      "request": "50 Dimsum",
+      "system_calculates": [
+        "Daging 4kg",
+        "Tepung 1kg",
+        "Kulit 50 pcs"
+      ]
+    },
+    "statuses": [
+      "draft",
+      "requested",
+      "approved",
+      "rejected",
+      "purchasing",
+      "sent_to_warehouse",
+      "received",
+      "in_production",
+      "completed",
+      "cancelled"
+    ]
+  },
+
+  "purchasing": {
+    "actor": "akuntan",
+    "flow": [
+      "Akuntan melihat kebutuhan bahan dari request.",
+      "Akuntan melakukan pembelian.",
+      "Input supplier.",
+      "Input bahan.",
+      "Input quantity.",
+      "Input unit price.",
+      "Input total.",
+      "Input invoice atau nota opsional.",
+      "Barang dikirim ke gudang."
+    ]
+  },
+
+  "goods_receiving": {
+    "actor": "gudang",
+    "requirements": [
+      "Quantity dikirim.",
+      "Quantity diterima.",
+      "Actual measurement.",
+      "Condition.",
+      "Notes.",
+      "Optional photo.",
+      "Discrepancy."
+    ],
+    "qc_status": [
+      "good",
+      "damaged",
+      "short",
+      "wrong_item",
+      "unusable"
+    ],
+    "rule": "Stok gudang baru bertambah setelah penerimaan dikonfirmasi."
+  },
+
+  "production": {
+    "production_order_fields": [
+      "reference_number",
+      "menu",
+      "recipe_version",
+      "target_output",
+      "estimated_materials",
+      "actual_materials",
+      "actual_output",
+      "remaining_material",
+      "started_at",
+      "completed_at",
+      "operator",
+      "status"
+    ],
+    "actual_consumption_rule": "Actual consumption harus tercatat untuk menghitung actual HPP.",
+    "remaining_stock_rule": "Gudang memasukkan stok sisa bahan setelah produksi dan sistem dapat menggunakan data tersebut untuk rekonsiliasi.",
+    "output_rule": "Finished goods bertambah sebesar actual output, bukan target.",
+    "variance_example": {
+      "target": 50,
+      "actual": 47,
+      "variance": -3
+    },
+    "notification_rule": "Jika actual output lebih rendah dari target atau variance melebihi threshold, kirim notifikasi ke akuntan dan manajer."
+  },
+
+  "hpp": {
+    "estimated_hpp": {
+      "formula": "SUM(recipe quantity x current average material cost)",
+      "usage": "Estimasi sebelum produksi."
+    },
+    "actual_hpp": {
+      "formula": "Total actual consumed material cost / actual finished goods output",
+      "usage": "Laporan keuntungan dan biaya sebenarnya."
+    },
+    "example": {
+      "actual_material_cost": 160000,
+      "actual_output": 45,
+      "actual_hpp": 3555.56
+    },
+    "critical_rules": [
+      "Historical HPP tidak berubah akibat harga bahan terbaru.",
+      "Production loss meningkatkan actual HPP.",
+      "Waste harus mempunyai cost.",
+      "Material variance harus dapat dilaporkan.",
+      "Jangan menggunakan floating point untuk nominal uang."
+    ]
+  },
+
+  "finished_goods_inventory": {
+    "rule": "Production completed menambah finished goods stock gudang sesuai actual output."
+  },
+
+  "warehouse_to_outlet": {
+    "description": "Transfer produk jadi dari gudang ke outlet.",
+    "flow": [
+      "Gudang membuat transfer.",
+      "Pilih outlet.",
+      "Pilih menu.",
+      "Input quantity.",
+      "Gudang kirim.",
+      "Outlet menerima.",
+      "Gudang stock berkurang.",
+      "Outlet stock bertambah."
+    ],
+    "statuses": [
+      "created",
+      "sent",
+      "received",
+      "cancelled"
+    ]
+  },
+
+  "pos": {
+    "requirements": [
+      "Menu selection",
+      "Quantity",
+      "Discount",
+      "Optional customer name",
+      "Dine In",
+      "Take Away",
+      "Tanpa nomor meja",
+      "Transaction note",
+      "Payment method",
+      "Tidak menggunakan payment gateway"
+    ],
+    "payment_logic": {
+      "cash": "Normal calculation.",
+      "qris_1": "Normal calculation.",
+      "qris_2": "Normal calculation.",
+      "qris_3": "Normal calculation.",
+      "gofood_online": "Total dapat diinput manual sesuai nilai transaksi platform online."
+    },
+    "completed_transaction_rule": [
+      "Kasir tidak boleh edit completed sale.",
+      "Correction dilakukan dengan void, cancel, atau correction transaction.",
+      "Void membutuhkan alasan.",
+      "Semua correction harus masuk audit log."
+    ],
+    "inventory_effect": "Sale mengurangi outlet finished goods inventory."
+  },
+
+  "outlet_qc_and_waste": {
+    "supported_cases": [
+      "Makanan rusak",
+      "Makanan basi",
+      "Makanan jatuh",
+      "Tidak layak makan",
+      "Tidak layak jual",
+      "Barang rusak"
+    ],
+    "rules": [
+      "Waste mengurangi stok.",
+      "Waste tidak dihitung sebagai sale.",
+      "Waste mempunyai cost.",
+      "Waste masuk loss report."
+    ]
+  },
+
+  "operational_expenses": {
+    "actor": "kasir",
+    "fields": [
+      "expense_category",
+      "item_name",
+      "quantity",
+      "unit_price",
+      "total",
+      "notes",
+      "receipt_image",
+      "payment_source"
+    ],
+    "example": {
+      "category": "Energy/Gas",
+      "item": "Gas",
+      "quantity": 1,
+      "unit_price": 25000,
+      "payment_source": "Outlet Cash"
+    }
+  },
+
+  "shift_closing": {
+    "requirements": [
+      "Total sales.",
+      "Sales per payment method.",
+      "Cash sales.",
+      "Cash operational expenses.",
+      "Expected cash.",
+      "Actual cash.",
+      "Cash variance.",
+      "Expected stock.",
+      "Actual closing stock.",
+      "Stock variance."
+    ],
+    "formulas": {
+      "expected_cash": "cash_sales - cash_operational_expenses",
+      "expected_stock": "opening_stock + incoming_stock - sales - waste"
+    }
+  },
+
+  "outlet_return_to_warehouse": {
+    "description": "Sisa stok outlet dikembalikan ke gudang setelah operasional.",
+    "flow": [
+      "Kasir membuat return.",
+      "Outlet menyerahkan barang.",
+      "Gudang menerima.",
+      "Gudang verifikasi jumlah.",
+      "Outlet stock berkurang.",
+      "Warehouse stock bertambah."
+    ]
+  },
+
+  "cash_handover": {
+    "description": "Kasir menyerahkan cash setelah closing kepada gudang.",
+    "flow": [
+      "Sistem menghitung expected cash.",
+      "Kasir menyerahkan cash.",
+      "Gudang memasukkan actual received.",
+      "Sistem menghitung variance.",
+      "Gudang mengkonfirmasi penerimaan.",
+      "Cash ledger gudang bertambah."
+    ]
+  },
+
+  "warehouse_cash": {
+    "rule": "Gunakan immutable cash ledger.",
+    "movements": [
+      "outlet_cash_received",
+      "accountant_cash_pickup",
+      "cash_adjustment"
+    ],
+    "calculation": "Current warehouse cash = total inflow - total outflow"
+  },
+
+  "accountant_cash_pickup": {
+    "flow": [
+      "Akuntan melihat saldo cash gudang.",
+      "Akuntan memasukkan jumlah pickup.",
+      "Gudang mengkonfirmasi penyerahan.",
+      "Cash warehouse berkurang."
+    ],
+    "fields": [
+      "reference_number",
+      "amount",
+      "warehouse_user",
+      "accountant_user",
+      "timestamp",
+      "notes",
+      "proof"
+    ]
+  },
+
+  "dashboard_policy": {
+    "existing_dashboard": "Pertahankan dashboard yang sudah dibuat.",
+    "instruction": [
+      "Jangan redesign dashboard tanpa kebutuhan.",
+      "Tambahkan widget atau data yang belum tersedia saja.",
+      "Ikuti UI existing.",
+      "Jika widget existing sudah memenuhi requirement, jangan membuat duplicate widget."
+    ]
+  },
+
+  "accountant_dashboard_data": [
+    "Revenue per outlet",
+    "Cash sales",
+    "QRIS sales",
+    "Online sales",
+    "Operational expense",
+    "Purchase",
+    "COGS",
+    "Gross profit",
+    "Waste cost",
+    "Production variance",
+    "Stock variance",
+    "Cash warehouse",
+    "Cash pending handover"
+  ],
+
+  "manager_dashboard_data": [
+    "Total revenue",
+    "Revenue per outlet",
+    "Expenses",
+    "Gross profit",
+    "Production performance",
+    "Inventory",
+    "Waste",
+    "Stock variance",
+    "Cash variance",
+    "Outlet closing status"
+  ],
+
+  "accounting": {
+    "profit_and_loss": {
+      "gross_profit": "Revenue - COGS",
+      "operating_profit": "Gross Profit - Operating Expenses"
+    },
+    "critical_rule": "Pembelian bahan tidak langsung menjadi seluruh COGS. Bahan yang belum digunakan tetap sebagai inventory."
+  },
+
+  "reports": [
+    "Sales Report",
+    "Sales by Outlet",
+    "Sales by Payment Method",
+    "Operational Expense Report",
+    "Purchase Report",
+    "Raw Material Inventory Report",
+    "Finished Goods Inventory Report",
+    "Stock Ledger Report",
+    "Production Report",
+    "Production Variance Report",
+    "Waste Report",
+    "Stock Variance Report",
+    "Cash Variance Report",
+    "Cash Handover Report",
+    "Warehouse Cash Report",
+    "HPP Report",
+    "Profit and Loss Report"
+  ],
+
+  "excel": {
+    "export": {
+      "required": true,
+      "rule": "Seluruh halaman data dan laporan harus memiliki export Excel jika masuk akal.",
+      "filters": [
+        "Date range",
+        "Outlet",
+        "Warehouse",
+        "Status",
+        "Category",
+        "User"
+      ],
+      "performance_rule": "Export data besar harus menggunakan chunking atau mekanisme streaming."
+    },
+    "import": {
+      "required": true,
+      "recommended_entities": [
+        "Ingredients",
+        "Menus",
+        "Suppliers",
+        "Recipes",
+        "Opening Stock",
+        "Master Data"
+      ],
+      "rules": [
+        "Gunakan template import.",
+        "Validasi setiap baris.",
+        "Berikan error report.",
+        "Jangan generic import langsung ke financial transaction.",
+        "Jangan generic import langsung ke stock ledger."
+      ]
+    }
+  },
+
+  "backup_and_restore": {
+    "required": true,
+    "requirements": [
+      "Manual database backup.",
+      "Automatic scheduled backup jika server mendukung.",
+      "Restore procedure.",
+      "Backup sebelum major migration.",
+      "Backup retention.",
+      "Jangan menyimpan backup tanpa batas.",
+      "Backup harus dapat dipindahkan keluar server."
+    ],
+    "rule": "Excel export bukan database backup."
+  },
+
+  "database_migration": {
+    "required": true,
+    "rules": [
+      "Jangan pernah mengganti database production dengan database kosong.",
+      "Jangan menghapus data existing untuk memasukkan schema baru.",
+      "Gunakan additive migration sebanyak mungkin.",
+      "Gunakan rename migration jika diperlukan.",
+      "Gunakan nullable field saat rollout jika diperlukan untuk backward compatibility.",
+      "Data migration dipisahkan jika kompleks.",
+      "Migration harus source controlled.",
+      "Backup sebelum migration berisiko.",
+      "Seed tidak boleh menghapus data production."
+    ]
+  },
+
+  "audit_log": {
+    "required": true,
+    "events": [
+      "Login",
+      "User changes",
+      "Role changes",
+      "Permission changes",
+      "Stock adjustment",
+      "POS void",
+      "Purchase changes",
+      "Goods receipt",
+      "Production completion",
+      "Cash handover",
+      "Cash pickup",
+      "Expense changes",
+      "Recipe changes",
+      "HPP related adjustments"
+    ],
+    "fields": [
+      "user_id",
+      "action",
+      "entity_type",
+      "entity_id",
+      "before_data",
+      "after_data",
+      "ip_address",
+      "user_agent",
+      "created_at"
+    ],
+    "performance_rule": "Audit log dapat diarsipkan jika ukurannya sudah sangat besar tetapi tidak boleh kehilangan histori penting."
+  },
+
+  "document_numbering": {
+    "production_request": "PR-YYYY-00001",
+    "purchase": "PUR-YYYY-00001",
+    "goods_receipt": "GR-YYYY-00001",
+    "production": "PROD-YYYY-00001",
+    "stock_transfer": "TRF-YYYY-00001",
+    "sale": "SALE-YYYY-00001",
+    "closing": "CLS-YYYY-00001",
+    "cash_handover": "CH-YYYY-00001",
+    "cash_pickup": "CP-YYYY-00001"
+  },
+
+  "notifications": [
+    "New production request",
+    "Production request approved",
+    "Production request rejected",
+    "Purchase sent to warehouse",
+    "Goods receipt discrepancy",
+    "Production output below target",
+    "High waste",
+    "Stock variance",
+    "Cash variance",
+    "Outlet not closed",
+    "Cash handover received"
+  ],
+
+  "recommended_database_entities": [
+    "users",
+    "roles",
+    "permissions",
+    "role_permissions",
+    "user_roles",
+    "user_outlets",
+    "outlets",
+    "warehouses",
+    "suppliers",
+    "units",
+    "unit_conversions",
+    "ingredient_categories",
+    "ingredients",
+    "menu_categories",
+    "menus",
+    "recipe_versions",
+    "recipe_items",
+    "production_requests",
+    "production_request_items",
+    "purchases",
+    "purchase_items",
+    "goods_receipts",
+    "goods_receipt_items",
+    "stock_ledger",
+    "production_orders",
+    "production_materials",
+    "production_outputs",
+    "stock_transfers",
+    "stock_transfer_items",
+    "sales",
+    "sale_items",
+    "payments",
+    "waste_records",
+    "expenses",
+    "shift_closings",
+    "shift_closing_stocks",
+    "stock_returns",
+    "stock_return_items",
+    "cash_handovers",
+    "cash_pickups",
+    "cash_ledger",
+    "audit_logs",
+    "notifications"
+  ],
+
+  "database_schema_rule": {
+    "important": "Daftar recommended_database_entities bukan instruksi untuk membuat ulang tabel jika aplikasi existing sudah mempunyai tabel dengan fungsi yang sama.",
+    "instructions": [
+      "Mapping tabel existing terhadap kebutuhan baru.",
+      "Reuse tabel existing jika cocok.",
+      "Tambah column dengan migration jika cukup.",
+      "Tambah tabel baru hanya jika memang diperlukan.",
+      "Hindari duplicate entity.",
+      "Jangan rename tabel hanya untuk menyamakan nama dengan specification."
+    ]
+  },
+
+  "data_integrity": [
+    "Negative stock tidak diperbolehkan kecuali adjustment khusus dengan permission.",
+    "Goods receipt tidak boleh diproses dua kali.",
+    "Production completion tidak boleh diproses dua kali.",
+    "Stock transfer tidak boleh diproses dua kali.",
+    "Sale tidak boleh mengurangi stok dua kali.",
+    "Cash handover tidak boleh credited dua kali.",
+    "Cash pickup tidak boleh deducted dua kali.",
+    "Gunakan database transaction.",
+    "Gunakan lockForUpdate pada proses yang memiliki race condition jika sesuai.",
+    "Gunakan unique constraint untuk idempotency jika diperlukan.",
+    "Gunakan foreign key.",
+    "Gunakan decimal untuk money dan quantity.",
+    "Transaksi completed bersifat immutable."
+  ],
+
+  "security": [
+    "Gunakan Laravel authentication existing.",
+    "Password hashing menggunakan Laravel default secure hashing.",
+    "Rate limit login jika belum tersedia.",
+    "Gunakan CSRF protection.",
+    "Gunakan server-side authorization.",
+    "Gunakan Form Request validation.",
+    "Validasi file upload.",
+    "Jangan expose stack trace di production.",
+    "Gunakan environment variable untuk secret.",
+    "Jangan commit .env.",
+    "Sanitize output sesuai kebutuhan.",
+    "Log aksi sensitif.",
+    "Batasi upload file berdasarkan MIME type dan ukuran."
+  ],
+
+  "development_phases": [
+    {
+      "phase": 0,
+      "name": "Existing Application Audit",
+      "instruction": "Wajib dilakukan sebelum coding.",
+      "tasks": [
+        "Audit existing features",
+        "Audit database",
+        "Audit routes",
+        "Audit models",
+        "Audit permissions",
+        "Audit UI",
+        "Audit dashboard",
+        "Audit inventory logic",
+        "Audit POS",
+        "Audit finance",
+        "Audit reports",
+        "Classify existing, incomplete, missing, and extra useful features"
+      ]
+    },
+    {
+      "phase": 1,
+      "name": "Foundation Gap Fix",
+      "features": [
+        "Authentication gap only",
+        "Roles gap only",
+        "Permissions gap only",
+        "Outlet access gap only",
+        "Audit log gap only",
+        "Database integrity fixes"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Master Data Gap Fix",
+      "features": [
+        "Outlet",
+        "Warehouse",
+        "Supplier",
+        "Units",
+        "Unit conversion",
+        "Ingredients",
+        "Menus",
+        "Payment methods",
+        "Expense categories"
+      ]
+    },
+    {
+      "phase": 3,
+      "name": "Inventory Engine",
+      "features": [
+        "Stock ledger",
+        "Raw material stock",
+        "Finished goods stock",
+        "Stock balance",
+        "Stock adjustment"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "Recipe & HPP",
+      "features": [
+        "Recipe",
+        "Recipe versions",
+        "Historical cost",
+        "Moving weighted average",
+        "Estimated HPP"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Production Request & Purchasing",
+      "features": [
+        "Production request",
+        "Automatic ingredient calculation",
+        "Approval",
+        "Purchase",
+        "Delivery",
+        "Goods receipt",
+        "QC"
+      ]
+    },
+    {
+      "phase": 6,
+      "name": "Production",
+      "features": [
+        "Production order",
+        "Actual consumption",
+        "Remaining material",
+        "Actual output",
+        "Production variance",
+        "Actual HPP",
+        "Finished goods stock"
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "Outlet Inventory",
+      "features": [
+        "Warehouse to outlet transfer",
+        "Outlet receiving",
+        "Outlet stock",
+        "Outlet return"
+      ]
+    },
+    {
+      "phase": 8,
+      "name": "POS Gap Completion",
+      "features": [
+        "POS transaction",
+        "Discount",
+        "Optional customer name",
+        "Dine in",
+        "Take away",
+        "Cash",
+        "QRIS",
+        "Manual online sales",
+        "Transaction lock",
+        "Automatic stock deduction"
+      ]
+    },
+    {
+      "phase": 9,
+      "name": "Outlet Operations",
+      "features": [
+        "Operational expense",
+        "Waste",
+        "QC",
+        "Closing shift",
+        "Closing stock",
+        "Cash variance",
+        "Stock variance"
+      ]
+    },
+    {
+      "phase": 10,
+      "name": "Cash Management",
+      "features": [
+        "Cash handover",
+        "Warehouse cash ledger",
+        "Accountant cash pickup"
+      ]
+    },
+    {
+      "phase": 11,
+      "name": "Reporting Gap Completion",
+      "features": [
+        "Accountant report",
+        "Manager report",
+        "Sales report",
+        "Inventory report",
+        "Production report",
+        "HPP report",
+        "Waste report",
+        "Cash report",
+        "Profit and Loss"
+      ]
+    },
+    {
+      "phase": 12,
+      "name": "Export Import Backup",
+      "features": [
+        "Excel export",
+        "Safe Excel import",
+        "Database backup",
+        "Restore documentation"
+      ]
+    },
+    {
+      "phase": 13,
+      "name": "Homepage Company Profile",
+      "features": [
+        "Landing page",
+        "Business profile",
+        "Products",
+        "Outlet information",
+        "Contact",
+        "Login CTA"
+      ]
+    },
+    {
+      "phase": 14,
+      "name": "Optimization & Final QA",
+      "features": [
+        "Query optimization",
+        "Index review",
+        "N+1 review",
+        "Asset optimization",
+        "Image compression",
+        "Mobile responsiveness",
+        "Desktop responsiveness",
+        "Security review",
+        "Regression test",
+        "Performance test"
+      ]
+    }
+  ],
+
+  "phase_execution_rule": {
+    "critical": "Fitur dalam phase hanya dikerjakan jika belum tersedia atau implementasi existing belum memenuhi requirement.",
+    "for_each_phase": [
+      "Audit ulang fitur terkait.",
+      "Sebutkan yang sudah tersedia.",
+      "Sebutkan yang tidak perlu dikerjakan.",
+      "Sebutkan yang perlu diperbaiki.",
+      "Sebutkan yang perlu dibuat.",
+      "Sebutkan migration yang dibutuhkan.",
+      "Sebutkan route yang berubah.",
+      "Sebutkan controller/service yang berubah.",
+      "Sebutkan view yang berubah.",
+      "Implementasikan.",
+      "Jalankan test.",
+      "Jalankan regression check.",
+      "Pastikan fitur existing tidak rusak.",
+      "Baru lanjut ke phase berikutnya."
+    ]
+  },
+
+  "testing": {
+    "required": true,
+    "types": [
+      "Feature test",
+      "Unit test untuk business logic kritikal",
+      "Permission test",
+      "Inventory test",
+      "HPP calculation test",
+      "Financial calculation test",
+      "Concurrency test untuk transaksi kritikal",
+      "Regression test"
+    ],
+    "critical_scenarios": [
+      "Harga bahan berubah tetapi historical HPP tetap.",
+      "Barang diterima lebih sedikit dari purchase.",
+      "Barang diterima lebih banyak dari purchase.",
+      "Production output kurang dari target.",
+      "Production output lebih dari target.",
+      "Actual consumption lebih tinggi dari recipe.",
+      "Actual consumption lebih rendah dari recipe.",
+      "Kasir input waste.",
+      "Actual cash berbeda dengan expected cash.",
+      "Kasir mencoba edit completed sale.",
+      "User tanpa permission mencoba mengakses halaman.",
+      "Dua request mengurangi stock yang sama.",
+      "Goods receipt endpoint dipanggil dua kali.",
+      "Production completion dipanggil dua kali.",
+      "Stock transfer diterima dua kali.",
+      "Cash handover diproses dua kali.",
+      "Cash pickup diproses dua kali.",
+      "Excel import memiliki row invalid.",
+      "Existing dashboard tetap berjalan setelah update.",
+      "Existing feature yang tidak terkait tetap bekerja."
+    ]
+  },
+
+  "deployment_safety": {
+    "rules": [
+      "Jangan drop production database.",
+      "Jangan migrate:fresh pada production.",
+      "Jangan db:wipe pada production.",
+      "Jangan delete storage existing.",
+      "Jangan menghapus file upload user.",
+      "Backup database sebelum migration besar.",
+      "Review migration destructive sebelum execute.",
+      "Gunakan maintenance mode jika perubahan memerlukan downtime.",
+      "Pastikan rollback strategy tersedia."
+    ]
+  },
+
+  "coding_style": {
+    "requirements": [
+      "Ikuti Laravel convention.",
+      "Gunakan descriptive naming.",
+      "Hindari overengineering.",
+      "Gunakan reusable service untuk business logic kompleks.",
+      "Gunakan reusable Blade component jika existing project cocok.",
+      "Jangan membuat abstraction yang tidak diperlukan.",
+      "Tambahkan komentar hanya untuk business rule kompleks.",
+      "Jangan membuat comment yang hanya mengulang code."
+    ]
+  },
+
+  "ai_forbidden_actions": [
+    "Membuat ulang aplikasi dari nol tanpa audit.",
+    "Menghapus dashboard existing.",
+    "Mengganti seluruh UI existing.",
+    "Menghapus fitur existing yang masih berguna.",
+    "Membuat duplicate fitur.",
+    "Membuat duplicate database table dengan fungsi sama.",
+    "Menghapus database existing.",
+    "Menggunakan migrate:fresh pada database existing.",
+    "Menggunakan db:wipe.",
+    "Mengubah historical transaction.",
+    "Mengedit completed financial transaction secara langsung.",
+    "Mengubah stock tanpa ledger.",
+    "Mengubah cash tanpa ledger.",
+    "Menambahkan banyak npm dependency tanpa alasan.",
+    "Menggunakan React atau Vue hanya untuk kebutuhan sederhana jika Blade sudah cukup.",
+    "Menggunakan Node.js, npm, package manager JavaScript lain, atau toolchain yang membutuhkan Node.js.",
+    "Menjalankan atau mempertahankan service aplikasi berbasis Node.js setelah migrasi tanpa Node.js.",
+    "Menambahkan library berat tanpa analisis performance."
+  ],
+
+  "ai_required_behavior_during_implementation": {
+    "before_any_change": [
+      "Baca existing code terkait.",
+      "Cari fitur serupa.",
+      "Cari route serupa.",
+      "Cari model serupa.",
+      "Cari migration serupa.",
+      "Periksa database relationship.",
+      "Periksa permission.",
+      "Periksa UI existing."
+    ],
+    "before_creating_new_file": [
+      "Pastikan fungsi tersebut belum tersedia.",
+      "Pastikan tidak ada service atau helper existing yang dapat digunakan.",
+      "Pastikan nama tidak menimbulkan duplicate responsibility."
+    ],
+    "after_change": [
+      "Run test terkait.",
+      "Periksa log error.",
+      "Periksa migration.",
+      "Periksa regression.",
+      "Periksa authorization.",
+      "Periksa responsive behavior jika menyentuh UI.",
+      "Periksa query performance jika menyentuh data."
+    ]
+  },
+
+  "required_initial_response_from_ai": {
+    "instruction": "Jangan langsung coding setelah menerima JSON ini.",
+    "must_first_produce": [
+      "Existing Application Audit Summary",
+      "Existing Feature Matrix",
+      "Missing Feature Matrix",
+      "Incomplete Feature Matrix",
+      "Existing Extra Features Worth Keeping",
+      "Database Schema Analysis",
+      "Architecture Assessment",
+      "RBAC Assessment",
+      "Inventory Assessment",
+      "POS Assessment",
+      "Finance Assessment",
+      "Performance Assessment",
+      "Security Assessment",
+      "Implementation Gap Plan"
+    ],
+    "feature_matrix_format": {
+      "columns": [
+        "Feature",
+        "Requirement",
+        "Existing Status",
+        "Existing Implementation",
+        "Decision",
+        "Required Change",
+        "Priority"
+      ],
+      "status_values": [
+        "EXISTS_OK",
+        "EXISTS_NEEDS_IMPROVEMENT",
+        "MISSING",
+        "EXTRA_EXISTING_FEATURE",
+        "NOT_APPLICABLE"
+      ],
+      "decision_values": [
+        "KEEP",
+        "EXTEND",
+        "CREATE",
+        "KEEP_AS_EXTRA",
+        "NO_ACTION"
+      ]
+    }
+  },
+
+  "first_execution_instruction": {
+    "instruction": "Mulai dengan Phase 0 saja.",
+    "steps": [
+      "Scan aplikasi Laravel existing.",
+      "Identifikasi versi Laravel dan PHP.",
+      "Identifikasi database driver.",
+      "Identifikasi package Composer.",
+      "Audit seluruh penggunaan Node.js/npm, package frontend, bundler, CI/deploy, dan service terpisah sebagai baseline migrasi tanpa Node.js.",
+      "Identifikasi alternatif non-Node untuk setiap kapabilitas existing yang saat ini bergantung pada Node.js.",
+      "Identifikasi struktur authentication.",
+      "Identifikasi roles dan permissions.",
+      "Identifikasi dashboard existing.",
+      "Identifikasi POS existing.",
+      "Identifikasi inventory existing.",
+      "Identifikasi finance existing.",
+      "Identifikasi reports existing.",
+      "Identifikasi export import existing.",
+      "Identifikasi backup existing.",
+      "Identifikasi homepage existing.",
+      "Buat feature matrix.",
+      "Buat database map.",
+      "Buat gap analysis.",
+      "Buat implementation plan berdasarkan code existing."
+    ],
+    "stop_condition": "Jangan lanjut coding sampai audit selesai dan jelas mana fitur yang perlu dibuat, diperbaiki, atau cukup dipertahankan."
+  },
+
+  "final_master_instruction": [
+    "JSON ini adalah source of truth utama untuk pengembangan.",
+    "Code aplikasi existing adalah source of truth kedua untuk mengetahui apa yang sudah tersedia.",
+    "Jika requirement sudah dipenuhi fitur existing, jangan buat ulang.",
+    "Jika fitur existing berguna tetapi tidak disebut requirement, pertahankan sebagai fitur tambahan.",
+    "Jika fitur existing hanya kurang sedikit, extend fitur tersebut.",
+    "Jangan merombak dashboard dan UI internal hanya untuk menyesuaikan selera baru.",
+    "Custom UI utama hanya difokuskan pada homepage atau company profile.",
+    "Gunakan Laravel sebanyak mungkin.",
+    "Jangan menggunakan Node.js sama sekali; hapus kebutuhan runtime dan toolchain Node.js secara bertahap setelah parity dan regression setiap fitur terjaga.",
+    "Minimalkan dependency baru.",
+    "Prioritaskan web ringan dan cepat.",
+    "Jaga compatibility dengan desktop dan mobile.",
+    "Jaga historical financial dan inventory data.",
+    "Jangan pernah mengorbankan data integrity untuk mempercepat pengerjaan.",
+    "Jangan menghapus data production.",
+    "Kerjakan satu phase pada satu waktu.",
+    "Setelah setiap phase lakukan test dan regression test sebelum melanjutkan."
+  ]
+}

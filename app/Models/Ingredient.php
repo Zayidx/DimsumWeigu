@@ -11,6 +11,11 @@ class Ingredient extends Model
 
     use SoftDeletes;
 
+    protected function casts(): array
+    {
+        return ['buy_price' => 'decimal:8', 'stock' => 'decimal:3', 'reorder_point' => 'decimal:3', 'is_active' => 'boolean'];
+    }
+
     public function unit()
     {
         return $this->belongsTo(Unit::class);
@@ -19,5 +24,10 @@ class Ingredient extends Model
     public function category()
     {
         return $this->belongsTo(IngredientCategory::class, 'ingredient_category_id');
+    }
+
+    public function recipeItems()
+    {
+        return $this->hasMany(RecipeItem::class);
     }
 }

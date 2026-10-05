@@ -145,7 +145,7 @@ class Checkout extends Component
         $shift = $this->activeShiftOrNull();
         if (! $shift) {
             return view('livewire.pos.checkout', ['shift' => null, 'products' => collect(), 'cart' => null, 'heldCarts' => collect(), 'customers' => collect(), 'previewTotal' => 0, 'previewLines' => [], 'payLaterEnabled' => false])
-                ->layout('layouts.dashboard', ['title' => __('Kasir')]);
+                ->layout('layouts.pos', ['title' => __('Kasir')]);
         }
         $cart = $carts->activeFor($shift)->load('items.product.unit', 'items.product.productUnits', 'items.unit');
         $warehouseId = $shift->warehouse_id;
@@ -177,7 +177,7 @@ class Checkout extends Component
         });
 
         return view('livewire.pos.checkout', compact('shift', 'products', 'cart', 'heldCarts', 'customers', 'previewTotal', 'previewLines', 'payLaterEnabled'))
-            ->layout('layouts.dashboard', ['title' => __('Kasir')]);
+            ->layout('layouts.pos', ['title' => __('Kasir')]);
     }
 
     private function activeCart(CartService $carts): Cart

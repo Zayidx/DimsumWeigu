@@ -8,6 +8,11 @@ class RecipeVersion extends Model
 {
     protected $guarded = ['id'];
 
+    protected function casts(): array
+    {
+        return ['version' => 'integer', 'yield_quantity' => 'decimal:3', 'is_active' => 'boolean', 'starts_at' => 'datetime', 'ends_at' => 'datetime'];
+    }
+
     public function items()
     {
         return $this->hasMany(RecipeItem::class);

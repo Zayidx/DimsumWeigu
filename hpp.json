@@ -1,0 +1,4325 @@
+{
+  "sumber": "Weigu - ALL HPP Revisi fix.xlsx",
+  "mata_uang": "IDR",
+  "catatan": [
+    "Nilai diambil dari nilai tersimpan Excel, termasuk hasil rumus; tidak dibulatkan atau dikoreksi.",
+    "Nama dan satuan mengikuti Excel; spasi awal dan akhir teks dihapus.",
+    "null berarti sel kosong, bukan nol. Nomor asli dipertahankan walaupun berulang atau melompat.",
+    "HPP ringkasan menu dan total cost resep berasal dari sheet masing-masing dan dapat berbeda.",
+    "Rincian resep dengan qty atau harga kosong dipertahankan sebagaimana sumber; biaya saus belum tentu tercakup.",
+    "Total cost resep adalah nilai untuk skala resep pada Excel; tidak selalu harga per pcs, khususnya basic preparation kopi.",
+    "Master Bahan baris 45, nomor 42, hanya berisi nomor tanpa data bahan."
+  ],
+  "menu": [
+    {
+      "nama": "Dimsum Ori isi 4",
+      "no": 1,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 7
+      },
+      "energi_target_300pcs": 2100,
+      "total_cost": 10791,
+      "harga_jual": 16000,
+      "target_per_hari": 10,
+      "total_kotor": 160000,
+      "total_cost_target": 107910,
+      "bersih_target": 52090,
+      "total_energi": 21000,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 4,
+          "hpp": 1761,
+          "total_hpp": 7044,
+          "hpp_pack": 834,
+          "pcs_menu": 40,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 8
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Ori isi 6",
+      "no": 2,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 10
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 14713,
+      "harga_jual": 22000,
+      "target_per_hari": 3,
+      "total_kotor": 66000,
+      "total_cost_target": 44139,
+      "bersih_target": 21861,
+      "total_energi": 7500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 6,
+          "hpp": 1761,
+          "total_hpp": 10566,
+          "hpp_pack": 834,
+          "pcs_menu": 18,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 10
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 11
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Ori isi 8",
+      "no": 3,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 13
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 18235,
+      "harga_jual": 28000,
+      "target_per_hari": 2,
+      "total_kotor": 56000,
+      "total_cost_target": 36470,
+      "bersih_target": 19530,
+      "total_energi": 5000,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 8,
+          "hpp": 1761,
+          "total_hpp": 14088,
+          "hpp_pack": 834,
+          "pcs_menu": 16,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 14
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum mentai isi 4",
+      "no": 4,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 16
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 14387,
+      "harga_jual": 20000,
+      "target_per_hari": 5,
+      "total_kotor": 100000,
+      "total_cost_target": 71935,
+      "bersih_target": 28065,
+      "total_energi": 12500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 4,
+          "hpp": 1761,
+          "total_hpp": 7044,
+          "hpp_pack": 834,
+          "pcs_menu": 20,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 16
+          }
+        },
+        {
+          "nama": "Dimsum Mentai Sauce",
+          "pcs": 4,
+          "hpp": 799,
+          "total_hpp": 3196,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 17
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 18
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum mentai isi 6",
+      "no": 5,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 20
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 19507,
+      "harga_jual": 26000,
+      "target_per_hari": 1,
+      "total_kotor": 26000,
+      "total_cost_target": 19507,
+      "bersih_target": 6493,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 6,
+          "hpp": 1761,
+          "total_hpp": 10566,
+          "hpp_pack": 834,
+          "pcs_menu": 6,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Dimsum Mentai Sauce",
+          "pcs": 6,
+          "hpp": 799,
+          "total_hpp": 4794,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 22
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum mentai isi 8",
+      "no": 8,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 24
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 24627,
+      "harga_jual": 36000,
+      "target_per_hari": 1,
+      "total_kotor": 36000,
+      "total_cost_target": 24627,
+      "bersih_target": 11373,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 8,
+          "hpp": 1761,
+          "total_hpp": 14088,
+          "hpp_pack": 834,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 24
+          }
+        },
+        {
+          "nama": "Dimsum Mentai Sauce",
+          "pcs": 8,
+          "hpp": 799,
+          "total_hpp": 6392,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 25
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 26
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Chesee isi 4",
+      "no": 9,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 28
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 12327,
+      "harga_jual": 22000,
+      "target_per_hari": 2,
+      "total_kotor": 44000,
+      "total_cost_target": 24654,
+      "bersih_target": 19346,
+      "total_energi": 5000,
+      "rincian": [
+        {
+          "nama": "Dimsum isi Keju",
+          "pcs": 4,
+          "hpp": 2045,
+          "total_hpp": 8180,
+          "hpp_pack": 834,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 28
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 29
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Chesee isi 6",
+      "no": 10,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 31
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 16417,
+      "harga_jual": 31000,
+      "target_per_hari": 1,
+      "total_kotor": 31000,
+      "total_cost_target": 16417,
+      "bersih_target": 14583,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum isi Keju",
+          "pcs": 6,
+          "hpp": 2045,
+          "total_hpp": 12270,
+          "hpp_pack": 834,
+          "pcs_menu": 6,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 31
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 32
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Chesee isi 8",
+      "no": 11,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 34
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 20507,
+      "harga_jual": 40000,
+      "target_per_hari": 1,
+      "total_kotor": 40000,
+      "total_cost_target": 20507,
+      "bersih_target": 19493,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum isi Keju",
+          "pcs": 8,
+          "hpp": 2045,
+          "total_hpp": 16360,
+          "hpp_pack": 834,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 34
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 35
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum MIX isi 6",
+      "no": 12,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 37
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 19079,
+      "harga_jual": 29000,
+      "target_per_hari": 1,
+      "total_kotor": 29000,
+      "total_cost_target": 19079,
+      "bersih_target": 9921,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 4,
+          "hpp": 1761,
+          "total_hpp": 7044,
+          "hpp_pack": 834,
+          "pcs_menu": 4,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 37
+          }
+        },
+        {
+          "nama": "Dimsum isi Keju",
+          "pcs": 2,
+          "hpp": 2045,
+          "total_hpp": 4090,
+          "hpp_pack": null,
+          "pcs_menu": 2,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 38
+          }
+        },
+        {
+          "nama": "Dimsum Mentai Sauce",
+          "pcs": 2,
+          "hpp": 799,
+          "total_hpp": 1598,
+          "hpp_pack": null,
+          "pcs_menu": 2,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 39
+          }
+        },
+        {
+          "nama": "Bolognese Sauce",
+          "pcs": 2,
+          "hpp": 1100,
+          "total_hpp": 2200,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 40
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 41
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum MIX isi 8",
+      "no": 13,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 43
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 24500,
+      "harga_jual": 40000,
+      "target_per_hari": 1,
+      "total_kotor": 40000,
+      "total_cost_target": 24500,
+      "bersih_target": 15500,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Dimsum ori topping beef",
+          "pcs": 6,
+          "hpp": 1761,
+          "total_hpp": 10566,
+          "hpp_pack": 834,
+          "pcs_menu": 6,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 43
+          }
+        },
+        {
+          "nama": "Dimsum isi Keju",
+          "pcs": 2,
+          "hpp": 2045,
+          "total_hpp": 4090,
+          "hpp_pack": null,
+          "pcs_menu": 2,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 44
+          }
+        },
+        {
+          "nama": "Dimsum Mentai Sauce",
+          "pcs": 3,
+          "hpp": 799,
+          "total_hpp": 2397,
+          "hpp_pack": null,
+          "pcs_menu": 3,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 45
+          }
+        },
+        {
+          "nama": "Bolognese Sauce",
+          "pcs": 3,
+          "hpp": 1100,
+          "total_hpp": 3300,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 46
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 47
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia Ori isi 3",
+      "no": 14,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 49
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 14164,
+      "harga_jual": 22000,
+      "target_per_hari": 4,
+      "total_kotor": 88000,
+      "total_cost_target": 56656,
+      "bersih_target": 31344,
+      "total_energi": 10000,
+      "rincian": [
+        {
+          "nama": "Lumpia",
+          "pcs": 3,
+          "hpp": 3339,
+          "total_hpp": 10017,
+          "hpp_pack": 834,
+          "pcs_menu": 12,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 49
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 50
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia Ori isi 5",
+      "no": 15,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 52
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 20842,
+      "harga_jual": 34000,
+      "target_per_hari": 2,
+      "total_kotor": 68000,
+      "total_cost_target": 41684,
+      "bersih_target": 26316,
+      "total_energi": 5000,
+      "rincian": [
+        {
+          "nama": "Lumpia",
+          "pcs": 5,
+          "hpp": 3339,
+          "total_hpp": 16695,
+          "hpp_pack": 834,
+          "pcs_menu": 10,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 52
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 53
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia Mentai isi 3",
+      "no": 16,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 55
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 16561,
+      "harga_jual": 26000,
+      "target_per_hari": 2,
+      "total_kotor": 52000,
+      "total_cost_target": 33122,
+      "bersih_target": 18878,
+      "total_energi": 5000,
+      "rincian": [
+        {
+          "nama": "Lumpia",
+          "pcs": 3,
+          "hpp": 3339,
+          "total_hpp": 10017,
+          "hpp_pack": 834,
+          "pcs_menu": 6,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 55
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 56
+          }
+        },
+        {
+          "nama": "Lumpia Mentai Sauce",
+          "pcs": 3,
+          "hpp": 799,
+          "total_hpp": 2397,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 57
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia Mentai isi 5",
+      "no": 17,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 59
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 24837,
+      "harga_jual": 38000,
+      "target_per_hari": 1,
+      "total_kotor": 38000,
+      "total_cost_target": 24837,
+      "bersih_target": 13163,
+      "total_energi": 2500,
+      "rincian": [
+        {
+          "nama": "Lumpia",
+          "pcs": 5,
+          "hpp": 3339,
+          "total_hpp": 16695,
+          "hpp_pack": 834,
+          "pcs_menu": 5,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 59
+          }
+        },
+        {
+          "nama": "Chili Oil",
+          "pcs": 1,
+          "hpp": 713,
+          "total_hpp": 713,
+          "hpp_pack": 100,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 60
+          }
+        },
+        {
+          "nama": "Lumpia Mentai Sauce",
+          "pcs": 5,
+          "hpp": 799,
+          "total_hpp": 3995,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 61
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Garlic",
+      "no": 18,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 63
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 15395,
+      "harga_jual": 26000,
+      "target_per_hari": 8,
+      "total_kotor": 208000,
+      "total_cost_target": 123160,
+      "bersih_target": 84840,
+      "total_energi": 20000,
+      "rincian": [
+        {
+          "nama": "Chikuro Basic",
+          "pcs": 1,
+          "hpp": 9847,
+          "total_hpp": 9847,
+          "hpp_pack": 900,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 63
+          }
+        },
+        {
+          "nama": "Garlic Sauce",
+          "pcs": 1,
+          "hpp": 2148,
+          "total_hpp": 2148,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 64
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Mentai",
+      "no": 18,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 66
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 14833,
+      "harga_jual": 26000,
+      "target_per_hari": 8,
+      "total_kotor": 208000,
+      "total_cost_target": 118664,
+      "bersih_target": 89336,
+      "total_energi": 20000,
+      "rincian": [
+        {
+          "nama": "Chikuro Basic",
+          "pcs": 1,
+          "hpp": 9847,
+          "total_hpp": 9847,
+          "hpp_pack": 900,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 66
+          }
+        },
+        {
+          "nama": "Chikuro Mentai Sauce",
+          "pcs": 1,
+          "hpp": 1586,
+          "total_hpp": 1586,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 67
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Lava",
+      "no": 20,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 69
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 14842,
+      "harga_jual": 26000,
+      "target_per_hari": 8,
+      "total_kotor": 208000,
+      "total_cost_target": 118736,
+      "bersih_target": 89264,
+      "total_energi": 20000,
+      "rincian": [
+        {
+          "nama": "Chikuro Basic",
+          "pcs": 1,
+          "hpp": 9847,
+          "total_hpp": 9847,
+          "hpp_pack": 900,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 69
+          }
+        },
+        {
+          "nama": "Lava Sauce",
+          "pcs": 1,
+          "hpp": 1595,
+          "total_hpp": 1595,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 70
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Cheese",
+      "no": 21,
+      "sumber": {
+        "sheet": "Menu Summary",
+        "baris": 72
+      },
+      "energi_target_300pcs": 2500,
+      "total_cost": 15565,
+      "harga_jual": 28000,
+      "target_per_hari": 8,
+      "total_kotor": 224000,
+      "total_cost_target": 124520,
+      "bersih_target": 99480,
+      "total_energi": 20000,
+      "rincian": [
+        {
+          "nama": "Chikuro Basic",
+          "pcs": 1,
+          "hpp": 9847,
+          "total_hpp": 9847,
+          "hpp_pack": 900,
+          "pcs_menu": 8,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 72
+          }
+        },
+        {
+          "nama": "Chesee Sauce",
+          "pcs": 1,
+          "hpp": 2318,
+          "total_hpp": 2318,
+          "hpp_pack": null,
+          "pcs_menu": null,
+          "sumber": {
+            "sheet": "Menu Summary",
+            "baris": 73
+          }
+        }
+      ]
+    }
+  ],
+  "resep": [
+    {
+      "nama": "Saus Dimsum",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 3
+      },
+      "biaya_bahan": 459.4736841,
+      "energi": 45.94736841,
+      "total_cost": 505.42105251,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Saus dimsum",
+          "qty": 25,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 450,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "Air Mineral",
+          "qty": 30,
+          "uom": null,
+          "harga_satuan": 0.31578947,
+          "harga_total": 9.4736841,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 4
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chili Oil",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 7
+      },
+      "biaya_bahan": 647.9545555698,
+      "energi": 64.79545555698,
+      "total_cost": 712.75001112678,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Minyak Goreng",
+          "qty": 17.241,
+          "uom": "ml",
+          "harga_satuan": 19,
+          "harga_total": 327.579,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Cabe Kering",
+          "qty": 1.724,
+          "uom": "gr",
+          "harga_satuan": 95,
+          "harga_total": 163.78,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 8
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.034,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 10.388888904,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 9
+          }
+        },
+        {
+          "nama": "Kapulaga",
+          "qty": 0.01,
+          "uom": "gr",
+          "harga_satuan": 13.3333333,
+          "harga_total": 0.133333333,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 10
+          }
+        },
+        {
+          "nama": "Kayu Manis",
+          "qty": 0.04,
+          "uom": "gr",
+          "harga_satuan": 6.66666667,
+          "harga_total": 0.2666666668,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 11
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.26,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 3.64,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Gula pasir",
+          "qty": 0.65,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 11.7,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Cengkeh",
+          "qty": 0.02,
+          "uom": "gr",
+          "harga_satuan": 13.3333333,
+          "harga_total": 0.266666666,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 14
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.26,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 13,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 15
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 0.86,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 17.2,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 16
+          }
+        },
+        {
+          "nama": "Cup chili oil",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 100,
+          "harga_total": 100,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 17
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Garlic Sauce",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 20
+      },
+      "biaya_bahan": 1952.7611112,
+      "energi": 195.27611112,
+      "total_cost": 2148.03722232,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "38pcs/1 recipe",
+        "60g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Bawang Putih",
+          "qty": 8,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 320,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Mamayo",
+          "qty": 52.64,
+          "uom": "gr",
+          "harga_satuan": 25,
+          "harga_total": 1316,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.53,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 55.65,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 22
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 61.1111112,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 23
+          }
+        },
+        {
+          "nama": "Parsley",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 1000,
+          "harga_total": 200,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 24
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lava Sauce",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 27
+      },
+      "biaya_bahan": 1450,
+      "energi": 145,
+      "total_cost": 1595,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "20pcs/1 recipe",
+        "60g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Saus Lava",
+          "qty": 50,
+          "uom": "gr",
+          "harga_satuan": 17,
+          "harga_total": 850,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 27
+          }
+        },
+        {
+          "nama": "Gourmet BBQ",
+          "qty": 12.5,
+          "uom": "gr",
+          "harga_satuan": 48,
+          "harga_total": 600,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 28
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chesee Sauce",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 32
+      },
+      "biaya_bahan": 2106.887894595,
+      "energi": 210.6887894595,
+      "total_cost": 2317.5766840545,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "39pcs/1 recipe",
+        "60g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Keju quickmelt",
+          "qty": 15.4,
+          "uom": "gr",
+          "harga_satuan": 100,
+          "harga_total": 1540,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 32
+          }
+        },
+        {
+          "nama": "Air Mineral",
+          "qty": 38.5,
+          "uom": "ml",
+          "harga_satuan": 0.31578947,
+          "harga_total": 12.157894595,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 33
+          }
+        },
+        {
+          "nama": "Maizena",
+          "qty": 3.1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 155,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 34
+          }
+        },
+        {
+          "nama": "Bubuk Keju",
+          "qty": 3.34,
+          "uom": "gr",
+          "harga_satuan": 112,
+          "harga_total": 374.08,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 35
+          }
+        },
+        {
+          "nama": "Creamer",
+          "qty": 0.513,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 25.65,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 36
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Saus Bolognese",
+      "kategori": "All Sauce",
+      "sumber": {
+        "sheet": "All Sauce",
+        "baris": 39
+      },
+      "biaya_bahan": 994.31599998312,
+      "energi": 99.431599998312,
+      "total_cost": 1093.74759998143,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "79pcs/recipe",
+        "35g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Daging Giling sapi",
+          "qty": 3.17,
+          "uom": "gr",
+          "harga_satuan": 100,
+          "harga_total": 317,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 39
+          }
+        },
+        {
+          "nama": "Bawang Bombay",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 50,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 40
+          }
+        },
+        {
+          "nama": "Saus tomat",
+          "qty": 25.32,
+          "uom": "kg",
+          "harga_satuan": 15,
+          "harga_total": 379.8,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 41
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 4.33,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 173.2,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 42
+          }
+        },
+        {
+          "nama": "Oregano",
+          "qty": 0.05064,
+          "uom": "gr",
+          "harga_satuan": 733.333333,
+          "harga_total": 37.13599998312,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 43
+          }
+        },
+        {
+          "nama": "Gula pasir",
+          "qty": 1.14,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 20.52,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 44
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 45
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 14.7,
+          "sumber": {
+            "sheet": "All Sauce",
+            "baris": 46
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Mentai Sauce",
+      "kategori": "Mentai Sauce",
+      "sumber": {
+        "sheet": "Mentai Sauce",
+        "baris": 3
+      },
+      "biaya_bahan": 726.5357692304,
+      "energi": 72.65357692304,
+      "total_cost": 799.18934615344,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "130pcs/1 recipe",
+        "30g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Mamayo",
+          "qty": 22,
+          "uom": "gr",
+          "harga_satuan": 25,
+          "harga_total": 550,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "Saus Sambal",
+          "qty": 4.62,
+          "uom": "gr",
+          "harga_satuan": 17,
+          "harga_total": 78.54,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 4
+          }
+        },
+        {
+          "nama": "Saus Tomat",
+          "qty": 3.2,
+          "uom": "gr",
+          "harga_satuan": 15,
+          "harga_total": 48,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 5
+          }
+        },
+        {
+          "nama": "Kikoman Manis",
+          "qty": 0.31,
+          "uom": "gr",
+          "harga_satuan": 56.5,
+          "harga_total": 17.515,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 6
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.31,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 23.25,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.15384615384,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 9.2307692304,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 8
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia Mentai Sauce",
+      "kategori": "Mentai Sauce",
+      "sumber": {
+        "sheet": "Mentai Sauce",
+        "baris": 11
+      },
+      "biaya_bahan": 726.5357692304,
+      "energi": 72.65357692304,
+      "total_cost": 799.18934615344,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "130pcs/1 recipe",
+        "30g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Mamayo",
+          "qty": 22,
+          "uom": "gr",
+          "harga_satuan": 25,
+          "harga_total": 550,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 11
+          }
+        },
+        {
+          "nama": "Saus Sambal",
+          "qty": 4.62,
+          "uom": "gr",
+          "harga_satuan": 17,
+          "harga_total": 78.54,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Saus Tomat",
+          "qty": 3.2,
+          "uom": "gr",
+          "harga_satuan": 15,
+          "harga_total": 48,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Kikoman Manis",
+          "qty": 0.31,
+          "uom": "gr",
+          "harga_satuan": 56.5,
+          "harga_total": 17.515,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 14
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.31,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 23.25,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 15
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.15384615384,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 9.2307692304,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 16
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Mentai Sauce",
+      "kategori": "Mentai Sauce",
+      "sumber": {
+        "sheet": "Mentai Sauce",
+        "baris": 19
+      },
+      "biaya_bahan": 1442.15,
+      "energi": 144.215,
+      "total_cost": 1586.365,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "65cs/1 recipe",
+        "60g/pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "Mamayo",
+          "qty": 43,
+          "uom": "gr",
+          "harga_satuan": 25,
+          "harga_total": 1075,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 19
+          }
+        },
+        {
+          "nama": "Saus Sambal",
+          "qty": 9.3,
+          "uom": "gr",
+          "harga_satuan": 17,
+          "harga_total": 158.1,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Saus Tomat",
+          "qty": 6.2,
+          "uom": "gr",
+          "harga_satuan": 15,
+          "harga_total": 93,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Kikoman Manis",
+          "qty": 0.7,
+          "uom": "gr",
+          "harga_satuan": 56.5,
+          "harga_total": 39.55,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 22
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.7,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 52.5,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 23
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 24,
+          "sumber": {
+            "sheet": "Mentai Sauce",
+            "baris": 24
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Basic",
+      "kategori": "Chikuro",
+      "sumber": {
+        "sheet": "Chikuro",
+        "baris": 3
+      },
+      "biaya_bahan": 8624.1111112,
+      "energi": 862.41111112,
+      "total_cost": 9486.52222232,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 100,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 5700,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 5.5,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 148.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 4
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 61.1111112,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 5
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 80,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 6
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 1.5,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 79.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 210,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 8
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 50,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 9
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 7,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 10
+          }
+        },
+        {
+          "nama": "Minyak Goreng",
+          "qty": 50,
+          "uom": "ml",
+          "harga_satuan": 19,
+          "harga_total": 950,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 11
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 10,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 220,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Rumput Laut",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 416,
+          "harga_total": 832,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Tepung Panir",
+          "qty": 13,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 286,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 14
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Garlic Sauce",
+      "kategori": "Chikuro",
+      "sumber": {
+        "sheet": "Chikuro",
+        "baris": 18
+      },
+      "biaya_bahan": 8624.1111112,
+      "energi": 862.41111112,
+      "total_cost": 9486.52222232,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 100,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 5700,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 18
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 5.5,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 148.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 19
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 61.1111112,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 80,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 1.5,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 79.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 22
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 210,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 23
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 50,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 24
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 7,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 25
+          }
+        },
+        {
+          "nama": "Minyak Goreng",
+          "qty": 50,
+          "uom": "ml",
+          "harga_satuan": 19,
+          "harga_total": 950,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 26
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 10,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 220,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 27
+          }
+        },
+        {
+          "nama": "Rumput Laut",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 416,
+          "harga_total": 832,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 28
+          }
+        },
+        {
+          "nama": "Tepung Panir",
+          "qty": 13,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 286,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 29
+          }
+        },
+        {
+          "nama": "Garlic Sauce",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": 0,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 30
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Lava Sauce",
+      "kategori": "Chikuro",
+      "sumber": {
+        "sheet": "Chikuro",
+        "baris": 33
+      },
+      "biaya_bahan": 8624.1111112,
+      "energi": 862.41111112,
+      "total_cost": 9486.52222232,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 100,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 5700,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 33
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 5.5,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 148.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 34
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 61.1111112,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 35
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 80,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 36
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 1.5,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 79.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 37
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 210,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 38
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 50,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 39
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 7,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 40
+          }
+        },
+        {
+          "nama": "Minyak Goreng",
+          "qty": 50,
+          "uom": "ml",
+          "harga_satuan": 19,
+          "harga_total": 950,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 41
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 10,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 220,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 42
+          }
+        },
+        {
+          "nama": "Rumput Laut",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 416,
+          "harga_total": 832,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 43
+          }
+        },
+        {
+          "nama": "Tepung Panir",
+          "qty": 13,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 286,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 44
+          }
+        },
+        {
+          "nama": "Lava Sauce",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": 0,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 45
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Chikuro Chesee Sauce",
+      "kategori": "Chikuro",
+      "sumber": {
+        "sheet": "Chikuro",
+        "baris": 48
+      },
+      "biaya_bahan": 8624.1111112,
+      "energi": 862.41111112,
+      "total_cost": 9486.52222232,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 100,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 5700,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 48
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 5.5,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 148.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 49
+          }
+        },
+        {
+          "nama": "Lada",
+          "qty": 0.2,
+          "uom": "gr",
+          "harga_satuan": 305.555556,
+          "harga_total": 61.1111112,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 50
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 80,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 51
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 1.5,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 79.5,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 52
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 210,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 53
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 50,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 54
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 7,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 55
+          }
+        },
+        {
+          "nama": "Minyak Goreng",
+          "qty": 50,
+          "uom": "ml",
+          "harga_satuan": 19,
+          "harga_total": 950,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 56
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 10,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 220,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 57
+          }
+        },
+        {
+          "nama": "Rumput Laut",
+          "qty": 2,
+          "uom": "gr",
+          "harga_satuan": 416,
+          "harga_total": 832,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 58
+          }
+        },
+        {
+          "nama": "Tepung Panir",
+          "qty": 13,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 286,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 59
+          }
+        },
+        {
+          "nama": "Chesee sauce",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": 0,
+          "sumber": {
+            "sheet": "Chikuro",
+            "baris": 60
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia keju ori",
+      "kategori": "Lumpia",
+      "sumber": {
+        "sheet": "Lumpia",
+        "baris": 3
+      },
+      "biaya_bahan": 3035.825,
+      "energi": 303.5825,
+      "total_cost": 3339.4075,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 25,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1425,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.375,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 37.125,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 4
+          }
+        },
+        {
+          "nama": "Kulit Lumpia",
+          "qty": 2,
+          "uom": "pcs",
+          "harga_satuan": 240,
+          "harga_total": 480,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 5
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.625,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 25,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 6
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 37.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.125,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 7.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 8
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.75,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 39.75,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 9
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 52.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 10
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.375,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 18.75,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 11
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.175,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 2.45,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Gula pasir",
+          "qty": 0.625,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 11.25,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Keju quickmelt",
+          "qty": 8,
+          "uom": "gr",
+          "harga_satuan": 100,
+          "harga_total": 800,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 14
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 4.5,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 99,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 15
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Lumpia keju mentai",
+      "kategori": "Lumpia",
+      "sumber": {
+        "sheet": "Lumpia",
+        "baris": 18
+      },
+      "biaya_bahan": 3035.825,
+      "energi": 303.5825,
+      "total_cost": 3339.4075,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 25,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1425,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 18
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.375,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 37.125,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 19
+          }
+        },
+        {
+          "nama": "Kulit Lumpia",
+          "qty": 2,
+          "uom": "pcs",
+          "harga_satuan": 240,
+          "harga_total": 480,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.625,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 25,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 37.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 22
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.125,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 7.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 23
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.75,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 39.75,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 24
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 52.5,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 25
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.375,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 18.75,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 26
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.175,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 2.45,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 27
+          }
+        },
+        {
+          "nama": "Gula pasir",
+          "qty": 0.625,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 11.25,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 28
+          }
+        },
+        {
+          "nama": "Keju quickmelt",
+          "qty": 8,
+          "uom": "gr",
+          "harga_satuan": 100,
+          "harga_total": 800,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 29
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 4.5,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 99,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 30
+          }
+        },
+        {
+          "nama": "Mentai Sauce",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": null,
+          "sumber": {
+            "sheet": "Lumpia",
+            "baris": 31
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum ori topping wortel",
+      "kategori": "Dimsum",
+      "sumber": {
+        "sheet": "Dimsum",
+        "baris": 3
+      },
+      "biaya_bahan": 1572.638723,
+      "energi": 157.2638723,
+      "total_cost": 1729.9025953,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 20,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1140,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.1,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 29.7,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 4
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 5
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 6
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 30,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.1,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 6,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 8
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.6,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 31.8,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 9
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 42,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 10
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.3,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 11
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Gula Pasir",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 9,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 13
+          }
+        },
+        {
+          "nama": "Kulit Dimsum",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 132.978723,
+          "harga_total": 132.978723,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 14
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 3.6,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 79.2,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 15
+          }
+        },
+        {
+          "nama": "wortel",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 30,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 16
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum ori topping beef",
+      "kategori": "Dimsum",
+      "sumber": {
+        "sheet": "Dimsum",
+        "baris": 19
+      },
+      "biaya_bahan": 1600.4958658571,
+      "energi": 160.04958658571,
+      "total_cost": 1760.54545244281,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 20,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1140,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 19
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.1,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 29.7,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 21
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 22
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 30,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 23
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.1,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 6,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 24
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.6,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 31.8,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 25
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 42,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 26
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.3,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 27
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 28
+          }
+        },
+        {
+          "nama": "Gula Pasir",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 9,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 29
+          }
+        },
+        {
+          "nama": "Kulit Dimsum",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 132.978723,
+          "harga_total": 132.978723,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 30
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 3.6,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 79.2,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 31
+          }
+        },
+        {
+          "nama": "beef patty",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 42.8571428571,
+          "harga_total": 42.8571428571,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 32
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum isi Keju",
+      "kategori": "Dimsum",
+      "sumber": {
+        "sheet": "Dimsum",
+        "baris": 35
+      },
+      "biaya_bahan": 1857.638723,
+      "energi": 185.7638723,
+      "total_cost": 2043.4025953,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 20,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1140,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 35
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.1,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 29.7,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 36
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 37
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 38
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 30,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 39
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.1,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 6,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 40
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.6,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 31.8,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 41
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 42,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 42
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.3,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 43
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 44
+          }
+        },
+        {
+          "nama": "Gula Pasir",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 9,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 45
+          }
+        },
+        {
+          "nama": "Kulit Dimsum",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 132.978723,
+          "harga_total": 132.978723,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 46
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 3.6,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 79.2,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 47
+          }
+        },
+        {
+          "nama": "Keju quickmelt",
+          "qty": 3,
+          "uom": "gr",
+          "harga_satuan": 100,
+          "harga_total": 300,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 48
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Mentai",
+      "kategori": "Dimsum",
+      "sumber": {
+        "sheet": "Dimsum",
+        "baris": 51
+      },
+      "biaya_bahan": 1557.638723,
+      "energi": 155.7638723,
+      "total_cost": 1713.4025953,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 20,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1140,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 51
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.1,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 29.7,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 52
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 53
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 54
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 30,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 55
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.1,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 6,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 56
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.6,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 31.8,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 57
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 42,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 58
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.3,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 59
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 60
+          }
+        },
+        {
+          "nama": "Gula Pasir",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 9,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 61
+          }
+        },
+        {
+          "nama": "Kulit Dimsum",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 132.978723,
+          "harga_total": 132.978723,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 62
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 3.6,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 79.2,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 63
+          }
+        },
+        {
+          "nama": "Mentai Sauce",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": 0,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 64
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Dimsum Bolognese",
+      "kategori": "Dimsum",
+      "sumber": {
+        "sheet": "Dimsum",
+        "baris": 67
+      },
+      "biaya_bahan": 1557.638723,
+      "energi": 155.7638723,
+      "total_cost": 1713.4025953,
+      "tarif_energi": 0.1,
+      "keterangan": [],
+      "bahan": [
+        {
+          "nama": "Ayam Fillet Paha",
+          "qty": 20,
+          "uom": "gr",
+          "harga_satuan": 57,
+          "harga_total": 1140,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 67
+          }
+        },
+        {
+          "nama": "Telur Ayam",
+          "qty": 1.1,
+          "uom": "gr",
+          "harga_satuan": 27,
+          "harga_total": 29.7,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 68
+          }
+        },
+        {
+          "nama": "Daun Bawang",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 69
+          }
+        },
+        {
+          "nama": "Bawang Putih",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 40,
+          "harga_total": 20,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 70
+          }
+        },
+        {
+          "nama": "Minyak Wijen",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 75,
+          "harga_total": 30,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 71
+          }
+        },
+        {
+          "nama": "Kecap Asin",
+          "qty": 0.1,
+          "uom": "gr",
+          "harga_satuan": 60,
+          "harga_total": 6,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 72
+          }
+        },
+        {
+          "nama": "Saori saus Tiram",
+          "qty": 0.6,
+          "uom": "gr",
+          "harga_satuan": 53,
+          "harga_total": 31.8,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 73
+          }
+        },
+        {
+          "nama": "Chicken Powder Knorr",
+          "qty": 0.4,
+          "uom": "gr",
+          "harga_satuan": 105,
+          "harga_total": 42,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 74
+          }
+        },
+        {
+          "nama": "Sasa",
+          "qty": 0.3,
+          "uom": "gr",
+          "harga_satuan": 50,
+          "harga_total": 15,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 75
+          }
+        },
+        {
+          "nama": "Garam",
+          "qty": 0.14,
+          "uom": "gr",
+          "harga_satuan": 14,
+          "harga_total": 1.96,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 76
+          }
+        },
+        {
+          "nama": "Gula Pasir",
+          "qty": 0.5,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 9,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 77
+          }
+        },
+        {
+          "nama": "Kulit Dimsum",
+          "qty": 1,
+          "uom": "pcs",
+          "harga_satuan": 132.978723,
+          "harga_total": 132.978723,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 78
+          }
+        },
+        {
+          "nama": "Tepung Tapioka",
+          "qty": 3.6,
+          "uom": "gr",
+          "harga_satuan": 22,
+          "harga_total": 79.2,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 79
+          }
+        },
+        {
+          "nama": "Sauce Bolognese",
+          "qty": null,
+          "uom": "gr",
+          "harga_satuan": null,
+          "harga_total": 0,
+          "sumber": {
+            "sheet": "Dimsum",
+            "baris": 80
+          }
+        }
+      ]
+    },
+    {
+      "nama": "KOPI SUSU JADUL",
+      "kategori": "KOPI EVENT",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 3
+      },
+      "biaya_bahan": 6300.27,
+      "energi": 630.027,
+      "total_cost": 6930.297,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "1pcs"
+      ],
+      "bahan": [
+        {
+          "nama": "NESCAFFE 30ml",
+          "qty": 1,
+          "uom": "set",
+          "harga_satuan": 1495.4,
+          "harga_total": 1495.4,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 3
+          }
+        },
+        {
+          "nama": "SKM",
+          "qty": 9,
+          "uom": "gr",
+          "harga_satuan": 28.58,
+          "harga_total": 257.22,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 4
+          }
+        },
+        {
+          "nama": "CREAMER 100ml",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 1151.25,
+          "harga_total": 1151.25,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 5
+          }
+        },
+        {
+          "nama": "Susu UHT",
+          "qty": 100,
+          "uom": "gr",
+          "harga_satuan": 20,
+          "harga_total": 2000,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 6
+          }
+        },
+        {
+          "nama": "Gula cair",
+          "qty": 11,
+          "uom": "gr",
+          "harga_satuan": 22.4,
+          "harga_total": 246.4,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 7
+          }
+        },
+        {
+          "nama": "Botol",
+          "qty": 1,
+          "uom": "gr",
+          "harga_satuan": 1150,
+          "harga_total": 1150,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 8
+          }
+        }
+      ]
+    },
+    {
+      "nama": "NESCAFE BASIC",
+      "kategori": "KOPI EVENT",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 12
+      },
+      "biaya_bahan": 27189.473682,
+      "energi": 2718.9473682,
+      "total_cost": 29908.4210502,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "30ml"
+      ],
+      "bahan": [
+        {
+          "nama": "NESCAFFE 20porsi(45g)",
+          "qty": 20,
+          "uom": "pcs",
+          "harga_satuan": 1350,
+          "harga_total": 27000,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 12
+          }
+        },
+        {
+          "nama": "Air Mineral",
+          "qty": 600,
+          "uom": "gr",
+          "harga_satuan": 0.31578947,
+          "harga_total": 189.473682,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 13
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Creamer",
+      "kategori": "KOPI EVENT",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 16
+      },
+      "biaya_bahan": 20931.57894,
+      "energi": 2093.157894,
+      "total_cost": 23024.736834,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "100ml"
+      ],
+      "bahan": [
+        {
+          "nama": "Creamer",
+          "qty": 500,
+          "uom": "gr",
+          "harga_satuan": 40.6,
+          "harga_total": 20300,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 16
+          }
+        },
+        {
+          "nama": "Air Mineral",
+          "qty": 2000,
+          "uom": "gr",
+          "harga_satuan": 0.31578947,
+          "harga_total": 631.57894,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 17
+          }
+        }
+      ]
+    },
+    {
+      "nama": "Simple Syrup",
+      "kategori": "KOPI EVENT",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 20
+      },
+      "biaya_bahan": 18284.210523,
+      "energi": 1828.4210523,
+      "total_cost": 20112.6315753,
+      "tarif_energi": 0.1,
+      "keterangan": [
+        "10ml"
+      ],
+      "bahan": [
+        {
+          "nama": "Gula",
+          "qty": 1000,
+          "uom": "gr",
+          "harga_satuan": 18,
+          "harga_total": 18000,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 20
+          }
+        },
+        {
+          "nama": "Air Mineral",
+          "qty": 900,
+          "uom": "gr",
+          "harga_satuan": 0.31578947,
+          "harga_total": 284.210523,
+          "sumber": {
+            "sheet": "KOPI EVENT",
+            "baris": 21
+          }
+        }
+      ]
+    }
+  ],
+  "bahan_baku": [
+    {
+      "no": 1,
+      "nama": "Ayam Fillet Paha",
+      "weight": 1000,
+      "uom": "kg",
+      "harga_satuan": 57,
+      "total": 57000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 4
+      }
+    },
+    {
+      "no": 2,
+      "nama": "Telur Ayam",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 27,
+      "total": 27000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 5
+      }
+    },
+    {
+      "no": 3,
+      "nama": "Daging Giling sapi",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 100,
+      "total": 100000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 6
+      }
+    },
+    {
+      "no": 4,
+      "nama": "Daun Bawang",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 20,
+      "total": 20000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 7
+      }
+    },
+    {
+      "no": 5,
+      "nama": "Bawang Bombay",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 50,
+      "total": 50000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 8
+      }
+    },
+    {
+      "no": 6,
+      "nama": "Bawang Putih",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 40,
+      "total": 40000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 9
+      }
+    },
+    {
+      "no": 7,
+      "nama": "Minyak Wijen",
+      "weight": 600,
+      "uom": "gr",
+      "harga_satuan": 75,
+      "total": 45000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 10
+      }
+    },
+    {
+      "no": 8,
+      "nama": "Kecap Asin",
+      "weight": 600,
+      "uom": "ml",
+      "harga_satuan": 60,
+      "total": 36000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 11
+      }
+    },
+    {
+      "no": 9,
+      "nama": "Saori saus Tiram",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 53,
+      "total": 53000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 12
+      }
+    },
+    {
+      "no": 10,
+      "nama": "Chicken Powder Knorr",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 105,
+      "total": 105000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 13
+      }
+    },
+    {
+      "no": 11,
+      "nama": "Sasa",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 50,
+      "total": 50000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 14
+      }
+    },
+    {
+      "no": 12,
+      "nama": "Garam",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 14,
+      "total": 14000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 15
+      }
+    },
+    {
+      "no": 13,
+      "nama": "Gula Pasir",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 18,
+      "total": 18000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 16
+      }
+    },
+    {
+      "no": 14,
+      "nama": "Tepung panir",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 22,
+      "total": 22000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 17
+      }
+    },
+    {
+      "no": 15,
+      "nama": "Tepung Tapioka",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 22,
+      "total": 22000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 18
+      }
+    },
+    {
+      "no": 16,
+      "nama": "Lada",
+      "weight": 36,
+      "uom": "gr",
+      "harga_satuan": 305.555556,
+      "total": 11000.000016,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 19
+      }
+    },
+    {
+      "no": 17,
+      "nama": "Mamayo",
+      "weight": 1000,
+      "uom": "kg",
+      "harga_satuan": 25,
+      "total": 25000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 20
+      }
+    },
+    {
+      "no": 18,
+      "nama": "Saus tomat",
+      "weight": 1000,
+      "uom": "kg",
+      "harga_satuan": 15,
+      "total": 15000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 21
+      }
+    },
+    {
+      "no": 19,
+      "nama": "Saus Sambal",
+      "weight": 1000,
+      "uom": "kg",
+      "harga_satuan": 17,
+      "total": 17000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 22
+      }
+    },
+    {
+      "no": 20,
+      "nama": "Kikoman Manis",
+      "weight": 2000,
+      "uom": "ml",
+      "harga_satuan": 56.5,
+      "total": 113000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 23
+      }
+    },
+    {
+      "no": 21,
+      "nama": "Oregano",
+      "weight": 30,
+      "uom": "gr",
+      "harga_satuan": 733.333333,
+      "total": 21999.99999,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 24
+      }
+    },
+    {
+      "no": 22,
+      "nama": "Minyak Goreng",
+      "weight": 1000,
+      "uom": "lt",
+      "harga_satuan": 19,
+      "total": 19000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 25
+      }
+    },
+    {
+      "no": 23,
+      "nama": "Cabe kering",
+      "weight": 1000,
+      "uom": "kg",
+      "harga_satuan": 95,
+      "total": 95000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 26
+      }
+    },
+    {
+      "no": 24,
+      "nama": "Kapulaga",
+      "weight": 150,
+      "uom": "gr",
+      "harga_satuan": 13.3333333,
+      "total": 1999.999995,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 27
+      }
+    },
+    {
+      "no": 25,
+      "nama": "Kayu Manis",
+      "weight": 300,
+      "uom": "gr",
+      "harga_satuan": 6.66666667,
+      "total": 2000.000001,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 28
+      }
+    },
+    {
+      "no": 26,
+      "nama": "Cengkeh",
+      "weight": 150,
+      "uom": "gr",
+      "harga_satuan": 13.3333333,
+      "total": 1999.999995,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 29
+      }
+    },
+    {
+      "no": 27,
+      "nama": "Parsley",
+      "weight": 12,
+      "uom": "gr",
+      "harga_satuan": 1000,
+      "total": 12000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 30
+      }
+    },
+    {
+      "no": 28,
+      "nama": "Keju quickmelt",
+      "weight": 2000,
+      "uom": "gr",
+      "harga_satuan": 100,
+      "total": 200000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 31
+      }
+    },
+    {
+      "no": 29,
+      "nama": "Air Mineral",
+      "weight": 19000,
+      "uom": "ml",
+      "harga_satuan": 0.31578947,
+      "total": 5999.99993,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 32
+      }
+    },
+    {
+      "no": 30,
+      "nama": "Maizena",
+      "weight": 300,
+      "uom": "gr",
+      "harga_satuan": 50,
+      "total": 15000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 33
+      }
+    },
+    {
+      "no": 31,
+      "nama": "Bubuk Keju",
+      "weight": 500,
+      "uom": "gr",
+      "harga_satuan": 112,
+      "total": 56000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 34
+      }
+    },
+    {
+      "no": 32,
+      "nama": "Creamer",
+      "weight": 500,
+      "uom": "gr",
+      "harga_satuan": 50,
+      "total": 25000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 35
+      }
+    },
+    {
+      "no": 33,
+      "nama": "Kulit Dimsum",
+      "weight": 47,
+      "uom": "pcs",
+      "harga_satuan": 132.978723,
+      "total": 6249.999981,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 36
+      }
+    },
+    {
+      "no": 34,
+      "nama": "Kulit Lumpia",
+      "weight": 50,
+      "uom": "pcs",
+      "harga_satuan": 240,
+      "total": 12000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 37
+      }
+    },
+    {
+      "no": 35,
+      "nama": "Cup Saus",
+      "weight": 350,
+      "uom": "pcs",
+      "harga_satuan": 100,
+      "total": 35000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 38
+      }
+    },
+    {
+      "no": 36,
+      "nama": "Saus Dimsum",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 18,
+      "total": 18000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 39
+      }
+    },
+    {
+      "no": 37,
+      "nama": "Saus Lava",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 17,
+      "total": 17000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 40
+      }
+    },
+    {
+      "no": 38,
+      "nama": "Gourmet BBQ",
+      "weight": 250,
+      "uom": "gr",
+      "harga_satuan": 48,
+      "total": 12000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 41
+      }
+    },
+    {
+      "no": 39,
+      "nama": "Rumput Laut",
+      "weight": 250,
+      "uom": "gr",
+      "harga_satuan": 416,
+      "total": 104000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 42
+      }
+    },
+    {
+      "no": 40,
+      "nama": "wortel",
+      "weight": 1000,
+      "uom": "gr",
+      "harga_satuan": 30,
+      "total": 30000,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 43
+      }
+    },
+    {
+      "no": 41,
+      "nama": "beef patty",
+      "weight": 280,
+      "uom": "gr",
+      "harga_satuan": 42.8571428571,
+      "total": 11999.999999988,
+      "sumber": {
+        "sheet": "Master Bahan",
+        "baris": 44
+      }
+    }
+  ],
+  "kemasan": [
+    {
+      "no": 1,
+      "nama": "box pack dimsum",
+      "qty": 425,
+      "uom": "Pcs",
+      "harga_satuan": 470.588235294118,
+      "harga_total": 200000,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 2
+      }
+    },
+    {
+      "no": 2,
+      "nama": "Sumpit",
+      "qty": 3000,
+      "uom": "Pcs",
+      "harga_satuan": 88,
+      "harga_total": 264000,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 3
+      }
+    },
+    {
+      "no": 3,
+      "nama": "Cup",
+      "qty": 350,
+      "uom": "Pcs",
+      "harga_satuan": 100,
+      "harga_total": 35000,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 4
+      }
+    },
+    {
+      "no": 4,
+      "nama": "Plastik dimsum 24",
+      "qty": 40,
+      "uom": "Pcs",
+      "harga_satuan": 275,
+      "harga_total": 11000,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 5
+      }
+    },
+    {
+      "no": 5,
+      "nama": "Pack chikuro",
+      "qty": 350,
+      "uom": "Pcs",
+      "harga_satuan": 75,
+      "harga_total": 26250,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 6
+      }
+    },
+    {
+      "no": 6,
+      "nama": "Plastik Chikuro",
+      "qty": 350,
+      "uom": "Pcs",
+      "harga_satuan": 150,
+      "harga_total": 52500,
+      "sumber": {
+        "sheet": "Packaging",
+        "baris": 7
+      }
+    }
+  ],
+  "energi": {
+    "label": "Energy 4 Outlet",
+    "rincian": [
+      {
+        "no": 1,
+        "keterangan": "Sewa Lapak",
+        "total_harga": 1900000,
+        "pembagi": 26,
+        "satuan_pembagi": "Day",
+        "harga_setelah_pembagian": 73076.9230769231,
+        "sumber": {
+          "sheet": "Energi",
+          "baris": 4
+        }
+      },
+      {
+        "no": 2,
+        "keterangan": "Sewa Produksi",
+        "total_harga": 500000,
+        "pembagi": 26,
+        "satuan_pembagi": "Day",
+        "harga_setelah_pembagian": 19230.7692307692,
+        "sumber": {
+          "sheet": "Energi",
+          "baris": 5
+        }
+      },
+      {
+        "no": 3,
+        "keterangan": "Gas",
+        "total_harga": 1100000,
+        "pembagi": 50,
+        "satuan_pembagi": "gas/bulan",
+        "harga_setelah_pembagian": 22000,
+        "sumber": {
+          "sheet": "Energi",
+          "baris": 6
+        }
+      },
+      {
+        "no": 4,
+        "keterangan": "Gaji 6 person",
+        "total_harga": 12900000,
+        "pembagi": 26,
+        "satuan_pembagi": "Day",
+        "harga_setelah_pembagian": 496153.846153846,
+        "sumber": {
+          "sheet": "Energi",
+          "baris": 7
+        }
+      }
+    ],
+    "seluruh_outlet_per_hari": 610461.538461539,
+    "satu_outlet_per_hari": 152615.384615385
+  },
+  "ringkasan_menu": {
+    "label": "ENERGI 611.000/300 PORSI",
+    "kotor": 1722000,
+    "hpp": 1051124,
+    "energi": 610500,
+    "bersih": 60376,
+    "bersih_per_bulan": 1569776
+  },
+  "catatan_kopi_event": [
+    {
+      "teks": "nescafe 45g beli 5",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 12
+      }
+    },
+    {
+      "teks": "creamer beli 5",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 13
+      }
+    },
+    {
+      "teks": "gula beli 1.500 g",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 14
+      }
+    },
+    {
+      "teks": "skm beli 2",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 15
+      }
+    },
+    {
+      "teks": "susu beli 10",
+      "sumber": {
+        "sheet": "KOPI EVENT",
+        "baris": 16
+      }
+    }
+  ]
+}
