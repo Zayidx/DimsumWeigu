@@ -5,8 +5,8 @@ namespace App\Livewire\Reports;
 use App\Models\CashierShift;
 use App\Models\Transaction;
 use App\Models\Warehouse;
-use App\Support\OutletAccess;
 use App\Support\CsvCell;
+use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -15,16 +15,31 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class SalesReport extends Component
 {
     use WithPagination;
+
     public string $from;
+
     public string $to;
+
     public string $warehouseId = '';
+
     public string $cashierId = '';
+
     public string $method = '';
 
-    public function mount(): void
+    public function mount(OutletAccess $access): void
     {
-        $this->from = today()->toDateString();
-        $this->to = today()->toDateString();
+        $input = request()->validate([
+            'from' => ['sometimes', 'date', 'after_or_equal:'.today()->subYear()->toDateString(), 'before_or_equal:today'],
+            'to' => ['sometimes', 'date', 'before_or_equal:today'],
+            'warehouse' => ['sometimes', 'integer'],
+        ]);
+        $this->from = $input['from'] ?? today()->toDateString();
+        $this->to = $input['to'] ?? today()->toDateString();
+        if (isset($input['warehouse'])) {
+            $outlet = $access->current(request());
+            $warehouse = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->findOrFail($input['warehouse']);
+            $this->warehouseId = (string) $warehouse->id;
+        }
     }
 
     public function applyFilters(): void
@@ -38,6 +53,7 @@ class SalesReport extends Component
         abort_unless(auth()->user()->can('reports-export'), 403);
         [$query, $outlet] = $this->query($access);
         $rows = (clone $query)->with(['user:id,name', 'warehouse:id,name', 'customer:id,name', 'tenders'])->orderBy('occurred_at')->get();
+
         return response()->streamDownload(function () use ($rows): void {
             $stream = fopen('php://output', 'w');
             fputcsv($stream, ['Nomor', 'Waktu', 'Pelanggan', 'Kasir', 'Gudang', 'Metode', 'Status pembayaran', 'Subtotal', 'Diskon', 'Pajak', 'Total', 'Dibayar']);
@@ -53,6 +69,7 @@ class SalesReport extends Component
         abort_unless(auth()->user()->can('reports-access'), 403);
         [$query, $outlet] = $this->query($access);
         $rows = (clone $query)->with(['user:id,name', 'warehouse:id,name', 'customer:id,name', 'tenders'])->latest('occurred_at')->paginate(25);
+
         return view('livewire.reports.sales-report', [
             'outlet' => $outlet,
             'rows' => $rows,
@@ -70,9 +87,17 @@ class SalesReport extends Component
         abort_if(now()->parse($this->from)->diffInDays(now()->parse($this->to)) > 366, 422, __('Rentang laporan maksimal satu tahun.'));
         $outlet = $access->current(request());
         $query = Transaction::query()->where('outlet_id', $outlet->id)->whereBetween('occurred_at', [$this->from.' 00:00:00', $this->to.' 23:59:59'])->whereIn('status', ['completed', 'paid']);
-        if ($this->warehouseId !== '') $query->where('warehouse_id', $this->warehouseId);
-        if ($this->cashierId !== '') $query->where('user_id', $this->cashierId);
-        if ($this->method !== '') $query->whereHas('tenders', fn (Builder $tenders) => $tenders->where('method', $this->method));
+        if ($this->warehouseId !== '') {
+            abort_unless(Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->whereKey($this->warehouseId)->exists(), 404);
+            $query->where('warehouse_id', $this->warehouseId);
+        }
+        if ($this->cashierId !== '') {
+            $query->where('user_id', $this->cashierId);
+        }
+        if ($this->method !== '') {
+            $query->whereHas('tenders', fn (Builder $tenders) => $tenders->where('method', $this->method));
+        }
+
         return [$query, $outlet];
     }
 }

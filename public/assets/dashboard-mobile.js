@@ -76,9 +76,6 @@
             document.documentElement.setAttribute('data-bs-theme', theme);
             try { localStorage.setItem('theme', theme); } catch (_) { /* Private mode can deny storage. */ }
         }
-        document.querySelectorAll('.workspace-account-menu[open]').forEach(menu => {
-            if (!menu.contains(event.target)) menu.removeAttribute('open');
-        });
         const submenuToggle = event.target.closest('#sidebar .sidebar-item.has-sub > .sidebar-link');
         if (submenuToggle) {
             requestAnimationFrame(() => {
@@ -95,7 +92,6 @@
         const overlay = cart || (mobile.matches && sidebar?.classList.contains('active') ? sidebar : null);
         if (event.key === 'Escape') {
             if (mobile.matches) window.sidebar?.hide();
-            document.querySelectorAll('.workspace-account-menu[open]').forEach(menu => menu.removeAttribute('open'));
         }
         if (event.key !== 'Tab' || !overlay) return;
         const focusable = [...overlay.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')].filter(element => !element.disabled && element.getClientRects().length);

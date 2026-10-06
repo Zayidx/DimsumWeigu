@@ -5,10 +5,15 @@ namespace Tests\Feature;
 use App\Livewire\Admin\RolesIndex;
 use App\Livewire\Catalog\UnitsIndex;
 use App\Livewire\Reports\InventoryReport;
+use App\Livewire\Reports\SalesReport;
+use App\Models\Customer;
+use App\Models\OperationalNotification;
 use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
+use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -60,8 +65,12 @@ class AdminReportsTest extends TestCase
             ->assertSee('Navigasi cepat')
             ->assertSee('aria-label="Notifikasi', false)
             ->assertSee('Outlet aktif')
-            ->assertSee('Menu</span>', false)
-            ->assertDontSee('aria-label="Buka menu"', false)
+            ->assertSee('class="burger-btn workspace-menu-toggle"', false)
+            ->assertSee('aria-label="Buka menu"', false)
+            ->assertSee('workspace-sidebar-brand', false)
+            ->assertSee('aria-label="Menu akun"', false)
+            ->assertSee('workspace-sidebar-outlet', false)
+            ->assertDontSee('workspace-topbar', false)
             ->assertDontSee('id="dashboard-sales-trend"', false);
     }
 
@@ -86,6 +95,77 @@ class AdminReportsTest extends TestCase
             ->assertSee('Lunas')
             ->assertSee('href="'.route('transactions.show', $transaction).'"', false)
             ->assertSee('bg-light-success text-success', false);
+    }
+
+    public function test_dashboard_content_changes_with_operational_role_and_permission(): void
+    {
+        foreach ([
+            ['cashier', 'Ruang kerja kasir', 'Transaksi saya hari ini', 'Sisa utang'],
+            ['warehouse', 'Ruang kerja gudang', 'Stok perlu dicek', 'Penjualan saya hari ini'],
+            ['finance', 'Ruang kerja keuangan', 'Sisa utang', 'Stok perlu dicek'],
+        ] as [$role, $title, $visible, $hidden]) {
+            $user = User::create(['name' => ucfirst($role), 'email' => $role.'@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+            $user->assignRole($role);
+            $user->outlets()->attach($this->outlet->id, ['is_default' => true]);
+            $this->assertTrue($user->can('dashboard-access'), $role.' lacks dashboard access');
+            $this->flushSession();
+
+            $response = $this->actingAs($user)->withSession(['active_outlet_id' => $this->outlet->id])->get(route('dashboard'));
+            $this->assertSame(200, $response->status(), $role.' redirected to '.$response->headers->get('Location'));
+            $response
+                ->assertSee($title)
+                ->assertSee($visible)
+                ->assertDontSee($hidden)
+                ->assertDontSee('Tren penjualan');
+        }
+    }
+
+    public function test_cashier_dashboard_shows_only_own_transactions(): void
+    {
+        $cashier = User::create(['name' => 'Kasir', 'email' => 'own-cashier@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $cashier->assignRole('cashier');
+        $cashier->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        foreach ([[$cashier, 'OWN-SALE', 12000], [$this->user, 'OTHER-SALE', 90000]] as [$seller, $number, $total]) {
+            Transaction::create(['number' => $number, 'outlet_id' => $this->outlet->id, 'warehouse_id' => $this->warehouse->id, 'user_id' => $seller->id, 'status' => 'completed', 'payment_status' => 'paid', 'grand_total' => $total, 'occurred_at' => now()]);
+        }
+
+        $this->actingAs($cashier)->withSession(['active_outlet_id' => $this->outlet->id])
+            ->get(route('dashboard'))->assertOk()->assertSee('OWN-SALE')->assertSee('Rp12.000')
+            ->assertDontSee('OTHER-SALE')->assertDontSee('Rp90.000');
+    }
+
+    public function test_finance_dashboard_totals_exclude_another_outlet(): void
+    {
+        $finance = User::create(['name' => 'Finance', 'email' => 'finance-dashboard@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $finance->assignRole('finance');
+        $finance->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        $customer = Customer::create(['code' => 'FIN-CUSTOMER', 'name' => 'Pelanggan keuangan', 'is_active' => true]);
+        $otherOutlet = Outlet::create(['code' => 'FIN-OTHER', 'slug' => 'fin-other', 'name' => 'Outlet lainnya', 'is_active' => true]);
+        $otherWarehouse = Warehouse::create(['outlet_id' => $otherOutlet->id, 'code' => 'FIN-OTHER-WH', 'name' => 'Gudang lainnya', 'type' => 'branch', 'is_active' => true]);
+
+        foreach ([[$this->warehouse, 'FIN-OWN', 30000], [$otherWarehouse, 'FIN-OTHER', 90000]] as [$warehouse, $number, $amount]) {
+            $sale = Transaction::create(['number' => $number, 'outlet_id' => $warehouse->outlet_id, 'warehouse_id' => $warehouse->id, 'user_id' => $this->user->id, 'status' => 'completed', 'payment_status' => 'unpaid', 'grand_total' => $amount, 'occurred_at' => now()]);
+            Receivable::create(['customer_id' => $customer->id, 'transaction_id' => $sale->id, 'reference' => $number, 'amount' => $amount, 'paid_amount' => 0, 'due_at' => today()->subDay(), 'status' => 'unpaid']);
+        }
+
+        $this->actingAs($finance)->withSession(['active_outlet_id' => $this->outlet->id])
+            ->get(route('dashboard'))->assertOk()->assertSee('Rp30.000')->assertDontSee('Rp90.000')
+            ->assertSee('Piutang jatuh tempo');
+    }
+
+    public function test_custom_role_dashboard_lists_only_granted_features(): void
+    {
+        $role = Role::create(['name' => 'catalog-viewer', 'guard_name' => 'web']);
+        $role->givePermissionTo(['dashboard-access', 'products-access']);
+        $viewer = User::create(['name' => 'Catalog Viewer', 'email' => 'catalog-viewer@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $viewer->assignRole($role);
+        $viewer->outlets()->attach($this->outlet->id, ['is_default' => true]);
+
+        $this->actingAs($viewer)->withSession(['active_outlet_id' => $this->outlet->id])
+            ->get(route('dashboard'))->assertOk()->assertSee('Ruang kerja saya')
+            ->assertSee('href="'.route('products.index').'"', false)
+            ->assertDontSee('href="'.route('payables.index').'"', false)
+            ->assertDontSee('Penjualan hari ini');
     }
 
     public function test_dashboard_periods_compare_the_matching_previous_period(): void
@@ -136,6 +216,42 @@ class AdminReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Produk perlu stok')
             ->assertDontSee('Produk lain');
+    }
+
+    public function test_dashboard_warehouse_filter_scopes_sales_and_report_links(): void
+    {
+        $secondWarehouse = Warehouse::create(['outlet_id' => $this->outlet->id, 'code' => 'SECOND-WH', 'name' => 'Gudang kedua', 'type' => 'branch', 'is_active' => true]);
+        $otherOutlet = Outlet::create(['code' => 'DISTANT', 'slug' => 'distant', 'name' => 'Outlet lain', 'is_active' => true]);
+        $otherWarehouse = Warehouse::create(['outlet_id' => $otherOutlet->id, 'code' => 'DISTANT-WH', 'name' => 'Gudang luar', 'type' => 'branch', 'is_active' => true]);
+
+        foreach ([[$this->warehouse, 'VISIBLE', 10000, 'Dimsum pilihan'], [$secondWarehouse, 'HIDDEN-WH', 50000, 'Produk gudang kedua'], [$otherWarehouse, 'HIDDEN-OUTLET', 90000, 'Produk outlet lain']] as [$warehouse, $number, $total, $product]) {
+            $transaction = Transaction::create(['number' => $number, 'outlet_id' => $warehouse->outlet_id, 'warehouse_id' => $warehouse->id, 'user_id' => $this->user->id, 'status' => 'completed', 'payment_status' => 'paid', 'grand_total' => $total, 'occurred_at' => now()]);
+            TransactionDetail::create(['transaction_id' => $transaction->id, 'product_name' => $product, 'unit_name' => 'pcs', 'quantity' => 2, 'unit_price' => $total / 2, 'line_total' => $total]);
+        }
+
+        $this->get(route('dashboard', ['warehouse' => $this->warehouse->id]))
+            ->assertOk()->assertSee('Rp10.000')->assertSee('Dimsum pilihan')
+            ->assertDontSee('HIDDEN-WH')->assertDontSee('HIDDEN-OUTLET')
+            ->assertDontSee('Produk gudang kedua')->assertDontSee('Produk outlet lain')
+            ->assertSee('id="dashboard-show-table"', false)
+            ->assertSee('from='.today()->toDateString().'&amp;to='.today()->toDateString().'&amp;warehouse='.$this->warehouse->id, false);
+
+        $this->get(route('dashboard', ['warehouse' => $otherWarehouse->id]))->assertNotFound();
+        $this->get(route('reports.sales', ['from' => today()->toDateString(), 'to' => today()->toDateString(), 'warehouse' => $this->warehouse->id]))
+            ->assertOk()->assertSee('Rp 10.000')->assertDontSee('HIDDEN-WH')->assertDontSee('HIDDEN-OUTLET');
+        $this->get(route('reports.sales', ['warehouse' => $otherWarehouse->id]))->assertNotFound();
+        Livewire::test(SalesReport::class)->set('warehouseId', (string) $otherWarehouse->id)->assertNotFound();
+    }
+
+    public function test_dashboard_notification_links_open_the_authorized_work_area(): void
+    {
+        OperationalNotification::create(['outlet_id' => $this->outlet->id, 'type' => 'receivable-overdue', 'title' => 'Piutang harus ditagih', 'reference_type' => 'receivable', 'reference_id' => 1]);
+        $otherOutlet = Outlet::create(['code' => 'NOTICE-OTHER', 'slug' => 'notice-other', 'name' => 'Outlet rahasia', 'is_active' => true]);
+        OperationalNotification::create(['outlet_id' => $otherOutlet->id, 'type' => 'receivable-overdue', 'title' => 'Piutang outlet rahasia']);
+
+        $this->get(route('dashboard'))->assertOk()->assertSee('Piutang harus ditagih')
+            ->assertSee('href="'.route('receivables.index').'"', false)
+            ->assertDontSee('Piutang outlet rahasia');
     }
 
     public function test_forged_role_form_cannot_remove_super_admin_permissions(): void

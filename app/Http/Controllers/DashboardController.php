@@ -3,13 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\CashierShift;
+use App\Models\OperationalNotification;
+use App\Models\Outlet;
+use App\Models\Payable;
+use App\Models\ProductionOrder;
+use App\Models\ProductionRequest;
 use App\Models\ProductWarehouse;
+use App\Models\PurchaseOrder;
+use App\Models\Receivable;
 use App\Models\Transaction;
+use App\Models\TransactionDetail;
 use App\Models\Warehouse;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -17,8 +27,23 @@ class DashboardController extends Controller
     public function __invoke(Request $request, OutletAccess $access): View
     {
         $outlet = $access->current($request);
+        $user = $request->user();
+        $availableWarehouses = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $requestedWarehouse = $request->query('warehouse');
+        $selectedWarehouse = is_scalar($requestedWarehouse) && ctype_digit((string) $requestedWarehouse)
+            ? $availableWarehouses->firstWhere('id', (int) $requestedWarehouse) : null;
+        abort_if($requestedWarehouse !== null && ! $selectedWarehouse, 404);
+        $warehouseId = $selectedWarehouse?->id;
+        if (! $user->hasAnyRole(['super-admin', 'manager'])) {
+            $role = $user->hasRole('finance') ? 'finance' : ($user->hasRole('warehouse') ? 'warehouse' : ($user->hasRole('cashier') ? 'cashier' : 'custom'));
+
+            return $this->roleDashboard($request, $outlet, $role, $availableWarehouses, $selectedWarehouse);
+        }
         $today = now()->startOfDay();
         $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('occurred_at', '>=', $today)->whereIn('status', ['completed', 'paid']);
+        if ($warehouseId) {
+            $sales->where('warehouse_id', $warehouseId);
+        }
         $requestedPeriod = $request->query('period', '7');
         $trendDays = is_string($requestedPeriod) && in_array($requestedPeriod, ['7', '30'], true) ? (int) $requestedPeriod : 7;
         $trendStart = today()->subDays($trendDays - 1);
@@ -26,30 +51,31 @@ class DashboardController extends Controller
             ->where('outlet_id', $outlet->id)
             ->whereBetween('occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])
             ->whereIn('status', ['completed', 'paid'])
+            ->when($warehouseId, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
             ->selectRaw('DATE(occurred_at) as sales_date, SUM(grand_total) as total')
             ->groupByRaw('DATE(occurred_at)')
             ->pluck('total', 'sales_date');
         $dailyTrend = collect(range(0, $trendDays - 1))->map(function (int $offset) use ($trendStart, $trendRows): array {
             $date = $trendStart->copy()->addDays($offset);
 
-            return ['label' => $date->translatedFormat('d M'), 'date' => $date->translatedFormat('d F Y'), 'total' => (float) ($trendRows[$date->toDateString()] ?? 0)];
+            return ['label' => $date->translatedFormat('d M'), 'date' => $date->translatedFormat('d F Y'), 'from' => $date->toDateString(), 'to' => $date->toDateString(), 'total' => (float) ($trendRows[$date->toDateString()] ?? 0)];
         });
         $salesTrend = $trendDays === 30
             ? $dailyTrend->chunk(6)->map(function (Collection $days): array {
                 $first = $days->first();
                 $last = $days->last();
 
-                return ['label' => $first['label'].'–'.$last['label'], 'date' => $first['date'].' – '.$last['date'], 'total' => $days->sum('total')];
+                return ['label' => $first['label'].'–'.$last['label'], 'date' => $first['date'].' – '.$last['date'], 'from' => $first['from'], 'to' => $last['to'], 'total' => $days->sum('total')];
             })->values()
             : $dailyTrend;
         $previousTrendTotal = Transaction::query()
             ->where('outlet_id', $outlet->id)
             ->whereBetween('occurred_at', [$trendStart->copy()->subDays($trendDays)->startOfDay(), $trendStart->copy()->subDay()->endOfDay()])
             ->whereIn('status', ['completed', 'paid'])
+            ->when($warehouseId, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
             ->sum('grand_total');
         $trendTotal = $dailyTrend->sum('total');
-        $warehouses = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true);
-        $warehouseIds = (clone $warehouses)->pluck('id');
+        $warehouseIds = $warehouseId ? collect([$warehouseId]) : $availableWarehouses->pluck('id');
         $lowStockQuery = ProductWarehouse::query()->with(['product:id,title,sku', 'warehouse:id,name'])
             ->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')
             ->whereHas('product', fn (Builder $products) => $products->where('is_active', true))
@@ -58,8 +84,75 @@ class DashboardController extends Controller
         $lowStock = $lowStockQuery->limit(8)->get();
         $shift = CashierShift::query()->with('warehouse:id,name')->where('user_id', $request->user()->id)->where('outlet_id', $outlet->id)->where('status', 'open')->latest('opened_at')->first();
 
+        $tasks = collect();
+        $addTask = function (string $permission, string $label, Builder $query, string $route) use ($tasks, $user): void {
+            if (! $user->can($permission)) {
+                return;
+            }
+            $count = (clone $query)->count();
+            if ($count === 0) {
+                return;
+            }
+            $oldest = (clone $query)->min('created_at');
+            $tasks->push(['label' => $label, 'count' => $count, 'oldest' => $oldest, 'url' => route($route)]);
+        };
+        $addTask('production-requests-access', 'Permintaan produksi aktif', ProductionRequest::query()->where('outlet_id', $outlet->id)->whereIn('status', ['draft', 'purchasing', 'approved', 'received'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'production-requests.index');
+        $addTask('goods-receivings-access', 'Pesanan menunggu penerimaan', PurchaseOrder::query()->whereIn('status', ['ordered', 'partial'])->whereIn('warehouse_id', $warehouseIds), 'goods-receivings.index');
+        $addTask('payables-access', 'Utang jatuh tempo', Payable::query()->whereIn('status', ['unpaid', 'partial'])->whereDate('due_at', '<=', today())->where(function (Builder $q) use ($warehouseIds): void {
+            $q->whereHas('receiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds))
+                ->orWhereHas('ingredientReceiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds));
+        }), 'payables.index');
+        $addTask('receivables-access', 'Piutang jatuh tempo', Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereDate('due_at', '<=', today())->whereHas('transaction', fn (Builder $q) => $q->where('outlet_id', $outlet->id)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))), 'receivables.index');
+        $addTask('cashier-shifts-access', 'Shift masih terbuka', CashierShift::query()->where('outlet_id', $outlet->id)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'shifts.index');
+
+        $quickActions = collect();
+        if ($user->can('cashier-shifts-open') && ! $shift) {
+            $quickActions->push(['label' => 'Buka shift', 'url' => route('shifts.create'), 'icon' => 'bi-play-circle']);
+        }
+        if ($user->can('purchase-orders-access') && $user->can('purchase-orders-create')) {
+            $quickActions->push(['label' => 'Buat pesanan', 'url' => route('purchase-orders.index'), 'icon' => 'bi-bag-plus']);
+        }
+        if ($user->can('goods-receivings-access') && $user->can('goods-receivings-create')) {
+            $quickActions->push(['label' => 'Terima barang', 'url' => route('goods-receivings.index'), 'icon' => 'bi-box-arrow-in-down']);
+        }
+        if ($user->can('production-requests-access') && $user->can('production-request')) {
+            $quickActions->push(['label' => 'Permintaan produksi', 'url' => route('production-requests.index'), 'icon' => 'bi-clipboard-plus']);
+        }
+        if ($shift && $user->can('cashier-shifts-access')) {
+            $quickActions->prepend(['label' => 'Lihat shift', 'url' => route('shifts.index'), 'icon' => 'bi-clock-history']);
+        }
+
+        $notifications = collect();
+        if ($user->can('notifications-access')) {
+            $notifications = OperationalNotification::query()->whereNull('read_at')->where(function (Builder $q) use ($outlet, $user): void {
+                $q->where(fn (Builder $personal) => $personal->where('user_id', $user->id)->where(fn (Builder $scope) => $scope->whereNull('outlet_id')->orWhere('outlet_id', $outlet->id)))
+                    ->orWhere(fn (Builder $shared) => $shared->whereNull('user_id')->where('outlet_id', $outlet->id));
+            })->orderByRaw("CASE WHEN type LIKE '%overdue' THEN 0 ELSE 1 END")->latest()->limit(4)->get();
+        }
+
+        $periodSales = Transaction::query()->where('outlet_id', $outlet->id)->whereBetween('occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])->whereIn('status', ['completed', 'paid'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId));
+        $topProducts = collect();
+        $busyHours = collect();
+        if ($user->can('reports-access')) {
+            $topProducts = TransactionDetail::query()->join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
+                ->where('transactions.outlet_id', $outlet->id)->whereBetween('transactions.occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])
+                ->whereIn('transactions.status', ['completed', 'paid'])->when($warehouseId, fn (Builder $q) => $q->where('transactions.warehouse_id', $warehouseId))
+                ->selectRaw('transaction_details.product_name, transaction_details.unit_name, SUM(transaction_details.quantity) as quantity')
+                ->groupBy('transaction_details.product_name', 'transaction_details.unit_name')->orderByDesc('quantity')->limit(5)->get();
+            $hourExpression = DB::getDriverName() === 'sqlite' ? "strftime('%H', occurred_at)" : 'HOUR(occurred_at)';
+            $busyHours = (clone $periodSales)->selectRaw($hourExpression.' as sale_hour, COUNT(*) as transactions')
+                ->groupByRaw($hourExpression)->orderByDesc('transactions')->limit(3)->get();
+        }
+
         return view('dashboard.index', [
             'outlet' => $outlet,
+            'availableWarehouses' => $availableWarehouses,
+            'selectedWarehouse' => $selectedWarehouse,
+            'tasks' => $tasks,
+            'quickActions' => $quickActions->take(3),
+            'notifications' => $notifications,
+            'topProducts' => $topProducts,
+            'busyHours' => $busyHours,
             'todaySales' => (clone $sales)->sum('grand_total'),
             'salesTrend' => $salesTrend,
             'trendDays' => $trendDays,
@@ -68,12 +161,152 @@ class DashboardController extends Controller
             'previousTrendTotal' => (float) $previousTrendTotal,
             'trendChangePercent' => $previousTrendTotal > 0 ? (($trendTotal - $previousTrendTotal) / $previousTrendTotal) * 100 : null,
             'todayTransactions' => (clone $sales)->count(),
-            'openShifts' => CashierShift::query()->where('outlet_id', $outlet->id)->where('status', 'open')->count(),
+            'openShifts' => CashierShift::query()->where('outlet_id', $outlet->id)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->count(),
             'lowStock' => $lowStock,
             'lowStockCount' => $lowStockCount,
             'shift' => $shift,
-            'recentTransactions' => $request->user()->can('transactions-access') ? Transaction::query()->with('customer:id,name')->where('outlet_id', $outlet->id)->latest('occurred_at')->limit(8)->get() : collect(),
+            'recentTransactions' => $user->can('transactions-access') ? Transaction::query()->with('customer:id,name')->where('outlet_id', $outlet->id)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->latest('occurred_at')->limit(8)->get() : collect(),
             'outlets' => $access->outletsFor($request->user())->get(['id', 'name']),
+        ]);
+    }
+
+    private function roleDashboard(Request $request, Outlet $outlet, string $role, Collection $warehouses, ?Warehouse $selectedWarehouse): View
+    {
+        $user = $request->user();
+        $warehouseId = $selectedWarehouse?->id;
+        $warehouseIds = $warehouseId ? [$warehouseId] : $warehouses->pluck('id')->all();
+        $metrics = collect();
+        $workItems = collect();
+        $actions = collect();
+        $recentTransactions = collect();
+        $titles = ['cashier' => 'Ruang kerja kasir', 'warehouse' => 'Ruang kerja gudang', 'finance' => 'Ruang kerja keuangan', 'custom' => 'Ruang kerja saya'];
+        $descriptions = [
+            'cashier' => 'Shift dan transaksi Anda pada outlet aktif.',
+            'warehouse' => 'Stok, penerimaan, dan produksi pada lokasi terpilih.',
+            'finance' => 'Tagihan dan penagihan pada lokasi terpilih.',
+            'custom' => 'Akses cepat ke fitur yang tersedia untuk akun Anda.',
+        ];
+        $addAction = function (string $permission, string $label, string $route, string $icon) use ($user, $actions): void {
+            if ($user->can($permission) && Route::has($route)) {
+                $actions->push(['label' => $label, 'url' => route($route), 'icon' => $icon]);
+            }
+        };
+        $addWorkItem = function (string $permission, string $label, int $count, string $route) use ($user, $workItems): void {
+            if ($count > 0 && $user->can($permission)) {
+                $workItems->push(['label' => $label, 'count' => $count, 'url' => route($route)]);
+            }
+        };
+
+        if ($role === 'cashier') {
+            $shift = CashierShift::query()->with('warehouse:id,name')->where('outlet_id', $outlet->id)->where('open_user_id', $user->id)->where('status', 'open')->latest('opened_at')->first();
+            $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);
+            $metrics->push(['label' => 'Shift saya', 'value' => $shift ? 'Terbuka' : 'Belum dibuka', 'detail' => $shift?->warehouse?->name ?? 'Buka shift sebelum melayani penjualan.']);
+            $metrics->push(['label' => 'Transaksi saya hari ini', 'value' => number_format((clone $sales)->count()), 'detail' => 'Transaksi selesai milik Anda.']);
+            $metrics->push(['label' => 'Penjualan saya hari ini', 'value' => 'Rp'.number_format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Nilai transaksi selesai, termasuk yang belum lunas.']);
+            if ($user->can('transactions-access')) {
+                $recentTransactions = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->latest('occurred_at')->limit(5)->get();
+            }
+            if ($shift) {
+                $addAction('cashier-shifts-access', 'Lihat shift saya', 'shifts.index', 'bi-clock-history');
+            } else {
+                $addAction('cashier-shifts-open', 'Buka shift', 'shifts.create', 'bi-play-circle');
+            }
+            $addAction('pos-access', 'Buka kasir', 'pos.index', 'bi-cart3');
+            $addAction('transactions-access', 'Daftar transaksi', 'transactions.index', 'bi-receipt');
+        } elseif ($role === 'warehouse') {
+            $lowStock = ProductWarehouse::query()->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')->whereHas('product', fn (Builder $q) => $q->where('is_active', true));
+            $orders = PurchaseOrder::query()->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['ordered', 'partial']);
+            $requests = ProductionRequest::query()->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['draft', 'purchasing', 'approved', 'received']);
+            $production = ProductionOrder::query()->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds)->where('status', 'in_production');
+            if ($user->can('inventory-access')) {
+                $metrics->push(['label' => 'Stok perlu dicek', 'value' => number_format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
+                $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
+            }
+            if ($user->can('goods-receivings-access')) {
+                $metrics->push(['label' => 'Menunggu penerimaan', 'value' => number_format((clone $orders)->count()), 'detail' => 'Pesanan yang masih perlu diterima.']);
+                $addWorkItem('goods-receivings-access', 'Terima barang', (clone $orders)->count(), 'goods-receivings.index');
+            }
+            if ($user->can('production-requests-access')) {
+                $metrics->push(['label' => 'Permintaan produksi aktif', 'value' => number_format((clone $requests)->count()), 'detail' => 'Permintaan pada lokasi terpilih.']);
+                $addWorkItem('production-requests-access', 'Tinjau permintaan produksi', (clone $requests)->count(), 'production-requests.index');
+            }
+            if ($user->can('production-orders-access')) {
+                $metrics->push(['label' => 'Sedang diproduksi', 'value' => number_format((clone $production)->count()), 'detail' => 'Pesanan produksi belum selesai.']);
+                $addWorkItem('production-orders-access', 'Lanjutkan produksi', (clone $production)->count(), 'production-orders.index');
+            }
+            $addAction('inventory-access', 'Buka inventori', 'inventory.index', 'bi-box-seam');
+            $addAction('goods-receivings-access', 'Penerimaan barang', 'goods-receivings.index', 'bi-box-arrow-in-down');
+            $addAction('production-orders-access', 'Produksi', 'production-orders.index', 'bi-gear');
+        } elseif ($role === 'finance') {
+            $payables = Payable::query()->whereIn('status', ['unpaid', 'partial'])->where(function (Builder $q) use ($warehouseIds): void {
+                $q->whereHas('receiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds))
+                    ->orWhereHas('ingredientReceiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds));
+            });
+            $receivables = Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereHas('transaction', fn (Builder $q) => $q->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds));
+            if ($user->can('payables-access')) {
+                $balance = (clone $payables)->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as balance')->value('balance');
+                $overdue = (clone $payables)->whereDate('due_at', '<=', today())->count();
+                $metrics->push(['label' => 'Sisa utang', 'value' => 'Rp'.number_format((float) $balance, 0, ',', '.'), 'detail' => 'Belum dibayar pada lokasi terpilih.']);
+                $metrics->push(['label' => 'Utang jatuh tempo', 'value' => number_format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
+                $addWorkItem('payables-access', 'Tinjau utang jatuh tempo', $overdue, 'payables.index');
+            }
+            if ($user->can('receivables-access')) {
+                $balance = (clone $receivables)->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as balance')->value('balance');
+                $overdue = (clone $receivables)->whereDate('due_at', '<=', today())->count();
+                $metrics->push(['label' => 'Sisa piutang', 'value' => 'Rp'.number_format((float) $balance, 0, ',', '.'), 'detail' => 'Belum diterima pada lokasi terpilih.']);
+                $metrics->push(['label' => 'Piutang jatuh tempo', 'value' => number_format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
+                $addWorkItem('receivables-access', 'Tinjau piutang jatuh tempo', $overdue, 'receivables.index');
+            }
+            $addAction('payables-access', 'Buka utang', 'payables.index', 'bi-wallet2');
+            $addAction('receivables-access', 'Buka piutang', 'receivables.index', 'bi-cash-coin');
+            $addAction('reports-access', 'Laporan penjualan', 'reports.sales', 'bi-bar-chart');
+        } else {
+            foreach ([
+                ['users-access', 'Pengguna', 'users.index', 'bi-people'],
+                ['products-access', 'Produk', 'products.index', 'bi-box'],
+                ['categories-access', 'Kategori', 'categories.index', 'bi-tags'],
+                ['units-access', 'Satuan', 'units.index', 'bi-rulers'],
+                ['customers-access', 'Pelanggan', 'customers.index', 'bi-person-lines-fill'],
+                ['suppliers-access', 'Pemasok', 'suppliers.index', 'bi-truck'],
+                ['pos-access', 'Kasir', 'pos.index', 'bi-cart3'],
+                ['transactions-access', 'Transaksi', 'transactions.index', 'bi-receipt'],
+                ['cashier-shifts-access', 'Shift kasir', 'shifts.index', 'bi-clock-history'],
+                ['inventory-access', 'Inventori', 'inventory.index', 'bi-box-seam'],
+                ['ingredients-access', 'Bahan', 'ingredients.index', 'bi-basket'],
+                ['recipes-access', 'Resep', 'recipes.index', 'bi-journal-text'],
+                ['production-requests-access', 'Permintaan produksi', 'production-requests.index', 'bi-clipboard-check'],
+                ['production-orders-access', 'Produksi', 'production-orders.index', 'bi-gear'],
+                ['transfers-access', 'Transfer stok', 'transfers.index', 'bi-arrow-left-right'],
+                ['stock-opnames-access', 'Stok opname', 'stock-opnames.index', 'bi-clipboard-data'],
+                ['purchase-orders-access', 'Pembelian', 'purchase-orders.index', 'bi-bag-check'],
+                ['goods-receivings-access', 'Penerimaan barang', 'goods-receivings.index', 'bi-box-arrow-in-down'],
+                ['supplier-returns-access', 'Retur pemasok', 'supplier-returns.index', 'bi-arrow-return-left'],
+                ['payables-access', 'Utang', 'payables.index', 'bi-wallet2'],
+                ['receivables-access', 'Piutang', 'receivables.index', 'bi-cash-coin'],
+                ['expenses-access', 'Pengeluaran', 'expenses.index', 'bi-cash-stack'],
+                ['waste-access', 'Waste', 'waste.index', 'bi-trash3'],
+                ['cash-management-access', 'Manajemen kas', 'cash-management.index', 'bi-bank'],
+                ['reports-access', 'Laporan', 'reports.sales', 'bi-bar-chart'],
+                ['audit-logs-access', 'Audit log', 'audit-logs.index', 'bi-journal-text'],
+                ['notifications-access', 'Notifikasi', 'notifications.index', 'bi-bell'],
+                ['store-settings-access', 'Profil toko', 'settings.store', 'bi-sliders'],
+                ['payment-settings-access', 'Pengaturan pembayaran', 'settings.payments', 'bi-credit-card'],
+            ] as [$permission, $label, $route, $icon]) {
+                $addAction($permission, $label, $route, $icon);
+            }
+        }
+
+        return view('dashboard.role', [
+            'outlet' => $outlet,
+            'role' => $role,
+            'roleTitle' => $titles[$role],
+            'roleDescription' => $descriptions[$role],
+            'availableWarehouses' => $warehouses,
+            'selectedWarehouse' => $selectedWarehouse,
+            'metrics' => $metrics,
+            'workItems' => $workItems,
+            'actions' => $actions->take(4),
+            'recentTransactions' => $recentTransactions,
         ]);
     }
 }
