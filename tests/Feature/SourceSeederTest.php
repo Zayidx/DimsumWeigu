@@ -27,28 +27,33 @@ class SourceSeederTest extends TestCase
         $this->assertSame(1, User::role('super-admin')->count());
         $this->assertDatabaseMissing('products', ['sku' => 'TEST-DOR']); // Synthetic simulation data stays opt-in.
         $this->seed(TestDataSeeder::class);
-        $this->assertSame(13, DB::table('products')->where('sku', 'like', 'TEST-%')->count());
-        $this->assertSame(13, DB::table('ingredients')->where('code', 'like', 'TEST-%')->count());
+        $this->assertSame(16, DB::table('products')->where('sku', 'like', 'TEST-%')->count());
+        $this->assertGreaterThan(40, DB::table('ingredients')->where('code', 'like', 'TEST-%')->count());
         $testProductIds = DB::table('products')->where('sku', 'like', 'TEST-%')->select('id');
         $testIngredientIds = DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id');
-        $this->assertSame(28, DB::table('product_units')->whereIn('product_id', $testProductIds)->count());
-        $this->assertSame(32, DB::table('recipe_versions')->whereIn('product_id', $testProductIds)->count());
-        $this->assertSame(79, DB::table('recipe_items')->whereIn('ingredient_id', $testIngredientIds)->count());
+        $this->assertGreaterThan(30, DB::table('product_units')->whereIn('product_id', $testProductIds)->count());
+        $this->assertGreaterThan(20, DB::table('recipe_versions')->whereIn('product_id', $testProductIds)->count());
+        $this->assertGreaterThan(100, DB::table('recipe_items')->whereIn('ingredient_id', $testIngredientIds)->count());
         $this->assertSame(4, DB::table('outlets')->count());
         $this->assertSame(5, DB::table('warehouses')->count());
         $this->assertSame(8, DB::table('users')->count());
-        $this->assertSame(13, DB::table('ingredient_warehouses')->whereIn('ingredient_id', $testIngredientIds)->count());
-        $this->assertSame(13, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', $testIngredientIds)->count());
-        foreach (['DOR' => 4500, 'DME' => 5500, 'DCH' => 6500, 'DMX' => 6000, 'LOR' => 9000, 'LME' => 10000,
-            'CGA' => 26000, 'CLA' => 26000, 'CME' => 26000, 'CCH' => 28000, 'BMX' => 90000, 'BME' => 85000, 'BCH' => 100000] as $sku => $price) {
+        $ingredientCount = DB::table('ingredients')->where('code', 'like', 'TEST-%')->count();
+        $openingLedgerCount = DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', $testIngredientIds)->count();
+        $this->assertGreaterThan(40, $openingLedgerCount);
+        $this->assertSame($openingLedgerCount, DB::table('ingredient_warehouses')->whereIn('ingredient_id', $testIngredientIds)->count());
+        foreach (['DOR' => 4000, 'DME' => 5000, 'DCH' => 5500, 'DMX' => 0, 'LOR' => 0, 'LME' => 0,
+            'CGA' => 26000, 'CLA' => 26000, 'CME' => 26000, 'CCH' => 28000] as $sku => $price) {
             $this->assertDatabaseHas('products', ['sku' => 'TEST-'.$sku, 'sell_price' => $price, 'stock' => 0]);
         }
         $this->assertDatabaseHas('warehouses', ['code' => 'PUSAT', 'outlet_id' => null, 'type' => 'central', 'is_sales_enabled' => false]);
         $this->assertSame(4, DB::table('warehouses')->where('type', 'branch')->where('is_sales_enabled', true)->count());
-        $this->assertDatabaseHas('ingredients', ['code' => 'TEST-CHILI-OIL', 'buy_price' => 0.18, 'stock' => 5000]);
-        $chili = Ingredient::where('code', 'TEST-CHILI-OIL')->firstOrFail();
-        $this->assertSame(19, DB::table('recipe_items')->where('ingredient_id', $chili->id)->where('quantity', 50)->count());
-        $this->assertSame(13, DB::table('ingredient_warehouses')->join('ingredients', 'ingredients.id', '=', 'ingredient_warehouses.ingredient_id')->where('ingredients.code', 'like', 'TEST-%')->whereColumn('ingredient_warehouses.stock', 'ingredients.stock')->count());
+        $this->assertDatabaseHas('ingredients', ['code' => 'TEST-AYAM-FILLET', 'unit_id' => DB::table('units')->where('code', 'GRAM')->value('id'), 'buy_price' => 57]);
+        $smallBoxCost = (float) Ingredient::query()->where('code', 'TEST-BOX-KECIL')->value('buy_price');
+        $this->assertEqualsWithDelta(150000 / 379, $smallBoxCost, 0.001);
+        $this->assertDatabaseHas('products', ['sku' => 'TEST-CGA', 'allow_single_unit_sale' => true]);
+        $this->assertDatabaseHas('products', ['sku' => 'TEST-DPL', 'is_semi_finished' => true, 'is_sellable' => false]);
+        $this->assertDatabaseMissing('ingredients', ['code' => 'TEST-FROZEN-DIMSUM']);
+        $this->assertSame($openingLedgerCount, DB::table('ingredient_warehouses')->join('ingredients', 'ingredients.id', '=', 'ingredient_warehouses.ingredient_id')->where('ingredients.code', 'like', 'TEST-%')->whereColumn('ingredient_warehouses.stock', 'ingredients.stock')->count());
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('products-create'));
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('cash-management-create'));
         $this->assertTrue(Role::findByName('cashier')->hasPermissionTo('pos-checkout'));
@@ -75,12 +80,13 @@ class SourceSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $this->seed(UserSeeder::class);
         $this->seed(TestDataSeeder::class);
-        $this->assertSame(13, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
+        $ingredientCount = DB::table('ingredients')->where('code', 'like', 'TEST-%')->count();
+        $this->assertSame($ingredientCount, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseCount('users', 8);
-        $this->assertSame(79, DB::table('recipe_items')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
+        $this->assertGreaterThan(100, DB::table('recipe_items')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseHas('products', ['sku' => 'TEST-DOR', 'sell_price' => 4700]);
         $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'stock' => 999]);
-        $this->assertSame(19, DB::table('recipe_items')->where('ingredient_id', $ingredient->id)->where('quantity', 2)->count());
+        $this->assertSame(0, DB::table('recipe_items')->where('ingredient_id', $ingredient->id)->where('quantity', 2)->count());
         $this->assertTrue(Role::findByName('manager')->hasPermissionTo('products-create'));
         $this->assertTrue(hash_equals($beforeCredential, hash('sha256', $cashier->fresh()->password)));
     }

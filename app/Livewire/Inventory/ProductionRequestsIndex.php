@@ -160,7 +160,7 @@ class ProductionRequestsIndex extends Component
         return view('livewire.inventory.production-requests-index', [
             'requests' => ProductionRequest::query()->with(['items.product', 'materials.ingredient.unit', 'items.recipe'])->whereIn('outlet_id', $outletIds)->latest()->limit(100)->get(),
             'purchases' => IngredientPurchaseOrder::query()->with(['request', 'items.ingredient.unit'])->whereHas('request', fn ($q) => $q->whereIn('outlet_id', $outletIds))->whereIn('status', ['ordered', 'partially_received'])->latest()->get(),
-            'products' => Product::query()->where('is_active', true)->where('is_sellable', true)->whereHas('recipeVersions', fn ($q) => $q->where('is_active', true))->orderBy('title')->get(),
+            'products' => Product::query()->where('is_active', true)->where('is_semi_finished', true)->whereHas('recipeVersions', fn ($q) => $q->whereColumn('recipe_versions.unit_id', 'products.unit_id')->where('is_active', true))->orderBy('title')->get(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name')->get(),
         ])->layout('layouts.dashboard', ['title' => __('Permintaan produksi')]);
     }

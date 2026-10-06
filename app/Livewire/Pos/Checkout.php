@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pos;
 
+use App\Models\BankAccount;
 use App\Models\Cart;
 use App\Models\CashierShift;
 use App\Models\Customer;
@@ -11,6 +12,7 @@ use App\Models\Setting;
 use App\Services\Cashier\CartService;
 use App\Services\Cashier\CheckoutService;
 use App\Support\FixedDecimal;
+use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -23,6 +25,8 @@ class Checkout extends Component
     public string $search = '';
 
     public string $cashReceived = '';
+
+    public string $qrisReference = '';
 
     public string $holdLabel = '';
 
@@ -139,13 +143,30 @@ class Checkout extends Component
         $this->dispatch('toast', type: 'success', message: __('Transaksi dicatat sebagai piutang.'));
     }
 
+    public function payQris(CheckoutService $checkout, CartService $carts): void
+    {
+        $this->authorizePos('pos-checkout');
+        $data = $this->validate(['qrisReference' => ['nullable', 'string', 'max:160']]);
+        $bankAccount = BankAccount::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->firstOrFail();
+        $this->persistDetails($carts);
+        $transaction = $checkout->qris($this->activeCart($carts), $bankAccount->id, $data['qrisReference'] ?? null);
+        $this->lastTransaction = $transaction->number;
+        $this->lastTransactionId = $transaction->id;
+        $this->qrisReference = '';
+        $this->customerId = null;
+        $this->notes = '';
+        $this->dispatch('toast', type: 'success', message: __('Pembayaran QRIS tercatat ke rekening finance. Transaksi :number', ['number' => $transaction->number]));
+    }
+
     public function render(CartService $carts)
     {
         $this->authorizePos();
         $shift = $this->activeShiftOrNull();
         if (! $shift) {
-            return view('livewire.pos.checkout', ['shift' => null, 'products' => collect(), 'cart' => null, 'heldCarts' => collect(), 'customers' => collect(), 'previewTotal' => 0, 'previewLines' => [], 'payLaterEnabled' => false])
-                ->layout('layouts.pos', ['title' => __('Kasir')]);
+            $outlets = app(OutletAccess::class)->outletsFor(auth()->user())->orderBy('name')->get(['id', 'name']);
+
+            return view('livewire.pos.checkout', ['shift' => null, 'products' => collect(), 'cart' => null, 'heldCarts' => collect(), 'customers' => collect(), 'previewTotal' => 0, 'previewLines' => [], 'payLaterEnabled' => false, 'qrisEnabled' => false, 'bankAccounts' => collect(), 'outlets' => $outlets])
+                ->layout('layouts.dashboard', ['title' => __('Kasir')]);
         }
         $cart = $carts->activeFor($shift)->load('items.product.unit', 'items.product.productUnits', 'items.unit');
         $warehouseId = $shift->warehouse_id;
@@ -153,11 +174,15 @@ class Checkout extends Component
             ->where('is_active', true)->where('is_sellable', true)
             ->when($this->search !== '', fn (Builder $q) => $q->where(fn (Builder $sub) => $sub->where('title', 'like', '%'.$this->search.'%')->orWhere('sku', 'like', '%'.$this->search.'%')->orWhere('barcode', 'like', '%'.$this->search.'%')->orWhereHas('productUnits', fn (Builder $unit) => $unit->where('barcode', 'like', '%'.$this->search.'%'))))
             ->where(function (Builder $query) use ($warehouseId) {
-                $query->where('track_stock', false)->orWhereHas('warehouseStocks', fn (Builder $stock) => $stock->where('warehouse_id', $warehouseId)->whereColumn('stock', '>', 'reserved_stock'));
+                $query->where('track_stock', false)
+                    ->orWhereHas('warehouseStocks', fn (Builder $stock) => $stock->where('warehouse_id', $warehouseId)->whereColumn('stock', '>', 'reserved_stock'))
+                    ->orWhereHas('recipeVersions', fn (Builder $recipe) => $recipe->where('is_active', true)->whereHas('productItems'));
             })->orderBy('title')->paginate(12);
         $heldCarts = Cart::query()->withCount('items')->where('user_id', auth()->id())->where('cashier_shift_id', $shift->id)->where('status', 'held')->orderByDesc('held_at')->get();
         $customers = Customer::query()->where('is_active', true)->orderBy('name')->limit(500)->get(['id', 'name', 'phone']);
         $payLaterEnabled = PaymentMethod::query()->where('code', 'pay-later')->where('is_enabled', true)->exists();
+        $qrisEnabled = PaymentMethod::query()->where('code', 'qris')->where('is_enabled', true)->exists();
+        $bankAccounts = $qrisEnabled ? BankAccount::query()->where('is_active', true)->orderBy('sort_order')->orderBy('bank_name')->get() : collect();
         $defaultTaxRate = (float) Setting::value('default_tax_rate', 0, $shift->outlet_id);
         $defaultTaxInclusive = Setting::value('tax_mode', 'exclusive', $shift->outlet_id) === 'inclusive';
         $previewLines = [];
@@ -176,8 +201,10 @@ class Checkout extends Component
             return $previewLines[$item->id];
         });
 
-        return view('livewire.pos.checkout', compact('shift', 'products', 'cart', 'heldCarts', 'customers', 'previewTotal', 'previewLines', 'payLaterEnabled'))
-            ->layout('layouts.pos', ['title' => __('Kasir')]);
+        $outlets = app(OutletAccess::class)->outletsFor(auth()->user())->orderBy('name')->get(['id', 'name']);
+
+        return view('livewire.pos.checkout', compact('shift', 'products', 'cart', 'heldCarts', 'customers', 'previewTotal', 'previewLines', 'payLaterEnabled', 'qrisEnabled', 'bankAccounts', 'outlets'))
+            ->layout('layouts.dashboard', ['title' => __('Kasir')]);
     }
 
     private function activeCart(CartService $carts): Cart

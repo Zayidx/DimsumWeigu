@@ -17,7 +17,7 @@ use RuntimeException;
 
 /**
  * Dimsum Weigu menu and recipe data for local development/testing only.
- * DatabaseSeeder runs this automatically in the local environment. This seeder never truncates business data.
+ * Run explicitly for local test menu data. This seeder never truncates business data.
  */
 class TestDataSeeder extends Seeder
 {
@@ -44,12 +44,15 @@ class TestDataSeeder extends Seeder
             $this->seedIngredients();
             $this->seedMenuCategories();
             $this->seedProducts();
+            RecipeVersion::query()->whereIn('product_id', collect($this->products)->pluck('id'))
+                ->where('is_active', true)->update(['is_active' => false]);
             $this->seedRecipes();
             $this->seedPortionRecipes();
+            $this->seedMenuAssemblyRecipes();
             $this->seedIngredientOpeningStock($central);
         });
 
-        $this->command?->info('Data uji frozen, saus, resep menu, harga, dan stok berhasil dibuat.');
+        $this->command?->info('Data uji bahan, produk setengah jadi, resep menu, harga, dan stok berhasil dibuat.');
         $this->command?->warn('Seluruh komposisi resep, biaya, dan stok pada seeder ini adalah data simulasi; jangan gunakan sebagai angka produksi/akuntansi aktual.');
     }
 
@@ -92,7 +95,7 @@ class TestDataSeeder extends Seeder
 
     private function seedIngredientCategories(): void
     {
-        foreach (['Produk Frozen', 'Saus Siap Pakai', 'Kemasan', 'Operasional'] as $name) {
+        foreach (['Produk Setengah Jadi', 'Bahan mentah', 'Saus Siap Pakai', 'Kemasan', 'Operasional'] as $name) {
             IngredientCategory::firstOrCreate(['name' => $name], ['is_active' => true]);
         }
     }
@@ -101,19 +104,61 @@ class TestDataSeeder extends Seeder
     {
         $categories = IngredientCategory::all()->keyBy('name');
         $rows = [
-            ['FROZEN-DIMSUM', 'Dimsum frozen', 'Produk Frozen', 'PCS', 1600, 3000],
-            ['FROZEN-LUMPIA', 'Lumpia frozen', 'Produk Frozen', 'PCS', 2800, 3000],
-            ['FROZEN-CHIQURO', 'Chiquro frozen', 'Produk Frozen', 'PCS', 8000, 3000],
-            ['SAUS-MENTAI', 'Saus mentai siap pakai', 'Saus Siap Pakai', 'GRAM', 0.20, 5000],
-            ['SAUS-GARLIC', 'Saus garlic siap pakai', 'Saus Siap Pakai', 'GRAM', 0.15, 1500],
-            ['SAUS-LAVA', 'Saus lava siap pakai', 'Saus Siap Pakai', 'GRAM', 0.18, 2000],
-            ['SAUS-CHEESE', 'Saus keju siap pakai', 'Saus Siap Pakai', 'GRAM', 0.22, 4000],
-            ['CHILI-OIL', 'Chili oil siap pakai', 'Saus Siap Pakai', 'GRAM', 0.18, 5000],
-            ['CUP-SAUS-PCS', 'Cup saus', 'Kemasan', 'PCS', 120, 500],
-            ['BOX-KECIL', 'Box kecil', 'Kemasan', 'PCS', 250, 500],
-            ['BOX-BESAR', 'Box besar', 'Kemasan', 'PCS', 450, 250],
-            ['MINYAK-LITER', 'Minyak goreng', 'Operasional', 'LITER', 20000, 15],
-            ['SUMPIT', 'Sumpit', 'Operasional', 'PCS', 100, 1000],
+            ['DAGING-GILING-SAPI', 'Daging giling sapi', 'Bahan mentah', 'GRAM', 100, 0],
+            ['AYAM-FILLET', 'Ayam fillet', 'Bahan mentah', 'GRAM', 57, 0],
+            ['TELUR', 'Telur', 'Bahan mentah', 'GRAM', 27, 0],
+            ['DAUN-BAWANG', 'Daun bawang', 'Bahan mentah', 'GRAM', 20, 0],
+            ['BAWANG-BOMBAY', 'Bawang bombay', 'Bahan mentah', 'GRAM', 50, 0],
+            ['BAWANG-PUTIH', 'Bawang putih', 'Bahan mentah', 'GRAM', 40, 0],
+            ['MINYAK-WIJEN', 'Minyak wijen', 'Bahan mentah', 'GRAM', 75, 0],
+            ['KECAP-ASIN', 'Kecap asin', 'Bahan mentah', 'ML', 60, 0],
+            ['SAORI', 'Saori', 'Bahan mentah', 'GRAM', 53, 0],
+            ['CHICKEN-POWDER', 'Chicken powder', 'Bahan mentah', 'GRAM', 105, 0],
+            ['SASA', 'Sasa', 'Bahan mentah', 'GRAM', 50, 0],
+            ['GARAM', 'Garam', 'Bahan mentah', 'GRAM', 14, 0],
+            ['GULA', 'Gula pasir', 'Bahan mentah', 'GRAM', 18, 0],
+            ['TEPUNG-PANIR', 'Tepung panir', 'Bahan mentah', 'GRAM', 22, 0],
+            ['TAPIOKA', 'Tapioka', 'Bahan mentah', 'GRAM', 22, 0],
+            ['LADA', 'Lada', 'Bahan mentah', 'GRAM', 305.555556, 0],
+            ['MAYO', 'Mayones', 'Bahan mentah', 'GRAM', 25, 0],
+            ['SAUS-TOMAT', 'Saus tomat', 'Bahan mentah', 'GRAM', 15, 0],
+            ['SAMBAL', 'Sambal', 'Bahan mentah', 'GRAM', 17, 0],
+            ['KIKOMAN', 'Kikoman', 'Bahan mentah', 'ML', 56.5, 0],
+            ['OREGANO', 'Oregano', 'Bahan mentah', 'GRAM', 733.333333, 0],
+            ['MINYAK-GORENG', 'Minyak goreng', 'Operasional', 'ML', 19, 0],
+            ['CABE-KERING', 'Cabe kering', 'Bahan mentah', 'GRAM', 95, 0],
+            ['KAPULAGA', 'Kapulaga', 'Bahan mentah', 'GRAM', 13.333333, 0],
+            ['KAYU-MANIS', 'Kayu manis', 'Bahan mentah', 'GRAM', 6.666667, 0],
+            ['CENGKEH', 'Cengkeh', 'Bahan mentah', 'GRAM', 13.333333, 0],
+            ['PARSLEY', 'Parsley', 'Bahan mentah', 'GRAM', 1000, 0],
+            ['QUICKMELT', 'Keju quickmelt', 'Bahan mentah', 'GRAM', 100, 0],
+            ['AIR', 'Air', 'Operasional', 'ML', 0.315789, 0],
+            ['MAIZENA', 'Maizena', 'Bahan mentah', 'GRAM', 50, 0],
+            ['CHEESE-POWDER', 'Cheese powder', 'Bahan mentah', 'GRAM', 112, 0],
+            ['CREAMER', 'Creamer', 'Bahan mentah', 'GRAM', 50, 0],
+            ['KULIT-DIMSUM', 'Kulit dimsum', 'Bahan mentah', 'PCS', 132.978723, 0],
+            ['KULIT-LUMPIA', 'Kulit lumpia', 'Bahan mentah', 'PCS', 240, 0],
+            ['BEEF-PATTY', 'Beef patty', 'Bahan mentah', 'GRAM', 42.857143, 0],
+            ['SAUS-DIMSUM', 'Saus dimsum', 'Saus Siap Pakai', 'GRAM', 18, 0],
+            ['WORTEL', 'Wortel', 'Bahan mentah', 'GRAM', 30, 0],
+            ['RUMPUT-LAUT', 'Rumput laut', 'Bahan mentah', 'GRAM', 416, 0],
+            ['SAUS-MENTAI', 'Saus mentai dimsum/lumpia, 30 g per porsi', 'Saus Siap Pakai', 'GRAM', 726.535769 / 30, 0],
+            ['SAUS-BOLOGNESE', 'Saus bolognese, 35 g per porsi', 'Saus Siap Pakai', 'GRAM', 994.316 / 35, 0],
+            ['SAUS-GARLIC', 'Saus garlic Chiquro, 60 g per porsi', 'Saus Siap Pakai', 'GRAM', 1952.761111 / 60, 0],
+            ['SAUS-LAVA', 'Saus lava Chiquro, 60 g per porsi', 'Saus Siap Pakai', 'GRAM', 1450 / 60, 0],
+            ['SAUS-CHIQ-MENTAI', 'Saus mentai Chiquro, 60 g per porsi', 'Saus Siap Pakai', 'GRAM', 1442.15 / 60, 0],
+            ['SAUS-CHEESE', 'Saus cheese (tidak dipakai untuk Chiquro Cheese)', 'Saus Siap Pakai', 'GRAM', 2106.887895 / 60, 0],
+            ['GOURMET-BBQ', 'Gourmet BBQ', 'Bahan mentah', 'GRAM', 48, 0],
+            ['CHILI-OIL', 'Chili oil racikan', 'Saus Siap Pakai', 'GRAM', 0, 0],
+            ['CHILI-OIL-CUP', 'Chili oil siap saji dalam cup', 'Kemasan', 'PCS', 647.954556, 100],
+            ['CUP-SAUS-PCS', 'Cup chili oil kosong', 'Kemasan', 'PCS', 100, 100],
+            ['BOX-KECIL', 'Kotak dimsum kecil', 'Kemasan', 'PCS', 150000 / 379, 500],
+            ['BOX-BESAR', 'Kotak dimsum besar', 'Kemasan', 'PCS', 200000 / 425, 250],
+            ['PLASTIK-DIMSUM', 'Plastik dimsum 24', 'Kemasan', 'PCS', 275, 500],
+            ['KERTAS-CHIQURO', 'Kertas Chiquro', 'Kemasan', 'PCS', 75, 500],
+            ['PLASTIK-CHIQURO', 'Plastik kecil Chiquro', 'Kemasan', 'PCS', 150, 500],
+            ['SUMPIT', 'Sumpit', 'Kemasan', 'PCS', 88, 1000],
+            ['MINYAK-LITER', 'Minyak goreng', 'Operasional', 'ML', 19, 0],
         ];
 
         foreach ($rows as [$code, $name, $category, $unitCode, $cost, $openingStock]) {
@@ -128,8 +173,18 @@ class TestDataSeeder extends Seeder
                     'is_active' => true,
                 ],
             );
+            $ingredient->forceFill([
+                'name' => $name,
+                'ingredient_category_id' => $categories[$category]->id,
+                'unit_id' => $this->units[$unitCode]->id,
+                'buy_price' => $cost,
+                'description' => 'Harga per gr/ml/pcs mengikuti workbook HPP; saldo existing dipertahankan.',
+                'is_active' => true,
+            ])->save();
             $this->ingredients[$code] = $ingredient;
         }
+        Ingredient::query()->whereIn('code', ['TEST-FROZEN-DIMSUM', 'TEST-FROZEN-LUMPIA', 'TEST-FROZEN-CHIQURO'])
+            ->update(['is_active' => false]);
     }
 
     private function seedMenuCategories(): void
@@ -142,19 +197,22 @@ class TestDataSeeder extends Seeder
     private function seedProducts(): void
     {
         $products = [
-            ['DOR', 'Dimsum Ori', 'Dimsum', 'PCS', 4500, 1600, ['P4' => [4, 16000], 'P6' => [6, 24000], 'P8' => [8, 30000]]],
-            ['DME', 'Dimsum Mentai', 'Dimsum', 'PCS', 5500, 2200, ['P4' => [4, 21000], 'P6' => [6, 28000], 'P8' => [8, 38000]]],
-            ['DCH', 'Dimsum Cheesemelt', 'Dimsum', 'PCS', 6500, 2700, ['P4' => [4, 25000], 'P6' => [6, 35000], 'P8' => [8, 48000]]],
-            ['DMX', 'Dimsum Mix', 'Dimsum', 'PCS', 6000, 2200, ['P6' => [6, 30000], 'P8' => [8, 45000]]],
-            ['LOR', 'Lumpia Original', 'Lumpia', 'PCS', 9000, 2800, ['P3' => [3, 24000], 'P5' => [5, 36000]]],
-            ['LME', 'Lumpia Mentai', 'Lumpia', 'PCS', 10000, 3200, ['P3' => [3, 28000], 'P5' => [5, 40000]]],
-            ['CGA', 'Chiquro Garlic', 'Chiquro', 'PCS', 26000, 7000, []],
-            ['CLA', 'Chiquro Lava', 'Chiquro', 'PCS', 26000, 8000, []],
-            ['CME', 'Chiquro Mentai', 'Chiquro', 'PCS', 26000, 8500, []],
-            ['CCH', 'Chiquro Cheese', 'Chiquro', 'PCS', 28000, 9000, []],
-            ['BMX', 'Paket Besar Dimsum Mix', 'Paket Besar', 'PKT', 90000, 28000, []],
-            ['BME', 'Paket Besar Dimsum Mentai', 'Paket Besar', 'PKT', 85000, 27000, []],
-            ['BCH', 'Paket Besar Dimsum Cheesemelt', 'Paket Besar', 'PKT', 100000, 33000, []],
+            ['DOR', 'Dimsum Ori', 'Dimsum', 'PCS', 4000, 0, ['P4' => [4, 16000], 'P6' => [6, 22000], 'P8' => [8, 28000]]],
+            ['DME', 'Dimsum Mentai', 'Dimsum', 'PCS', 5000, 0, ['P4' => [4, 20000], 'P6' => [6, 26000], 'P8' => [8, 36000]]],
+            ['DCH', 'Dimsum Bolognese', 'Dimsum', 'PCS', 5500, 0, ['P4' => [4, 22000], 'P6' => [6, 31000], 'P8' => [8, 40000]]],
+            ['DMX', 'Dimsum Mix', 'Dimsum', 'PCS', 0, 0, ['P6' => [6, 29000], 'P8' => [8, 40000]]],
+            ['LOR', 'Lumpia Original', 'Lumpia', 'PCS', 0, 0, ['P3' => [3, 22000], 'P5' => [5, 34000]]],
+            ['LME', 'Lumpia Mentai', 'Lumpia', 'PCS', 0, 0, ['P3' => [3, 26000], 'P5' => [5, 38000]]],
+            ['CGA', 'Chiquro Garlic', 'Chiquro', 'PCS', 26000, 0, []],
+            ['CLA', 'Chiquro Lava', 'Chiquro', 'PCS', 26000, 0, []],
+            ['CME', 'Chiquro Mentai', 'Chiquro', 'PCS', 26000, 0, []],
+            ['CCH', 'Chiquro Cheese', 'Chiquro', 'PCS', 28000, 0, []],
+            ['DPL', 'Dimsum Ori tanpa topping · Setengah Jadi', 'Dimsum', 'PCS', 0, 0, []],
+            ['DWO', 'Dimsum Wortel · Setengah Jadi', 'Dimsum', 'PCS', 0, 0, []],
+            ['DBE', 'Dimsum Beef · Setengah Jadi', 'Dimsum', 'PCS', 0, 0, []],
+            ['LPS', 'Lumpia · Setengah Jadi', 'Lumpia', 'PCS', 0, 0, []],
+            ['CHB', 'Chiquro Basic bolong · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
+            ['CHS', 'Chiquro Cheese · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
         ];
 
         $categoryIds = Category::whereIn('name', ['Dimsum', 'Lumpia', 'Chiquro', 'Paket Besar'])->pluck('id', 'name');
@@ -175,8 +233,20 @@ class TestDataSeeder extends Seeder
                     'tax_rate' => 0,
                     'min_stock' => 5,
                     'max_stock' => 500,
+                    'allow_single_unit_sale' => in_array($code, ['CGA', 'CLA', 'CME', 'CCH'], true),
                 ],
             );
+
+            $previousDefaults = ['DOR' => 4500, 'DME' => 5500, 'DCH' => 6500, 'DMX' => 6000, 'LOR' => 9000, 'LME' => 10000];
+            $product->forceFill([
+                'title' => $name, 'category_id' => $categoryIds[$category],
+                'allow_single_unit_sale' => in_array($code, ['CGA', 'CLA', 'CME', 'CCH'], true),
+            ]);
+            if (isset($previousDefaults[$code]) && (float) $product->sell_price === (float) $previousDefaults[$code]) {
+                $product->sell_price = $price;
+                $product->buy_price = $cost;
+            }
+            $product->save();
 
             $baseUnit = $this->units[$baseUnitCode];
             $this->setProductUnit($product, $baseUnit, true, 1, $cost, $price, 'BASE');
@@ -185,13 +255,20 @@ class TestDataSeeder extends Seeder
                 $this->setProductUnit($product, $this->units[$unitCode], false, $factor, $unitCost, $sellPrice, $unitCode);
             }
             $this->products[$code] = $product;
+            if (in_array($code, ['DPL', 'DWO', 'DBE', 'LPS', 'CHB', 'CHS'], true)) {
+                $product->forceFill(['is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true])->save();
+            } elseif ($code === 'DMX') {
+                $product->forceFill(['is_sellable' => false])->save();
+            }
         }
+        Product::query()->whereIn('sku', ['TEST-BMX', 'TEST-BME', 'TEST-BCH'])
+            ->update(['is_active' => false, 'is_sellable' => false]);
     }
 
-    private function setProductUnit(Product $product, Unit $unit, bool $isBase, int $factor, int $buyPrice, int $sellPrice, string $suffix): void
+    private function setProductUnit(Product $product, Unit $unit, bool $isBase, int $factor, float $buyPrice, int $sellPrice, string $suffix): void
     {
-        DB::table('product_units')->insertOrIgnore(
-            ['product_id' => $product->id, 'unit_id' => $unit->id] +
+        DB::table('product_units')->updateOrInsert(
+            ['product_id' => $product->id, 'unit_id' => $unit->id],
             [
                 'is_base' => $isBase,
                 'is_default' => $isBase,
@@ -209,31 +286,18 @@ class TestDataSeeder extends Seeder
     private function seedRecipes(): void
     {
         $recipes = [
-            'DOR' => ['yield' => 1, 'notes' => 'Dimsum frozen disiapkan kukus tanpa topping.', 'items' => ['FROZEN-DIMSUM' => [1, 'PCS']]],
-            'DME' => ['yield' => 1, 'notes' => 'Dimsum frozen dengan saus mentai siap pakai; gramasi simulasi.', 'items' => ['FROZEN-DIMSUM' => [1, 'PCS'], 'SAUS-MENTAI' => [5, 'GRAM']]],
-            'DCH' => ['yield' => 1, 'notes' => 'Dimsum frozen dengan saus keju siap pakai; gramasi simulasi.', 'items' => ['FROZEN-DIMSUM' => [1, 'PCS'], 'SAUS-CHEESE' => [4, 'GRAM']]],
-            'DMX' => ['yield' => 1, 'notes' => 'Campuran dimsum frozen; rasio simulasi.', 'items' => ['FROZEN-DIMSUM' => [1, 'PCS']]],
-            'LOR' => ['yield' => 1, 'notes' => 'Satu lumpia frozen digoreng.', 'items' => ['FROZEN-LUMPIA' => [1, 'PCS']]],
-            'LME' => ['yield' => 1, 'notes' => 'Lumpia frozen dengan saus mentai siap pakai; gramasi simulasi.', 'items' => ['FROZEN-LUMPIA' => [1, 'PCS'], 'SAUS-MENTAI' => [5, 'GRAM']]],
-            'CGA' => ['yield' => 1, 'notes' => 'Chiquro frozen dengan saus garlic siap pakai; gramasi simulasi.', 'items' => ['FROZEN-CHIQURO' => [1, 'PCS'], 'SAUS-GARLIC' => [5, 'GRAM']]],
-            'CLA' => ['yield' => 1, 'notes' => 'Chiquro frozen dengan saus lava siap pakai; gramasi simulasi.', 'items' => ['FROZEN-CHIQURO' => [1, 'PCS'], 'SAUS-LAVA' => [6, 'GRAM']]],
-            'CME' => ['yield' => 1, 'notes' => 'Chiquro frozen dengan saus mentai siap pakai; gramasi simulasi.', 'items' => ['FROZEN-CHIQURO' => [1, 'PCS'], 'SAUS-MENTAI' => [5, 'GRAM']]],
-            'CCH' => ['yield' => 1, 'notes' => 'Chiquro frozen dengan saus keju siap pakai; gramasi simulasi.', 'items' => ['FROZEN-CHIQURO' => [1, 'PCS'], 'SAUS-CHEESE' => [5, 'GRAM']]],
-            'BMX' => ['yield' => 1, 'notes' => 'Paket besar simulasi; komposisi aktual perlu disesuaikan.', 'items' => ['FROZEN-DIMSUM' => [20, 'PCS']]],
-            'BME' => ['yield' => 1, 'notes' => 'Paket besar simulasi; komposisi aktual perlu disesuaikan.', 'items' => ['FROZEN-DIMSUM' => [20, 'PCS'], 'SAUS-MENTAI' => [100, 'GRAM']]],
-            'BCH' => ['yield' => 1, 'notes' => 'Paket besar simulasi; komposisi aktual perlu disesuaikan.', 'items' => ['FROZEN-DIMSUM' => [20, 'PCS'], 'SAUS-CHEESE' => [80, 'GRAM']]],
+            'DPL' => ['yield' => 1, 'notes' => 'Basis satu buah dimsum ori polos dari resep topping wortel/beef; takaran topping dihilangkan.', 'items' => ['AYAM-FILLET' => [20, 'GRAM'], 'TELUR' => [1.1, 'GRAM'], 'DAUN-BAWANG' => [1, 'GRAM'], 'BAWANG-PUTIH' => [0.5, 'GRAM'], 'MINYAK-WIJEN' => [0.4, 'GRAM'], 'KECAP-ASIN' => [0.1, 'ML'], 'SAORI' => [0.6, 'GRAM'], 'CHICKEN-POWDER' => [0.4, 'GRAM'], 'SASA' => [0.3, 'GRAM'], 'GARAM' => [0.14, 'GRAM'], 'GULA' => [0.5, 'GRAM'], 'KULIT-DIMSUM' => [1, 'PCS'], 'TAPIOKA' => [3.6, 'GRAM']]],
+            'DWO' => ['yield' => 1, 'notes' => 'Satu buah dimsum topping wortel dari resep HPP.', 'items' => ['AYAM-FILLET' => [20, 'GRAM'], 'TELUR' => [1.1, 'GRAM'], 'DAUN-BAWANG' => [1, 'GRAM'], 'BAWANG-PUTIH' => [0.5, 'GRAM'], 'MINYAK-WIJEN' => [0.4, 'GRAM'], 'KECAP-ASIN' => [0.1, 'ML'], 'SAORI' => [0.6, 'GRAM'], 'CHICKEN-POWDER' => [0.4, 'GRAM'], 'SASA' => [0.3, 'GRAM'], 'GARAM' => [0.14, 'GRAM'], 'GULA' => [0.5, 'GRAM'], 'KULIT-DIMSUM' => [1, 'PCS'], 'TAPIOKA' => [3.6, 'GRAM'], 'WORTEL' => [0.5, 'GRAM']]],
+            'DBE' => ['yield' => 1, 'notes' => 'Satu buah dimsum topping beef dari resep HPP.', 'items' => ['AYAM-FILLET' => [20, 'GRAM'], 'TELUR' => [1.1, 'GRAM'], 'DAUN-BAWANG' => [1, 'GRAM'], 'BAWANG-PUTIH' => [0.5, 'GRAM'], 'MINYAK-WIJEN' => [0.4, 'GRAM'], 'KECAP-ASIN' => [0.1, 'ML'], 'SAORI' => [0.6, 'GRAM'], 'CHICKEN-POWDER' => [0.4, 'GRAM'], 'SASA' => [0.3, 'GRAM'], 'GARAM' => [0.14, 'GRAM'], 'GULA' => [0.5, 'GRAM'], 'KULIT-DIMSUM' => [1, 'PCS'], 'TAPIOKA' => [3.6, 'GRAM'], 'BEEF-PATTY' => [1, 'GRAM']]],
+            'LPS' => ['yield' => 1, 'notes' => 'Resep Lumpia keju ori per satu hasil resep dari workbook; komposisi cheese ikut produk setengah jadi.', 'items' => ['AYAM-FILLET' => [25, 'GRAM'], 'TELUR' => [1.375, 'GRAM'], 'KULIT-LUMPIA' => [2, 'PCS'], 'BAWANG-PUTIH' => [0.625, 'GRAM'], 'MINYAK-WIJEN' => [0.5, 'GRAM'], 'KECAP-ASIN' => [0.125, 'ML'], 'SAORI' => [0.75, 'GRAM'], 'CHICKEN-POWDER' => [0.5, 'GRAM'], 'SASA' => [0.375, 'GRAM'], 'GARAM' => [0.175, 'GRAM'], 'GULA' => [0.625, 'GRAM'], 'QUICKMELT' => [8, 'GRAM'], 'TAPIOKA' => [4.5, 'GRAM']]],
+            'CHB' => ['yield' => 1, 'notes' => 'Resep Chiquro Basic dari workbook; yield produk per batch perlu dikonfirmasi.', 'items' => ['AYAM-FILLET' => [100, 'GRAM'], 'TELUR' => [5.5, 'GRAM'], 'LADA' => [0.2, 'GRAM'], 'BAWANG-PUTIH' => [2, 'GRAM'], 'SAORI' => [1.5, 'GRAM'], 'CHICKEN-POWDER' => [2, 'GRAM'], 'SASA' => [1, 'GRAM'], 'GARAM' => [0.5, 'GRAM'], 'MINYAK-GORENG' => [50, 'ML'], 'TAPIOKA' => [10, 'GRAM'], 'RUMPUT-LAUT' => [2, 'GRAM'], 'TEPUNG-PANIR' => [13, 'GRAM']]],
+            'CHS' => ['yield' => 1, 'notes' => 'Keju disiapkan saat produksi gudang; jumlah keju per Chiquro menunggu konfirmasi pengguna.', 'items' => ['AYAM-FILLET' => [100, 'GRAM'], 'TELUR' => [5.5, 'GRAM'], 'LADA' => [0.2, 'GRAM'], 'BAWANG-PUTIH' => [2, 'GRAM'], 'SAORI' => [1.5, 'GRAM'], 'CHICKEN-POWDER' => [2, 'GRAM'], 'SASA' => [1, 'GRAM'], 'GARAM' => [0.5, 'GRAM'], 'MINYAK-GORENG' => [50, 'ML'], 'TAPIOKA' => [10, 'GRAM'], 'RUMPUT-LAUT' => [2, 'GRAM'], 'TEPUNG-PANIR' => [13, 'GRAM']]],
         ];
 
         foreach ($recipes as $code => $recipeData) {
-            $recipe = RecipeVersion::firstOrCreate(
-                ['product_id' => $this->products[$code]->id, 'version' => 1],
-                [
-                    'yield_quantity' => $recipeData['yield'],
-                    'unit_id' => $this->products[$code]->unit_id,
-                    'notes' => '[DATA UJI] '.$recipeData['notes'],
-                    'created_by' => User::where('email', 'warehouse@gmail.com')->value('id'),
-                ],
-            );
+            $recipe = $this->managedRecipe($this->products[$code], $this->units['PCS'], $recipeData['notes'], $recipeData['yield']);
+            $recipe->items()->delete();
+            $recipe->productItems()->delete();
             foreach ($recipeData['items'] as $ingredientCode => [$quantity, $unitCode]) {
                 $unit = $this->units[$unitCode];
                 $recipe->items()->firstOrCreate(['ingredient_id' => $this->ingredients[$ingredientCode]->id], [
@@ -261,26 +325,15 @@ class TestDataSeeder extends Seeder
                 ['P5', 'BOX-BESAR'],
             ];
         }
-        foreach (['BMX', 'BME', 'BCH'] as $menuCode) {
-            $profiles[$menuCode] = [['PKT', 'BOX-BESAR']];
-        }
-
         foreach ($profiles as $menuCode => $menuProfiles) {
             $product = $this->products[$menuCode];
             foreach ($menuProfiles as $index => [$unitCode, $boxCode]) {
                 $unit = $this->units[$unitCode];
                 $version = $index + 2;
-                $recipe = RecipeVersion::firstOrCreate(
-                    ['product_id' => $product->id, 'version' => $version],
-                    [
-                        'unit_id' => $unit->id,
-                        'yield_quantity' => 1,
-                        'notes' => '[DATA UJI] Per porsi: 1 box, 1 sumpit, chili oil 50 gram.',
-                        'created_by' => User::where('email', 'warehouse@gmail.com')->value('id'),
-                    ],
-                );
+                $recipe = $this->managedRecipe($product, $unit, 'Porsi menggunakan box, plastik, sumpit, dan satu cup chili oil sesuai tipe paket.');
+                $recipe->items()->delete();
 
-                foreach ([[$boxCode, 1, 'PCS'], ['SUMPIT', 1, 'PCS'], ['CHILI-OIL', 50, 'GRAM']] as [$ingredientCode, $quantity, $unitCode]) {
+                foreach ([[$boxCode, 1, 'PCS'], ['PLASTIK-DIMSUM', 1, 'PCS'], ['SUMPIT', 1, 'PCS'], ['CHILI-OIL-CUP', 1, 'PCS']] as [$ingredientCode, $quantity, $unitCode]) {
                     $recipe->items()->firstOrCreate(['ingredient_id' => $this->ingredients[$ingredientCode]->id], [
                         'quantity' => $quantity,
                         'unit_id' => $this->units[$unitCode]->id,
@@ -291,19 +344,106 @@ class TestDataSeeder extends Seeder
         }
     }
 
+    /** Package checkout converts semi-finished outlet stock into the ready-to-serve menu. */
+    private function seedMenuAssemblyRecipes(): void
+    {
+        foreach (['DOR', 'DME', 'DCH'] as $menuCode) {
+            $sauce = match ($menuCode) {
+                'DME' => ['SAUS-MENTAI' => 120],
+                'DCH' => ['SAUS-BOLOGNESE' => 140],
+                default => [],
+            };
+            $this->addAssemblyRecipe($this->products[$menuCode], 'P4', ['DPL' => 3, 'DWO' => 1], 2,
+                'Isi 4: tiga ori tanpa topping + satu wortel. Saus mengikuti gramasi workbook.', $sauce);
+        }
+
+        foreach (['LOR', 'LME'] as $menuCode) {
+            $sauceQty = $menuCode === 'LME' ? 90 : 0;
+            $this->addAssemblyRecipe($this->products[$menuCode], 'P3', ['LPS' => 3], 2,
+                'Isi 3 lumpia setengah jadi. Saus mentai 30 g per buah sesuai workbook.', $sauceQty ? ['SAUS-MENTAI' => $sauceQty] : []);
+            $this->addAssemblyRecipe($this->products[$menuCode], 'P5', ['LPS' => 5], 3,
+                'Isi 5 lumpia setengah jadi. Saus mentai 30 g per buah sesuai workbook.', $sauceQty ? ['SAUS-MENTAI' => 150] : []);
+        }
+
+        foreach (['CGA' => ['CHB', 'SAUS-GARLIC'], 'CLA' => ['CHB', 'SAUS-LAVA'], 'CME' => ['CHB', 'SAUS-CHIQ-MENTAI'], 'CCH' => ['CHS', null]] as $menuCode => [$componentCode, $sauceCode]) {
+            $recipe = $this->managedRecipe($this->products[$menuCode], $this->units['PCS'], 'Satu Chiquro setengah jadi, satu kertas, satu plastik kecil, dan satu porsi saus sesuai workbook.');
+            $recipe->items()->whereIn('ingredient_id', collect(['SAUS-GARLIC', 'SAUS-LAVA', 'SAUS-CHIQ-MENTAI', 'SAUS-CHEESE'])->map(fn ($code) => $this->ingredients[$code]->id)->all())->delete();
+            $recipe->productItems()->delete();
+            $recipe->productItems()->firstOrCreate(['product_id' => $this->products[$componentCode]->id], [
+                'unit_id' => $this->units['PCS']->id, 'quantity' => 1, 'waste_percent' => 0,
+            ]);
+            foreach (['KERTAS-CHIQURO', 'PLASTIK-CHIQURO'] as $ingredientCode) {
+                $recipe->items()->firstOrCreate(['ingredient_id' => $this->ingredients[$ingredientCode]->id], [
+                    'quantity' => 1, 'unit_id' => $this->units['PCS']->id, 'base_quantity' => 1,
+                ]);
+            }
+            if ($sauceCode) {
+                $recipe->items()->firstOrCreate(['ingredient_id' => $this->ingredients[$sauceCode]->id], [
+                    'quantity' => 60, 'unit_id' => $this->units['GRAM']->id, 'base_quantity' => 60,
+                ]);
+            }
+        }
+    }
+
+    private function addAssemblyRecipe(Product $menu, string $unitCode, array $components, int $version, string $notes, array $ingredients = []): void
+    {
+        $recipe = $this->managedRecipe($menu, $this->units[$unitCode], $notes);
+        $recipe->productItems()->delete();
+        $recipe->items()->whereIn('ingredient_id', collect(['SAUS-MENTAI', 'SAUS-BOLOGNESE'])->map(fn ($code) => $this->ingredients[$code]->id)->all())->delete();
+        foreach ($components as $code => $quantity) {
+            $recipe->productItems()->firstOrCreate(['product_id' => $this->products[$code]->id], [
+                'unit_id' => $this->units['PCS']->id, 'quantity' => $quantity, 'waste_percent' => 0,
+            ]);
+        }
+        foreach ($ingredients as $code => $quantity) {
+            $recipe->items()->firstOrCreate(['ingredient_id' => $this->ingredients[$code]->id], [
+                'unit_id' => $this->units['GRAM']->id, 'quantity' => $quantity, 'base_quantity' => $quantity,
+            ]);
+        }
+    }
+
+    private function managedRecipe(Product $product, Unit $unit, string $notes, int $yield = 1): RecipeVersion
+    {
+        $recipe = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $unit->id)
+            ->where('notes', 'like', '[DATA UJI SYNC]%')->orderByDesc('version')->first();
+        if (! $recipe) {
+            $version = ((int) RecipeVersion::query()->where('product_id', $product->id)->max('version')) + 1;
+            $recipe = new RecipeVersion(['product_id' => $product->id, 'unit_id' => $unit->id, 'version' => $version]);
+        }
+        $recipe->forceFill([
+            'yield_quantity' => $yield, 'is_active' => true, 'starts_at' => now(),
+            'notes' => '[DATA UJI SYNC] '.$notes,
+            'created_by' => User::where('email', 'warehouse@gmail.com')->value('id'),
+        ])->save();
+
+        return $recipe;
+    }
+
     private function seedIngredientOpeningStock(Warehouse $central): void
     {
         $stocks = [
-            'FROZEN-DIMSUM' => 3000, 'FROZEN-LUMPIA' => 3000, 'FROZEN-CHIQURO' => 3000,
-            'SAUS-MENTAI' => 5000, 'SAUS-GARLIC' => 1500,
-            'SAUS-LAVA' => 2000, 'SAUS-CHEESE' => 4000, 'CHILI-OIL' => 5000,
-            'CUP-SAUS-PCS' => 500, 'BOX-KECIL' => 500, 'BOX-BESAR' => 250,
-            'MINYAK-LITER' => 15, 'SUMPIT' => 1000,
+            'DAGING-GILING-SAPI' => 0, 'AYAM-FILLET' => 0, 'TELUR' => 0,
+            'DAUN-BAWANG' => 0, 'BAWANG-BOMBAY' => 0, 'BAWANG-PUTIH' => 0,
+            'MINYAK-WIJEN' => 0, 'KECAP-ASIN' => 0, 'SAORI' => 0,
+            'CHICKEN-POWDER' => 0, 'SASA' => 0, 'GARAM' => 0, 'GULA' => 0,
+            'TEPUNG-PANIR' => 0, 'TAPIOKA' => 0, 'LADA' => 0, 'MAYO' => 0,
+            'SAUS-TOMAT' => 0, 'SAMBAL' => 0, 'KIKOMAN' => 0, 'OREGANO' => 0,
+            'MINYAK-GORENG' => 0, 'CABE-KERING' => 0, 'KAPULAGA' => 0,
+            'KAYU-MANIS' => 0, 'CENGKEH' => 0, 'PARSLEY' => 0, 'QUICKMELT' => 0,
+            'AIR' => 0, 'MAIZENA' => 0, 'CHEESE-POWDER' => 0, 'CREAMER' => 0,
+            'KULIT-DIMSUM' => 0, 'KULIT-LUMPIA' => 0, 'BEEF-PATTY' => 0,
+            'SAUS-DIMSUM' => 0, 'SAUS-BOLOGNESE' => 0, 'SAUS-LAVA' => 0,
+            'SAUS-CHIQ-MENTAI' => 0, 'SAUS-GARLIC' => 0, 'GOURMET-BBQ' => 0,
+            'RUMPUT-LAUT' => 0, 'WORTEL' => 0, 'SAUS-MENTAI' => 0,
+            'SAUS-GARLIC' => 0, 'SAUS-CHEESE' => 0, 'CHILI-OIL' => 0,
+            'CHILI-OIL-CUP' => 100, 'CUP-SAUS-PCS' => 100, 'BOX-KECIL' => 500, 'BOX-BESAR' => 250,
+            'PLASTIK-DIMSUM' => 500, 'KERTAS-CHIQURO' => 500,
+            'PLASTIK-CHIQURO' => 500, 'SUMPIT' => 1000,
         ];
         $actorId = User::where('email', 'warehouse@gmail.com')->value('id');
 
-        foreach ($stocks as $code => $quantity) {
-            $ingredient = $this->ingredients[$code];
+        foreach ($this->ingredients as $code => $ingredient) {
+            $quantity = $stocks[$code] ?? 0;
             DB::transaction(function () use ($ingredient, $central, $quantity, $actorId) {
                 $locked = Ingredient::whereKey($ingredient->id)->lockForUpdate()->firstOrFail();
                 $key = 'testdata:opening:ingredient:'.$ingredient->id.':warehouse:'.$central->id;

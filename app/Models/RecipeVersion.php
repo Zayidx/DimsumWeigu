@@ -18,6 +18,11 @@ class RecipeVersion extends Model
         return $this->hasMany(RecipeItem::class);
     }
 
+    public function productItems()
+    {
+        return $this->hasMany(RecipeProductItem::class);
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

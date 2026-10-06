@@ -2,12 +2,16 @@
 
 namespace App\Livewire\Finance;
 
+use App\Models\BankAccount;
+use App\Models\BankAccountLedger;
 use App\Models\CashHandover;
 use App\Models\CashierShift;
 use App\Models\Warehouse;
 use App\Models\WarehouseCashLedger;
 use App\Services\Cashier\CashHandoverService;
 use App\Services\Cashier\CashierShiftService;
+use App\Services\Finance\BankAccountLedgerService;
+use App\Services\Finance\CashDepositService;
 use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use App\Support\PasswordStepUp;
@@ -45,9 +49,36 @@ class CashManagementIndex extends Component
 
     public string $ledgerWarehouse = '';
 
+    public string $depositAccountId = '';
+
+    public string $depositAmount = '';
+
+    public string $depositNote = '';
+
+    #[Locked]
+    public string $depositKey = '';
+
     public function mount(): void
     {
         $this->movementKey = (string) Str::uuid();
+        $this->depositKey = (string) Str::uuid();
+    }
+
+    public function depositCash(CashDepositService $service): void
+    {
+        $this->permit('cash-management-create');
+        PasswordStepUp::requireRecent();
+        $data = $this->validate([
+            'depositAccountId' => ['required', 'integer', 'exists:bank_accounts,id'],
+            'depositAmount' => ['required', 'numeric', 'gt:0', 'decimal:0,2', 'max:999999999999.99'],
+            'depositNote' => ['required', 'string', 'min:3', 'max:500'],
+        ]);
+        $source = $this->currentWarehouses()->whereNull('outlet_id')->where('type', 'central')->where('is_active', true)->firstOrFail();
+        $account = BankAccount::query()->whereKey($data['depositAccountId'])->where('is_active', true)->firstOrFail();
+        $service->deposit($source, $account, $data['depositAmount'], $data['depositNote'], $this->depositKey);
+        $this->depositKey = (string) Str::uuid();
+        $this->reset(['depositAmount', 'depositNote']);
+        $this->dispatch('toast', type: 'success', message: __('Setoran kas ke rekening berhasil dicatat.'));
     }
 
     public function create(): void
@@ -139,6 +170,8 @@ class CashManagementIndex extends Component
                 $q->orWhere(fn ($c) => $c->whereNull('outlet_id')->where('type', 'central'));
             }
         })->with('outlet:id,name')->orderBy('name')->get();
+        $bankAccounts = BankAccount::query()->where('is_active', true)->orderBy('sort_order')->orderBy('bank_name')->get();
+        $centralWarehouse = $this->currentWarehouses()->whereNull('outlet_id')->where('type', 'central')->where('is_active', true)->first();
 
         return view('livewire.finance.cash-management-index', [
             'handovers' => CashHandover::where(fn ($q) => $q->whereIn('source_warehouse_id', $currentIds)->orWhereIn('destination_warehouse_id', $currentIds))
@@ -150,6 +183,14 @@ class CashManagementIndex extends Component
             'sources' => $this->currentWarehouses()->where('is_active', true)->when($cashierOnly, fn ($q) => $q->whereKey($shift?->warehouse_id ?? 0))->orderBy('name')->get(), 'destinations' => $destinations,
             'warehouses' => $this->currentWarehouses()->orderBy('name')->get(), 'currentIds' => $currentIds,
             'shift' => $shift,
+            'bankAccounts' => $bankAccounts,
+            'bankLedger' => auth()->user()->can('bank-accounts-access')
+                ? BankAccountLedger::query()->with(['account:id,bank_name,account_name,account_number', 'user:id,name'])->latest('id')->paginate(20, ['*'], 'bankPage')
+                : BankAccountLedger::query()->whereRaw('1 = 0')->paginate(20, ['*'], 'bankPage'),
+            'bankBalances' => auth()->user()->can('bank-accounts-access')
+                ? $bankAccounts->mapWithKeys(fn (BankAccount $account) => [$account->id => app(BankAccountLedgerService::class)->balanceCents($account)])
+                : collect(),
+            'centralWarehouse' => auth()->user()->can('bank-accounts-access') ? $centralWarehouse : null,
         ])->layout('layouts.dashboard', ['title' => __('Manajemen kas')]);
     }
 
@@ -171,7 +212,7 @@ class CashManagementIndex extends Component
 
         return Warehouse::where(function ($q) use ($outletId) {
             $q->where('outlet_id', $outletId);
-            if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) {
+            if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access') || auth()->user()->can('bank-accounts-access')) {
                 $q->orWhere(fn ($c) => $c->whereNull('outlet_id')->where('type', 'central'));
             }
         });

@@ -21,7 +21,7 @@
                     @forelse ($products as $product)
                         @php($warehouseStock = $product->warehouseStocks->first())
                         <tr>
-                            <td><div class="fw-semibold">{{ $product->title }}</div><div class="small text-muted">{{ $product->sku }}@if($product->barcode) · {{ $product->barcode }}@endif</div></td>
+                            <td><div class="fw-semibold">{{ $product->title }} @if($product->is_semi_finished)<span class="badge bg-light-primary text-primary">Setengah jadi</span>@endif</div><div class="small text-muted">{{ $product->sku }}@if($product->barcode) · {{ $product->barcode }}@endif</div></td>
                             <td>{{ $product->category?->name ?? 'Tanpa kategori' }}</td>
                             <td>Rp {{ number_format((float) $product->sell_price, 0, ',', '.') }}<div class="small text-muted">per {{ $product->unit?->symbol }}</div></td>
                             <td>@if($warehouseStock){{ number_format((float) $warehouseStock->stock, 3, ',', '.') }}@else<span class="text-muted">—</span>@endif</td>
@@ -68,6 +68,8 @@
                             <label class="form-check"><input type="checkbox" wire:model="taxInclusive" class="form-check-input"><span class="form-check-label">Harga sudah termasuk pajak</span></label>
                             <label class="form-check"><input type="checkbox" wire:model="isActive" class="form-check-input"><span class="form-check-label">Produk aktif</span></label>
                             <label class="form-check"><input type="checkbox" wire:model="isSellable" class="form-check-input"><span class="form-check-label">Dapat dijual</span></label>
+                            <label class="form-check"><input type="checkbox" wire:model.live="isSemiFinished" class="form-check-input"><span class="form-check-label">Produk setengah jadi untuk dirakit outlet</span></label>
+                            <label class="form-check"><input type="checkbox" wire:model="allowSingleUnitSale" class="form-check-input"><span class="form-check-label">Izinkan penjualan satuan dasar (contoh: Chiquro)</span></label>
                             <label class="form-check"><input type="checkbox" wire:model="trackStock" class="form-check-input"><span class="form-check-label">Lacak stok</span></label>
                             <label class="form-check"><input type="checkbox" wire:model="trackBatches" class="form-check-input"><span class="form-check-label">Lacak batch/kedaluwarsa</span></label>
                         </div>

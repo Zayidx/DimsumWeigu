@@ -174,6 +174,7 @@ class ProductionOrderService
                     $batchId, ProductionOrder::class, $order->id,
                 );
                 $product->refresh()->update(['buy_price' => FixedDecimal::moneyText($unitCostCents)]);
+                $product->productUnits()->where('unit_id', $product->unit_id)->update(['buy_price' => FixedDecimal::moneyText($unitCostCents)]);
             }
 
             $order->update(['status' => 'completed', 'completed_by' => $actor->id, 'completed_at' => now()]);

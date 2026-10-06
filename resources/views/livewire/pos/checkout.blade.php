@@ -1,4 +1,19 @@
 <div class="pos-workspace" x-data="{ cartOpen: false }" x-on:pos-cart-open.window="cartOpen = true" x-on:keydown.escape.window="cartOpen = false">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2 text-muted"><i class="bi bi-shop" aria-hidden="true"></i><span>Outlet aktif:</span><strong class="text-body">{{ $outlets->firstWhere('id', (int) session('active_outlet_id'))?->name ?? 'Outlet belum dipilih' }}</strong></div>
+        @if(!$shift && $outlets->count() > 1)
+            <form method="POST" action="{{ route('outlet.switch') }}" class="d-flex flex-wrap align-items-center gap-2">
+                @csrf
+                <label for="pos-active-outlet" class="visually-hidden">Pilih outlet</label>
+                <select id="pos-active-outlet" name="outlet_id" class="form-select" aria-label="Pilih outlet">
+                    @foreach($outlets as $outlet)
+                        <option value="{{ $outlet->id }}" @selected((int) session('active_outlet_id') === $outlet->id)>{{ $outlet->name }}</option>
+                    @endforeach
+                </select>
+                <button class="btn btn-outline-primary" type="submit">Ganti outlet</button>
+            </form>
+        @endif
+    </div>
     @if($lastTransaction)
         <div class="alert alert-success d-flex align-items-center justify-content-between" role="status"><span>Pembayaran berhasil. <strong>{{ $lastTransaction }}</strong></span><a class="btn btn-outline-success" href="{{ route('transactions.show', $lastTransactionId) }}">Lihat transaksi</a></div>
     @endif
@@ -18,16 +33,13 @@
                         @forelse($products as $product)
                             @php($stock = $product->warehouseStocks->first())
                             <div class="col-6" wire:key="pos-product-{{ $product->id }}"><article class="pos-product-card">
-                                <button type="button" wire:click="addProduct({{ $product->id }})" wire:loading.attr="disabled" class="btn pos-product-main" aria-label="Tambah {{ $product->title }}">
-                                    <span class="pos-product-title"><strong>{{ $product->title }}</strong><i class="bi bi-plus-circle text-primary" aria-hidden="true"></i></span>
-                                    <span class="d-block small text-muted mt-1">{{ $product->unit?->symbol }}@if($product->track_stock && $stock) · stok {{ number_format(max(0, (float)$stock->stock - (float)$stock->reserved_stock), 3, ',', '.') }}@endif</span>
-                                    <span class="pos-product-price">Rp{{ number_format((float)$product->sell_price, 0, ',', '.') }}</span>
-                                </button>
+                                <div class="pos-product-main"><span class="pos-product-title"><strong>{{ $product->title }}</strong><i class="bi bi-box-seam text-primary" aria-hidden="true"></i></span><span class="d-block small text-muted mt-1">{{ $product->unit?->symbol }}@if($product->track_stock && $stock) · stok {{ number_format(max(0, (float)$stock->stock - (float)$stock->reserved_stock), 3, ',', '.') }}@endif</span><span class="d-block small fw-semibold text-primary mt-2">{{ $product->allow_single_unit_sale ? 'Jual per '.$product->unit?->symbol : 'Pilih satuan paket untuk menambahkan' }}</span></div>
+                                @if($product->allow_single_unit_sale)<div class="pos-variants"><button type="button" wire:click="addProduct({{ $product->id }})" wire:loading.attr="disabled" class="btn btn-outline-primary" aria-label="Tambah {{ $product->title }}"><span>+ {{ $product->unit?->symbol }}</span><strong>Rp{{ number_format((float)$product->sell_price,0,',','.') }}</strong></button></div>@endif
                                 @if($product->productUnits->where('unit_id', '!=', $product->unit_id)->isNotEmpty())<div class="pos-variants">
                                     @foreach($product->productUnits->where('unit_id', '!=', $product->unit_id) as $altUnit)
                                         <button type="button" wire:click="addProductUnit({{ $product->id }}, {{ $altUnit->unit_id }})" wire:loading.attr="disabled" class="btn btn-outline-primary" aria-label="Tambah {{ $product->title }} {{ $altUnit->unit->name }}"><span>+ {{ $altUnit->unit->symbol }}</span><strong>Rp{{ number_format((float)($altUnit->sell_price ?? ((float)$product->sell_price * (float)$altUnit->conversion_factor)),0,',','.') }}</strong></button>
                                     @endforeach
-                                </div>@endif
+                                </div>@elseif(!$product->allow_single_unit_sale)<div class="small text-warning mt-2">Paket belum diatur untuk produk ini.</div>@endif
                             </article></div>
                         @empty
                             <div class="col-12 text-center py-5 text-muted"><i class="bi bi-search fs-2" aria-hidden="true"></i><p class="mt-2 mb-0">{{ $search !== '' ? 'Produk tidak ditemukan.' : 'Belum ada produk dengan stok tersedia di gudang ini.' }}</p><p class="small mt-2">{{ $search !== '' ? 'Coba nama produk, SKU, atau barcode lain.' : 'Stok bahan di PUSAT belum menjadi stok produk yang bisa dijual di outlet.' }}</p>@can('inventory-access')<a href="{{ route('inventory.index') }}" class="btn btn-outline-primary">Lihat inventori</a>@endcan</div>
@@ -55,6 +67,7 @@
                         <div class="pos-checkout-actions"><div class="d-flex justify-content-between gap-2 pos-total"><span>Total</span><strong>Rp{{ number_format($previewTotal / 100, 0, ',', '.') }}</strong></div><p class="small text-muted mb-0">Termasuk perkiraan pajak. Total akhir diperiksa saat pembayaran.</p>
                             @can('pos-checkout')
                                 <form wire:submit="pay" class="mt-3"><label class="form-label" for="pos-cash">Tunai diterima (Rp)</label><input id="pos-cash" type="number" min="0" step="0.01" inputmode="decimal" wire:model="cashReceived" class="form-control" required><div class="pos-quick-cash"><button type="button" wire:click="$set('cashReceived', '{{ number_format($previewTotal / 100, 2, '.', '') }}')" class="btn btn-outline-primary">Uang pas</button>@foreach([50000, 100000] as $cashOption)@if($cashOption * 100 >= $previewTotal)<button type="button" wire:click="$set('cashReceived', '{{ $cashOption }}')" class="btn btn-outline-secondary">{{ number_format($cashOption,0,',','.') }}</button>@endif@endforeach</div>@error('cashReceived')<div class="text-danger small mt-1">{{ $message }}</div>@enderror<button class="btn btn-success w-100 mt-3" type="submit" wire:loading.attr="disabled"><span wire:loading.remove wire:target="pay"><i class="bi bi-cash-coin me-1" aria-hidden="true"></i>Bayar tunai</span><span wire:loading wire:target="pay">Memproses pembayaran…</span></button></form>
+                                @if($qrisEnabled && $bankAccounts->isNotEmpty())<form wire:submit="payQris" class="mt-3"><button class="btn btn-outline-primary w-100" type="submit" wire:confirm="Pastikan pembayaran QRIS sudah berhasil sebelum melanjutkan." wire:loading.attr="disabled"><i class="bi bi-qr-code me-1" aria-hidden="true"></i>QRIS</button></form>@elseif($qrisEnabled)<div class="alert alert-warning mt-3 mb-0">Pembayaran QRIS belum tersedia.</div>@endif
                                 @if($payLaterEnabled)<button type="button" wire:click="payLater" wire:confirm="Catat transaksi ini sebagai piutang pelanggan? Batas kredit akan diperiksa." class="btn btn-outline-warning w-100 mt-2" wire:loading.attr="disabled">Bayar nanti (piutang)</button>@endif
                             @endcan
                             @can('pos-hold')<form wire:submit="hold" class="mt-3"><label class="form-label" for="pos-hold-label">Tahan keranjang</label><div class="input-group"><input id="pos-hold-label" wire:model="holdLabel" class="form-control" maxlength="120" placeholder="Nama atau nomor antrean"><button type="submit" class="btn btn-outline-primary" wire:loading.attr="disabled">Tahan</button></div></form>@endcan

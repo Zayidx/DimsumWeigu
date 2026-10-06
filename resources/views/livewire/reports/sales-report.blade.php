@@ -19,6 +19,11 @@
         <div class="col-12 col-sm-6 col-xl-4"><section class="card h-100"><div class="card-body"><span class="dashboard-metric-label">Transaksi lunas</span><h2 class="h4 mb-0">Rp {{ number_format($paidSales, 0, ',', '.') }}</h2></div></section></div>
     </div>
 
+    <div class="row g-3 mb-4" aria-label="Penerimaan menurut jenis dana">
+        <div class="col-12 col-md-6"><section class="card h-100 border-start border-4 border-success"><div class="card-body"><span class="dashboard-metric-label">Penerimaan tunai · kas outlet</span><h2 class="h4 mb-0">Rp {{ number_format($cashSales, 0, ',', '.') }}</h2><small class="text-muted">Pembayaran tunai yang tercatat pada shift kasir.</small></div></section></div>
+        <div class="col-12 col-md-6"><section class="card h-100 border-start border-4 border-primary"><div class="card-body"><span class="dashboard-metric-label">Penerimaan QRIS · rekening finance</span><h2 class="h4 mb-0">Rp {{ number_format($qrisSales, 0, ',', '.') }}</h2><small class="text-muted">QRIS langsung dicatat ke rekening dan tidak masuk kas gudang.</small>@if($qrisByAccount->isNotEmpty())<ul class="small mt-2 mb-0">@foreach($qrisByAccount as $account)<li>{{ $account->bank_name }} · {{ $account->account_name }} ({{ $account->account_number }}): <strong>Rp {{ number_format($account->total, 0, ',', '.') }}</strong></li>@endforeach</ul>@endif</div></section></div>
+    </div>
+
     @if($totalTransactions > 0)
         <div class="row g-3 mb-4">
             <div class="col-12 col-xl-8"><section class="card h-100" aria-labelledby="sales-daily-title"><div class="card-header"><h2 id="sales-daily-title" class="card-title mb-0">Tren penjualan harian</h2></div><div class="card-body"><div id="sales-chart-daily" class="sales-report-chart" aria-label="Grafik tren nilai penjualan per hari"></div></div></section></div>

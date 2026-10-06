@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductUnit;
 use App\Models\ProductWarehouse;
+use App\Models\RecipeVersion;
 use App\Support\FixedDecimal;
 use App\Support\OutletAccess;
 use Illuminate\Support\Facades\DB;
@@ -41,11 +42,17 @@ class CartService
             $product = Product::query()->whereKey($productId)->where('is_active', true)->where('is_sellable', true)->firstOrFail();
             $stock = ProductWarehouse::query()->where('product_id', $product->id)->where('warehouse_id', $cart->warehouse_id)->first();
             $unitId ??= $product->unit_id;
-            $productUnit = $unitId === $product->unit_id ? null : ProductUnit::query()->where('product_id', $product->id)->where('unit_id', $unitId)->firstOrFail();
+            if ($unitId === $product->unit_id && ! $product->allow_single_unit_sale) {
+                throw ValidationException::withMessages(['unit' => __('Penjualan wajib memilih satuan paket.')]);
+            }
+            $productUnit = ProductUnit::query()->where('product_id', $product->id)->where('unit_id', $unitId)
+                ->where('is_base', $unitId === $product->unit_id)->firstOrFail();
+            $this->assertAssemblyRecipeAvailable($product, $unitId);
+            $assembledAtSale = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $unitId)->where('is_active', true)->whereHas('productItems')->exists();
             $item = CartItem::query()->firstOrNew(['cart_id' => $cart->id, 'product_id' => $product->id, 'unit_id' => $unitId]);
             $nextQty = (float) $item->quantity + 1;
             $stockQuantity = $nextQty * (float) ($productUnit?->conversion_factor ?? 1);
-            if ($product->track_stock && (! $stock || $stockQuantity > (float) $stock->stock - (float) $stock->reserved_stock)) {
+            if ($product->track_stock && ! $assembledAtSale && (! $stock || $stockQuantity > (float) $stock->stock - (float) $stock->reserved_stock)) {
                 throw ValidationException::withMessages(['product' => __('Produk tidak tersedia di gudang aktif.')]);
             }
             $item->quantity = number_format($nextQty, 3, '.', '');
@@ -70,10 +77,16 @@ class CartService
             $cart = $this->lockActive($cart->id);
             $item = CartItem::query()->where('cart_id', $cart->id)->whereKey($itemId)->lockForUpdate()->firstOrFail();
             $product = Product::query()->findOrFail($item->product_id);
-            $productUnit = $product->unit_id === $item->unit_id ? null : ProductUnit::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)->firstOrFail();
+            if ($product->unit_id === $item->unit_id && ! $product->allow_single_unit_sale) {
+                throw ValidationException::withMessages(['unit' => __('Penjualan wajib memilih satuan paket.')]);
+            }
+            $productUnit = ProductUnit::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)
+                ->where('is_base', $item->unit_id === $product->unit_id)->firstOrFail();
+            $this->assertAssemblyRecipeAvailable($product, (int) $item->unit_id);
+            $assembledAtSale = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)->where('is_active', true)->whereHas('productItems')->exists();
             $stockQty = $qty * (float) ($productUnit?->conversion_factor ?? 1);
             $stock = ProductWarehouse::query()->where('product_id', $product->id)->where('warehouse_id', $cart->warehouse_id)->first();
-            if ($product->track_stock && (! $stock || $stockQty > (float) $stock->stock - (float) $stock->reserved_stock)) {
+            if ($product->track_stock && ! $assembledAtSale && (! $stock || $stockQty > (float) $stock->stock - (float) $stock->reserved_stock)) {
                 throw ValidationException::withMessages(['quantity' => __('Jumlah melebihi stok tersedia.')]);
             }
             $item->quantity = number_format($qty, 3, '.', '');
@@ -131,9 +144,15 @@ class CartService
             }
             foreach ($held->items()->get() as $item) {
                 $product = Product::where('is_active', true)->where('is_sellable', true)->findOrFail($item->product_id);
+                if ($product->unit_id === $item->unit_id && ! $product->allow_single_unit_sale) {
+                    throw ValidationException::withMessages(['cart' => __('Keranjang memuat satuan jual yang tidak diizinkan.')]);
+                }
                 $unit = $product->unit_id === $item->unit_id ? null : ProductUnit::where('product_id', $product->id)->where('unit_id', $item->unit_id)->firstOrFail();
+                $this->assertAssemblyRecipeAvailable($product, (int) $item->unit_id);
                 $needed = (float) $item->quantity * (float) ($unit?->conversion_factor ?? 1);
-                if ($product->track_stock) {
+                $assembledAtSale = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)
+                    ->where('is_active', true)->whereHas('productItems')->exists();
+                if ($product->track_stock && ! $assembledAtSale) {
                     $stock = ProductWarehouse::where('product_id', $product->id)->where('warehouse_id', $held->warehouse_id)->first();
                     $available = $stock ? (float) $stock->stock - (float) $stock->reserved_stock : 0;
                     if ($product->track_batches) {
@@ -190,5 +209,14 @@ class CartService
         $shift = CashierShift::query()->whereKey($shiftId)->where('open_user_id', auth()->id())->where('status', 'open')->firstOrFail();
         abort_unless($shift->warehouse_id === $warehouseId && $shift->outlet_id === $outletId, 404);
         app(OutletAccess::class)->require(auth()->user(), $outletId);
+    }
+
+    private function assertAssemblyRecipeAvailable(Product $product, int $unitId): void
+    {
+        $hasAssemblyRecipes = RecipeVersion::query()->where('product_id', $product->id)->where('is_active', true)->whereHas('productItems')->exists();
+        $hasUnitRecipe = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $unitId)->where('is_active', true)->whereHas('productItems')->exists();
+        if ($hasAssemblyRecipes && ! $hasUnitRecipe) {
+            throw ValidationException::withMessages(['product' => __('Komposisi menu ini belum disiapkan untuk satuan yang dipilih.')]);
+        }
     }
 }

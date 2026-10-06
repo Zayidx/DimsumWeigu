@@ -11,7 +11,7 @@ class RecipeCostService
     /** Returns a two-decimal estimate from current master costs; historical production snapshots stay separate. */
     public function estimate(RecipeVersion $recipe): string
     {
-        $recipe->loadMissing('items.ingredient');
+        $recipe->loadMissing('items.ingredient', 'productItems.product.productUnits', 'productItems.unit');
         $costMicro = 0;
         foreach ($recipe->items as $item) {
             $ingredient = $item->ingredient;
@@ -25,6 +25,26 @@ class RecipeCostService
             $unitCostMicro = FixedDecimal::toScaled((string) $ingredient->buy_price, 8);
             if ($quantityMilli > intdiv(PHP_INT_MAX - 500, max(1, $unitCostMicro))) {
                 throw new \InvalidArgumentException('Kuantitas resep terlalu besar untuk estimasi HPP yang aman.');
+            }
+            $costMicro += intdiv(($quantityMilli * $unitCostMicro) + 500, 1000);
+        }
+        foreach ($recipe->productItems as $item) {
+            $product = $item->product;
+            if (! $product || ! $product->is_active || ! $product->is_semi_finished) {
+                throw ValidationException::withMessages(['recipe' => __('Resep memiliki produk setengah jadi yang tidak aktif.')]);
+            }
+            $unit = $product->productUnits->firstWhere('unit_id', $item->unit_id);
+            $factor = $item->unit_id === $product->unit_id ? 1 : (float) ($unit?->conversion_factor ?? 0);
+            if ($factor <= 0) {
+                throw ValidationException::withMessages(['recipe' => __('Satuan produk setengah jadi pada resep tidak valid.')]);
+            }
+            $quantityMilli = (int) round(self::effectiveQuantityMilli(FixedDecimal::quantity((string) $item->quantity), (string) $item->waste_percent) * $factor);
+            $unitCost = $unit?->buy_price !== null && (float) $unit->buy_price > 0
+                ? $unit->buy_price
+                : $product->buy_price;
+            $unitCostMicro = FixedDecimal::toScaled((string) $unitCost, 8);
+            if ($quantityMilli > intdiv(PHP_INT_MAX - 500, max(1, $unitCostMicro))) {
+                throw new \InvalidArgumentException('Kuantitas produk terlalu besar untuk estimasi HPP yang aman.');
             }
             $costMicro += intdiv(($quantityMilli * $unitCostMicro) + 500, 1000);
         }

@@ -11,7 +11,10 @@ use App\Models\Ingredient;
 use App\Models\IngredientPurchaseOrder;
 use App\Models\Outlet;
 use App\Models\Product;
+use App\Models\ProductUnit;
+use App\Models\RecipeVersion;
 use App\Models\Supplier;
+use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Cashier\CartService;
@@ -43,7 +46,7 @@ class ProductionRequestServiceTest extends TestCase
         $finance = User::where('email', 'finance@gmail.com')->firstOrFail();
         $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
         $warehouse = Warehouse::where('code', 'PUSAT')->firstOrFail();
-        $product = Product::where('sku', 'TEST-DME')->firstOrFail();
+        $product = Product::where('sku', 'TEST-DPL')->firstOrFail();
         $this->actingAs($warehouseUser);
         DB::table('ingredient_warehouses')->where('warehouse_id', $warehouse->id)->update(['stock' => 0, 'reserved_stock' => 0]);
         Ingredient::query()->where('code', 'like', 'TEST-%')->update(['stock' => 0]);
@@ -85,7 +88,7 @@ class ProductionRequestServiceTest extends TestCase
         $this->actingAs($warehouseUser);
         $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
         $warehouse = Warehouse::where('code', 'PUSAT')->firstOrFail();
-        $product = Product::where('sku', 'TEST-DME')->firstOrFail();
+        $product = Product::where('sku', 'TEST-DPL')->firstOrFail();
         DB::table('ingredient_warehouses')->where('warehouse_id', $warehouse->id)->update(['stock' => 0, 'reserved_stock' => 0]);
         Ingredient::query()->where('code', 'like', 'TEST-%')->update(['stock' => 0]);
         $request = app(ProductionRequestService::class)->create($warehouseUser, $outlet->id, $warehouse->id, [['product_id' => $product->id, 'quantity' => '2']]);
@@ -112,16 +115,21 @@ class ProductionRequestServiceTest extends TestCase
         $transferService->receive($transfer->id, 'test-outlet-receipt-'.Str::uuid());
         $this->assertDatabaseHas('product_warehouses', ['product_id' => $product->id, 'warehouse_id' => $outletWarehouse->id, 'stock' => 1.5]);
 
+        $menu = Product::query()->create(['unit_id' => $product->unit_id, 'sku' => 'TEST-DME-ASSEMBLED', 'title' => 'Dimsum Mentai Paket Test', 'buy_price' => 0, 'sell_price' => 10000, 'stock' => 0, 'is_active' => true, 'is_sellable' => true, 'is_semi_finished' => false, 'track_stock' => false]);
+        $packUnit = Unit::query()->firstOrCreate(['code' => 'TEST-PACK'], ['name' => 'Paket test', 'symbol' => 'paket test', 'dimension' => 'count', 'is_active' => true]);
+        ProductUnit::query()->create(['product_id' => $menu->id, 'unit_id' => $packUnit->id, 'conversion_factor' => 1, 'sell_price' => 10000, 'is_base' => false, 'is_default' => false]);
+        $menuRecipe = RecipeVersion::query()->create(['product_id' => $menu->id, 'unit_id' => $packUnit->id, 'version' => 1, 'starts_at' => now(), 'is_active' => true, 'yield_quantity' => 1]);
+        $menuRecipe->productItems()->create(['product_id' => $product->id, 'unit_id' => $product->unit_id, 'quantity' => '0.500', 'waste_percent' => 0]);
         $cashier = User::where('email', 'cashier@gmail.com')->firstOrFail();
         $this->actingAs($cashier)->withSession(['active_outlet_id' => $outlet->id]);
         $shift = app(CashierShiftService::class)->open($outlet->id, $outletWarehouse->id, '100000');
         $cartService = app(CartService::class);
         $cart = $cartService->activeFor($shift);
-        $cartService->add($cart, $product->id);
+        $cartService->add($cart, $menu->id, $packUnit->id);
         $transaction = app(CheckoutService::class)->cash($cart, '10000');
         $this->assertSame('completed', $transaction->status);
         $this->assertSame(1, (int) $transaction->details()->count());
-        $this->assertDatabaseHas('product_warehouses', ['product_id' => $product->id, 'warehouse_id' => $outletWarehouse->id, 'stock' => 0.5]);
+        $this->assertDatabaseHas('product_warehouses', ['product_id' => $product->id, 'warehouse_id' => $outletWarehouse->id, 'stock' => 1.0]);
         $this->assertGreaterThan(0, (float) $transaction->details()->first()->unit_cost);
     }
 
@@ -134,7 +142,12 @@ class ProductionRequestServiceTest extends TestCase
         $finance = User::where('email', 'finance@gmail.com')->firstOrFail();
         $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
         $central = Warehouse::where('code', 'PUSAT')->firstOrFail();
-        $product = Product::where('sku', 'TEST-DOR')->firstOrFail();
+        $product = Product::where('sku', 'TEST-DPL')->firstOrFail();
+        foreach ($product->recipeVersions()->where('unit_id', $product->unit_id)->where('is_active', true)->firstOrFail()->items as $item) {
+            $quantity = (float) $item->quantity;
+            DB::table('ingredient_warehouses')->where('warehouse_id', $central->id)->where('ingredient_id', $item->ingredient_id)->update(['stock' => $quantity, 'reserved_stock' => 0]);
+            $item->ingredient()->update(['stock' => $quantity]);
+        }
         $this->actingAs($warehouseUser);
         $request = app(ProductionRequestService::class)->create($warehouseUser, $outlet->id, $central->id, [['product_id' => $product->id, 'quantity' => '1']]);
         $this->assertSame(0.0, (float) $request->materials->first()->purchase_quantity);
@@ -154,8 +167,8 @@ class ProductionRequestServiceTest extends TestCase
         $warehouseUser = User::where('email', 'warehouse@gmail.com')->firstOrFail();
         $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
         $central = Warehouse::where('code', 'PUSAT')->firstOrFail();
-        $product = Product::where('sku', 'TEST-DOR')->firstOrFail();
-        $ingredient = Ingredient::where('code', 'TEST-FROZEN-DIMSUM')->firstOrFail();
+        $product = Product::where('sku', 'TEST-DPL')->firstOrFail();
+        $ingredient = Ingredient::where('code', 'TEST-AYAM-FILLET')->firstOrFail();
         DB::table('ingredient_warehouses')->where('warehouse_id', $central->id)->update(['stock' => 0, 'reserved_stock' => 0]);
         Ingredient::query()->where('code', 'like', 'TEST-%')->update(['stock' => 0]);
         DB::table('ingredient_warehouses')->where('warehouse_id', $central->id)->where('ingredient_id', $ingredient->id)->update(['stock' => 1]);
@@ -166,12 +179,12 @@ class ProductionRequestServiceTest extends TestCase
         $first = $service->create($warehouseUser, $outlet->id, $central->id, [['product_id' => $product->id, 'quantity' => '2']]);
         $firstMaterial = $first->materials->first();
         $this->assertSame(1.0, (float) $firstMaterial->reserved_quantity);
-        $this->assertSame(1.0, (float) $firstMaterial->purchase_quantity);
+        $this->assertSame(39.0, (float) $firstMaterial->purchase_quantity);
 
         $second = $service->create($warehouseUser, $outlet->id, $central->id, [['product_id' => $product->id, 'quantity' => '1']]);
         $secondMaterial = $second->materials->first();
         $this->assertSame(0.0, (float) $secondMaterial->reserved_quantity);
-        $this->assertSame(1.0, (float) $secondMaterial->purchase_quantity);
+        $this->assertSame(20.0, (float) $secondMaterial->purchase_quantity);
         $this->assertSame(1.0, (float) DB::table('ingredient_warehouses')->where('warehouse_id', $central->id)->where('ingredient_id', $ingredient->id)->value('reserved_stock'));
     }
 
@@ -185,12 +198,13 @@ class ProductionRequestServiceTest extends TestCase
         $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
         $central = Warehouse::where('code', 'PUSAT')->firstOrFail();
         $product = Product::where('sku', 'HPP-MENU-001')->firstOrFail();
+        $product->forceFill(['is_semi_finished' => true, 'is_sellable' => false])->save();
         $this->assertDatabaseHas('recipe_versions', ['product_id' => $product->id, 'is_active' => true]);
 
         $this->actingAs($warehouseUser);
         Livewire::test(IngredientsIndex::class)->assertSee('Master bahan');
-        Livewire::test(RecipesIndex::class)->assertSee('Estimasi HPP selalu memakai harga terbaru');
-        Livewire::test(ProductionRequestsIndex::class)->assertSee('Permintaan menghitung kebutuhan');
+        Livewire::test(RecipesIndex::class)->assertSee('Resep dapat menggabungkan bahan baku');
+        Livewire::test(ProductionRequestsIndex::class)->assertSee('Gudang meminta target produk setengah jadi');
         Livewire::test(ProductionOrdersIndex::class)->assertSee('Siap diproduksi');
         $request = app(ProductionRequestService::class)->create($warehouseUser, $outlet->id, $central->id, [['product_id' => $product->id, 'quantity' => '1']]);
         $supplier = Supplier::create(['code' => 'HPP-SUPPLIER', 'name' => 'Pemasok HPP', 'is_active' => true]);
@@ -219,11 +233,16 @@ class ProductionRequestServiceTest extends TestCase
         $transfers->send($transfer->id);
         $transfers->receive($transfer->id, 'hpp-transfer-'.Str::uuid());
 
+        $menu = Product::query()->create(['unit_id' => $product->unit_id, 'sku' => 'HPP-MENU-PACK', 'title' => 'HPP Menu Paket', 'buy_price' => 0, 'sell_price' => 20000, 'stock' => 0, 'is_active' => true, 'is_sellable' => true, 'is_semi_finished' => false, 'track_stock' => false]);
+        $packUnit = Unit::query()->firstOrCreate(['code' => 'TEST-PACK'], ['name' => 'Paket test', 'symbol' => 'paket test', 'dimension' => 'count', 'is_active' => true]);
+        ProductUnit::query()->create(['product_id' => $menu->id, 'unit_id' => $packUnit->id, 'conversion_factor' => 1, 'sell_price' => 20000, 'is_base' => false, 'is_default' => false]);
+        $menuRecipe = RecipeVersion::query()->create(['product_id' => $menu->id, 'unit_id' => $packUnit->id, 'version' => 1, 'starts_at' => now(), 'is_active' => true, 'yield_quantity' => 1]);
+        $menuRecipe->productItems()->create(['product_id' => $product->id, 'unit_id' => $product->unit_id, 'quantity' => '1.000', 'waste_percent' => 0]);
         $cashier = User::where('email', 'cashier@gmail.com')->firstOrFail();
         $this->actingAs($cashier)->withSession(['active_outlet_id' => $outlet->id]);
         $shift = app(CashierShiftService::class)->open($outlet->id, $branch->id, '100000');
         $cart = app(CartService::class)->activeFor($shift);
-        app(CartService::class)->add($cart, $product->id);
+        app(CartService::class)->add($cart, $menu->id, $packUnit->id);
         $sale = app(CheckoutService::class)->cash($cart, '20000');
 
         $this->assertSame('completed', $sale->status);

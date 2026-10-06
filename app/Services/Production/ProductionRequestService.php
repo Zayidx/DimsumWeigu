@@ -64,10 +64,10 @@ class ProductionRequestService
                 if ($quantityMilli < 1) {
                     throw ValidationException::withMessages(['items' => __('Jumlah produksi minimal 0,001.')]);
                 }
-                $product = Product::query()->whereKey($productId)->where('is_active', true)->where('is_sellable', true)->first();
-                $recipe = $product ? RecipeVersion::query()->where('product_id', $productId)->where('is_active', true)->with('items.ingredient')->lockForUpdate()->first() : null;
-                if (! $recipe || $recipe->items->isEmpty()) {
-                    throw ValidationException::withMessages(['items' => __('Menu yang diminta belum memiliki resep aktif.')]);
+                $product = Product::query()->whereKey($productId)->where('is_active', true)->where('is_semi_finished', true)->first();
+                $recipe = $product ? RecipeVersion::query()->where('product_id', $productId)->where('unit_id', $product->unit_id)->where('is_active', true)->with('items.ingredient', 'productItems')->lockForUpdate()->first() : null;
+                if (! $recipe || $recipe->items->isEmpty() || $recipe->productItems->isNotEmpty()) {
+                    throw ValidationException::withMessages(['items' => __('Produk setengah jadi harus memiliki resep bahan baku aktif.')]);
                 }
                 $request->items()->create(['product_id' => $productId, 'recipe_version_id' => $recipe->id, 'quantity' => FixedDecimal::quantityText($quantityMilli)]);
                 foreach ($recipe->items as $recipeItem) {

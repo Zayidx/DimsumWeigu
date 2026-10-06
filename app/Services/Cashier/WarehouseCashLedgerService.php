@@ -16,7 +16,7 @@ class WarehouseCashLedgerService
             $warehouse = Warehouse::query()->lockForUpdate()->findOrFail($warehouseId);
             $last = WarehouseCashLedger::query()->where('warehouse_id', $warehouse->id)->latest('id')->first();
             $before = $last ? FixedDecimal::money((string) $last->balance_after) : 0;
-            $isOutflow = in_array($type, ['cash_out', 'sale_refund', 'handover_out', 'supplier_payment', 'expense'], true);
+            $isOutflow = in_array($type, ['cash_out', 'sale_refund', 'handover_out', 'supplier_payment', 'expense', 'bank_deposit'], true);
             if ($amountCents < 0 || ($isOutflow && $before < $amountCents)) {
                 throw ValidationException::withMessages(['amount' => __('Saldo kas gudang tidak mencukupi.')]);
             }

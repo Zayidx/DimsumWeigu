@@ -63,6 +63,10 @@ class ProductsIndex extends Component
 
     public bool $isSellable = true;
 
+    public bool $isSemiFinished = false;
+
+    public bool $allowSingleUnitSale = false;
+
     public bool $trackStock = true;
 
     public bool $trackBatches = false;
@@ -74,6 +78,15 @@ class ProductsIndex extends Component
     public function updatingSearch(): void
     {
         $this->resetPage();
+    }
+
+    public function updatedIsSemiFinished(bool $value): void
+    {
+        if ($value) {
+            $this->isSellable = false;
+            $this->trackStock = true;
+            $this->allowSingleUnitSale = false;
+        }
     }
 
     public function openCreate(): void
@@ -102,6 +115,8 @@ class ProductsIndex extends Component
         $this->taxInclusive = $product->tax_inclusive;
         $this->isActive = $product->is_active;
         $this->isSellable = $product->is_sellable;
+        $this->isSemiFinished = $product->is_semi_finished;
+        $this->allowSingleUnitSale = $product->allow_single_unit_sale;
         $this->trackStock = $product->track_stock;
         $this->trackBatches = $product->track_batches;
         $this->alternateUnits = $product->productUnits()->where('unit_id', '!=', $product->unit_id)->with('unit:id,name,symbol')->get()->map(fn (ProductUnit $row) => [
@@ -157,7 +172,7 @@ class ProductsIndex extends Component
             'taxRate' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'minStock' => ['required', 'numeric', 'min:0', 'max:999999999999.999'],
             'reorderPoint' => ['required', 'numeric', 'min:0', 'max:999999999999.999'],
-            'taxInclusive' => ['boolean'], 'isActive' => ['boolean'], 'isSellable' => ['boolean'],
+            'taxInclusive' => ['boolean'], 'isActive' => ['boolean'], 'isSellable' => ['boolean'], 'isSemiFinished' => ['boolean'], 'allowSingleUnitSale' => ['boolean'],
             'trackStock' => ['boolean'], 'trackBatches' => ['boolean'],
             'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'alternateUnits' => ['nullable', 'array'],
@@ -167,6 +182,15 @@ class ProductsIndex extends Component
             'alternateUnits.*.barcode' => ['nullable', 'string', 'max:96', 'distinct'],
         ]);
         $baseUnit = Unit::query()->findOrFail((int) $validated['unitId']);
+        if ($validated['isSemiFinished'] && $validated['isSellable']) {
+            throw ValidationException::withMessages(['isSemiFinished' => __('Produk setengah jadi adalah stok rakitan dan tidak dijual langsung.')]);
+        }
+        if ($validated['isSemiFinished'] && ! $validated['trackStock']) {
+            throw ValidationException::withMessages(['isSemiFinished' => __('Stok produk setengah jadi harus dilacak per gudang.')]);
+        }
+        if ($validated['isSemiFinished'] && $validated['allowSingleUnitSale']) {
+            throw ValidationException::withMessages(['allowSingleUnitSale' => __('Produk setengah jadi tidak dijual langsung.')]);
+        }
         foreach ($validated['alternateUnits'] ?? [] as $index => $alternate) {
             $unit = Unit::query()->findOrFail((int) $alternate['unit_id']);
             if ($unit->dimension !== $baseUnit->dimension || $unit->id === $baseUnit->id) {
@@ -195,6 +219,8 @@ class ProductsIndex extends Component
             'tax_inclusive' => $validated['taxInclusive'], 'min_stock' => $validated['minStock'],
             'reorder_point' => $validated['reorderPoint'], 'is_active' => $validated['isActive'],
             'is_sellable' => $validated['isSellable'], 'track_stock' => $validated['trackStock'],
+            'is_semi_finished' => $validated['isSemiFinished'],
+            'allow_single_unit_sale' => $validated['allowSingleUnitSale'],
             'track_batches' => $validated['trackBatches'],
         ];
         if ($imagePath) {
@@ -280,6 +306,8 @@ class ProductsIndex extends Component
         $this->taxInclusive = false;
         $this->isActive = true;
         $this->isSellable = true;
+        $this->isSemiFinished = false;
+        $this->allowSingleUnitSale = false;
         $this->trackStock = true;
         $this->trackBatches = false;
     }

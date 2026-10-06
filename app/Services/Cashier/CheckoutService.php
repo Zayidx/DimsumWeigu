@@ -2,6 +2,7 @@
 
 namespace App\Services\Cashier;
 
+use App\Models\BankAccount;
 use App\Models\Cart;
 use App\Models\CashierShift;
 use App\Models\Customer;
@@ -11,11 +12,14 @@ use App\Models\Product;
 use App\Models\ProductUnit;
 use App\Models\Profit;
 use App\Models\Receivable;
+use App\Models\RecipeVersion;
 use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\TransactionTender;
+use App\Services\Finance\BankAccountLedgerService;
 use App\Services\Inventory\StockMutationService;
+use App\Services\Production\RecipeCostService;
 use App\Support\AuditLogger;
 use App\Support\FixedDecimal;
 use App\Support\OutletAccess;
@@ -37,9 +41,14 @@ class CheckoutService
         return $this->complete($cart, 'pay-later', '0');
     }
 
-    private function complete(Cart $cart, string $method, string $received): Transaction
+    public function qris(Cart $cart, int $bankAccountId, ?string $reference = null): Transaction
     {
-        if (! in_array($method, ['cash', 'pay-later'], true)) {
+        return $this->complete($cart, 'qris', '0', $bankAccountId, $reference);
+    }
+
+    private function complete(Cart $cart, string $method, string $received, ?int $bankAccountId = null, ?string $reference = null): Transaction
+    {
+        if (! in_array($method, ['cash', 'pay-later', 'qris'], true)) {
             throw ValidationException::withMessages(['payment' => __('Metode pembayaran belum didukung.')]);
         }
         $receivedCents = FixedDecimal::money($received);
@@ -47,14 +56,15 @@ class CheckoutService
             throw ValidationException::withMessages(['received' => __('Jumlah pembayaran tidak valid.')]);
         }
 
-        return DB::transaction(function () use ($cart, $receivedCents, $method) {
+        return DB::transaction(function () use ($cart, $receivedCents, $method, $bankAccountId, $reference) {
             $cart = Cart::query()->with('items')->whereKey($cart->id)->lockForUpdate()->firstOrFail();
             abort_unless($cart->user_id === auth()->id() && auth()->user()?->can('pos-access') && auth()->user()?->can('pos-checkout'), 403);
             app(OutletAccess::class)->require(auth()->user(), $cart->outlet_id);
             $existing = Transaction::where('client_uuid', $cart->uuid)->first();
             if ($existing) {
                 $tender = $existing->tenders()->where('method', $method)->first();
-                if (! $tender || ($method === 'cash' && FixedDecimal::money((string) ($tender->metadata['received'] ?? '0')) !== $receivedCents)) {
+                if (! $tender || ($method === 'cash' && FixedDecimal::money((string) ($tender->metadata['received'] ?? '0')) !== $receivedCents)
+                    || ($method === 'qris' && (int) $tender->bank_account_id !== $bankAccountId)) {
                     throw ValidationException::withMessages(['payment' => __('Keranjang sudah dibayar dengan rincian pembayaran berbeda.')]);
                 }
 
@@ -71,6 +81,7 @@ class CheckoutService
             if (! $paymentMethod) {
                 throw ValidationException::withMessages(['payment' => __('Metode pembayaran belum diaktifkan.')]);
             }
+            $bankAccount = $method === 'qris' ? BankAccount::query()->whereKey($bankAccountId)->where('is_active', true)->firstOrFail() : null;
             $creditCustomer = null;
             $creditBefore = 0;
             if ($method === 'pay-later') {
@@ -92,8 +103,17 @@ class CheckoutService
                 if ($qtyMilli <= 0) {
                     throw ValidationException::withMessages(['cart' => __('Jumlah produk pada keranjang tidak valid.')]);
                 }
-                $unit = $product->unit_id === $item->unit_id ? null : ProductUnit::query()
-                    ->where('product_id', $product->id)->where('unit_id', $item->unit_id)->firstOrFail();
+                if ($product->unit_id === $item->unit_id && ! $product->allow_single_unit_sale) {
+                    throw ValidationException::withMessages(['unit' => __('Penjualan wajib memilih satuan paket.')]);
+                }
+                $unit = ProductUnit::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)
+                    ->where('is_base', $item->unit_id === $product->unit_id)->firstOrFail();
+                $recipe = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $item->unit_id)->where('is_active', true)
+                    ->with(['items.ingredient', 'productItems.product.productUnits'])->first();
+                $hasAssemblyRecipes = RecipeVersion::query()->where('product_id', $product->id)->where('is_active', true)->whereHas('productItems')->exists();
+                if ($hasAssemblyRecipes && ! $recipe?->productItems->isNotEmpty()) {
+                    throw ValidationException::withMessages(['recipe' => __('Komposisi menu ini belum disiapkan untuk satuan yang dipilih.')]);
+                }
                 $conversion = (float) ($unit?->conversion_factor ?? 1);
                 $stockQtyMilli = (int) round($qtyMilli * $conversion);
                 $basePrice = FixedDecimal::money((string) $product->sell_price);
@@ -108,8 +128,9 @@ class CheckoutService
                 $inclusive = $product->tax_rate === null ? $defaultTaxInclusive : $product->tax_inclusive;
                 $tax = $inclusive ? (int) round($net * $rate / (10000 + $rate)) : (int) round($net * $rate / 10000);
                 $lineTotal = $inclusive ? $net : $net + $tax;
-                $cost = (int) round(FixedDecimal::money((string) $product->buy_price) * $stockQtyMilli / 1000);
-                $prepared[] = compact('item', 'product', 'unit', 'qtyMilli', 'stockQtyMilli', 'price', 'gross', 'discount', 'net', 'rate', 'tax', 'lineTotal', 'cost', 'inclusive');
+                $unitCostCents = $recipe ? FixedDecimal::money(app(RecipeCostService::class)->estimate($recipe)) : FixedDecimal::money((string) $product->buy_price) * $conversion;
+                $cost = (int) round($unitCostCents * $qtyMilli / 1000);
+                $prepared[] = compact('item', 'product', 'unit', 'recipe', 'qtyMilli', 'stockQtyMilli', 'price', 'gross', 'discount', 'net', 'rate', 'tax', 'lineTotal', 'cost', 'unitCostCents', 'inclusive');
                 $subtotal += $net;
                 $taxTotal += $tax;
                 $total += $lineTotal;
@@ -125,12 +146,12 @@ class CheckoutService
                 'number' => 'WG-'.now()->format('ymdHis').'-'.Str::upper(Str::random(6)),
                 'outlet_id' => $cart->outlet_id, 'warehouse_id' => $cart->warehouse_id,
                 'cashier_shift_id' => $shift->id, 'user_id' => auth()->id(), 'customer_id' => $cart->customer_id,
-                'source' => 'pos', 'status' => 'completed', 'payment_status' => $method === 'cash' ? 'paid' : 'unpaid',
+                'source' => 'pos', 'status' => 'completed', 'payment_status' => in_array($method, ['cash', 'qris'], true) ? 'paid' : 'unpaid',
                 'subtotal' => FixedDecimal::moneyText($subtotal), 'tax_total' => FixedDecimal::moneyText($taxTotal),
-                'grand_total' => FixedDecimal::moneyText($total), 'paid_total' => FixedDecimal::moneyText($method === 'cash' ? $total : 0),
+                'grand_total' => FixedDecimal::moneyText($total), 'paid_total' => FixedDecimal::moneyText(in_array($method, ['cash', 'qris'], true) ? $total : 0),
                 'change_total' => FixedDecimal::moneyText($method === 'cash' ? $receivedCents - $total : 0), 'notes' => $cart->notes,
                 'client_uuid' => $cart->uuid, 'idempotency_key' => 'checkout:'.$cart->uuid,
-                'occurred_at' => now(), 'paid_at' => $method === 'cash' ? now() : null,
+                'occurred_at' => now(), 'paid_at' => in_array($method, ['cash', 'qris'], true) ? now() : null,
             ]);
 
             foreach ($prepared as $index => $line) {
@@ -141,12 +162,16 @@ class CheckoutService
                     'quantity' => FixedDecimal::quantityText($line['qtyMilli']),
                     'unit_price' => FixedDecimal::moneyText($line['price']), 'discount_total' => FixedDecimal::moneyText($line['discount']),
                     'tax_rate' => number_format($line['rate'] / 100, 4, '.', ''), 'tax_total' => FixedDecimal::moneyText($line['tax']),
-                    'line_total' => FixedDecimal::moneyText($line['lineTotal']), 'unit_cost' => $line['product']->buy_price,
+                    'line_total' => FixedDecimal::moneyText($line['lineTotal']), 'unit_cost' => FixedDecimal::moneyText($line['unitCostCents']),
                     'notes' => $line['item']->notes,
                 ]);
-                if ($line['product']->track_stock) {
+                $assembledAtSale = $line['recipe'] && $line['recipe']->productItems->isNotEmpty();
+                if ($line['product']->track_stock && ! $assembledAtSale) {
                     $this->stock->mutate($line['product']->id, $cart->warehouse_id, '-'.FixedDecimal::quantityText($line['stockQtyMilli']), 'sale', 'sale:'.$transaction->id.':'.$index,
                         null, null, Transaction::class, $transaction->id);
+                }
+                if ($assembledAtSale) {
+                    $this->consumeRecipe($line['recipe'], $line['qtyMilli'], $cart->warehouse_id, $transaction, $detail, $index);
                 }
                 Profit::query()->create([
                     'transaction_id' => $transaction->id, 'transaction_detail_id' => $detail->id,
@@ -159,11 +184,15 @@ class CheckoutService
             }
 
             TransactionTender::query()->create([
-                'transaction_id' => $transaction->id, 'method' => $method, 'amount' => FixedDecimal::moneyText($total),
-                'status' => $method === 'cash' ? 'paid' : 'pending', 'idempotency_key' => $method.':'.$cart->uuid,
-                'confirmed_at' => $method === 'cash' ? now() : null,
-                'metadata' => $method === 'cash' ? ['received' => FixedDecimal::moneyText($receivedCents), 'change' => FixedDecimal::moneyText($receivedCents - $total)] : ['settlement' => 'receivable'],
+                'transaction_id' => $transaction->id, 'bank_account_id' => $bankAccount?->id, 'method' => $method, 'amount' => FixedDecimal::moneyText($total),
+                'status' => in_array($method, ['cash', 'qris'], true) ? 'paid' : 'pending', 'idempotency_key' => $method.':'.$cart->uuid,
+                'provider_reference' => $method === 'qris' ? $reference : null,
+                'confirmed_at' => in_array($method, ['cash', 'qris'], true) ? now() : null,
+                'metadata' => $method === 'cash' ? ['received' => FixedDecimal::moneyText($receivedCents), 'change' => FixedDecimal::moneyText($receivedCents - $total)] : ($method === 'qris' ? ['settlement' => 'finance-bank-account'] : ['settlement' => 'receivable']),
             ]);
+            if ($method === 'qris') {
+                app(BankAccountLedgerService::class)->credit($bankAccount, $total, 'qris_sale', Transaction::class, $transaction->id, 'qris:'.$cart->uuid, __('QRIS POS :number', ['number' => $transaction->number]));
+            }
             if ($method === 'pay-later') {
                 Receivable::query()->create([
                     'customer_id' => $creditCustomer->id, 'transaction_id' => $transaction->id,
@@ -190,5 +219,41 @@ class CheckoutService
 
             return $transaction->refresh();
         }, attempts: 3);
+    }
+
+    private function consumeRecipe(RecipeVersion $recipe, int $soldQuantityMilli, int $warehouseId, Transaction $transaction, TransactionDetail $detail, int $lineIndex): void
+    {
+        $yieldMilli = FixedDecimal::quantity((string) $recipe->yield_quantity);
+        if ($yieldMilli <= 0) {
+            throw ValidationException::withMessages(['recipe' => __('Hasil resep harus lebih dari nol.')]);
+        }
+        foreach ($recipe->items as $item) {
+            $quantityMilli = FixedDecimal::quantity((string) $item->quantity);
+            if ($quantityMilli > intdiv(PHP_INT_MAX - intdiv($yieldMilli, 2), max(1, $soldQuantityMilli))) {
+                throw ValidationException::withMessages(['recipe' => __('Jumlah pemakaian bahan melewati batas aman.')]);
+            }
+            $requiredMilli = intdiv(($quantityMilli * $soldQuantityMilli) + intdiv($yieldMilli, 2), $yieldMilli);
+            $requiredMilli = RecipeCostService::effectiveQuantityMilli($requiredMilli, (string) $item->waste_percent);
+            app(IngredientSaleConsumptionService::class)->consume(
+                $item->ingredient, $warehouseId, $requiredMilli, $transaction,
+                'sale-recipe:'.$transaction->id.':'.$detail->id.':ingredient:'.$item->id,
+            );
+        }
+        foreach ($recipe->productItems as $item) {
+            $component = $item->product;
+            $unit = $component->productUnits->firstWhere('unit_id', $item->unit_id);
+            $factor = $item->unit_id === $component->unit_id ? 1 : (float) ($unit?->conversion_factor ?? 0);
+            if (! $component->is_semi_finished || $factor <= 0) {
+                throw ValidationException::withMessages(['recipe' => __('Komponen produk setengah jadi pada resep tidak valid.')]);
+            }
+            $componentQuantityMilli = RecipeCostService::effectiveQuantityMilli(FixedDecimal::quantity((string) $item->quantity), (string) $item->waste_percent);
+            $requiredMilli = (int) round(($componentQuantityMilli * $soldQuantityMilli / $yieldMilli) * $factor);
+            $this->stock->mutate(
+                $component->id, $warehouseId, '-'.FixedDecimal::quantityText($requiredMilli), 'sale_component',
+                'sale-recipe:'.$transaction->id.':'.$detail->id.':product:'.$item->id,
+                __('Komponen :name untuk :menu', ['name' => $component->title, 'menu' => $detail->product_name]),
+                null, Transaction::class, $transaction->id,
+            );
+        }
     }
 }
