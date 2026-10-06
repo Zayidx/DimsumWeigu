@@ -145,7 +145,7 @@ Harga rupiah; berlaku global tanpa periode promo/outlet khusus pada TestDataSeed
 
 ## Akun dan akses
 
-Password sumber tidak dipakai. Akun baru memakai password acak yang tidak ditampilkan; administrator dapat memakai SUPER_ADMIN_PASSWORD dari konfigurasi proyek baru. Semua akun baru wajib mengganti password. Gunakan /forgot-password dengan pengiriman email yang telah dikonfigurasi. Seeder tidak mengirim email otomatis dan tidak menulis password ke dokumentasi/log.
+`php artisan db:seed` memanggil `UserSeeder` secara otomatis. Manager, finance, warehouse, dan semua kasir memakai password awal `indrawan123` lalu wajib menggantinya saat login. Akun seeder lama yang belum pernah mengganti password juga menerima password awal tersebut; akun yang sudah mengganti password sendiri tetap dipertahankan. Administrator memakai `SUPER_ADMIN_PASSWORD` dari `.env`, yang wajib diisi sebelum seeding.
 
 | Nama | Login | Role | Outlet (default bertanda *) |
 |---|---|---|---|
@@ -157,6 +157,8 @@ Password sumber tidak dipakai. Akun baru memakai password acak yang tidak ditamp
 | Kasir Cabang 2 - Galaxy Hermina | cashier2@gmail.com | cashier | GAL-HER* |
 | Kasir Cabang 3 - Pekayon Jaya | cashier3@gmail.com | cashier | PEK-JAYA* |
 | Kasir Cabang 4 - Jalan Raya Pekayon | cashier4@gmail.com | cashier | JL-RAYA-PEK* |
+
+Gunakan `/forgot-password` bila akun yang sudah pernah mengganti password lupa kredensialnya.
 
 ### Permission per role
 

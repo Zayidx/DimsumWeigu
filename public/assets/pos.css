@@ -44,7 +44,8 @@ body.pos-shell { min-width: 320px; min-height: 100vh; background: var(--pos-crea
 .pos-page-heading p { margin: 0; color: var(--pos-muted); }
 .pos-eyebrow { color: var(--pos-accent); font-size: .76rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; }
 .pos-shift-link { flex: 0 0 auto; }
-.pos-shell .btn { min-height: 42px; border-radius: 12px; font-weight: 650; }
+.pos-shell .btn { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; font-weight: 650; }
+.pos-shell .btn > .bi, .pos-history-link > .bi, .pos-shift-link > .bi, .pos-account-options .bi { display: inline-flex; width: 1.25em; height: 1.25em; flex: 0 0 auto; align-items: center; justify-content: center; line-height: 1; }
 .pos-shell .btn-primary { border-color: var(--pos-accent); background: var(--pos-accent); }
 .pos-shell .btn-primary:hover, .pos-shell .btn-primary:focus { border-color: var(--pos-accent-dark); background: var(--pos-accent-dark); }
 .pos-shell .btn-outline-primary { border-color: #d5a08e; color: var(--pos-accent); }
@@ -119,9 +120,9 @@ body.pos-shell { min-width: 320px; min-height: 100vh; background: var(--pos-crea
     .pos-brand small { font-size: .7rem; }
     .pos-topbar-actions { gap: 7px; }
     .pos-outlet-label { max-width: 42vw; overflow: hidden; padding: 8px 10px; font-size: .78rem; text-overflow: ellipsis; white-space: nowrap; }
-    .pos-outlet-form > label, .pos-outlet-form .btn, .pos-account-name, .pos-account-menu > summary > .bi-chevron-down, .pos-history-link span { display: none; }
+    .pos-outlet-form > label, .pos-account-name, .pos-account-menu > summary > .bi-chevron-down, .pos-history-link span { display: none; }
     .pos-outlet-form .form-select { width: min(38vw, 150px); min-height: 40px; padding: 6px 26px 6px 9px; font-size: .78rem; }
-    .pos-history-link, .pos-account-menu > summary { width: 42px; min-height: 42px; justify-content: center; padding: 3px; }
+    .pos-history-link, .pos-account-menu > summary { width: 44px; min-height: 44px; justify-content: center; padding: 3px; }
     .pos-avatar { width: 34px; height: 34px; }
     .pos-main { padding: 18px 12px calc(96px + env(safe-area-inset-bottom)); }
     .pos-page-heading { align-items: center; gap: 8px; margin-bottom: 16px; }
@@ -144,9 +145,11 @@ body.pos-shell { min-width: 320px; min-height: 100vh; background: var(--pos-crea
 }
 
 @media (max-width: 400px) {
-    .pos-history-link { display: none; }
-    .pos-outlet-label { max-width: 29vw; }
-    .pos-outlet-form .form-select { width: min(29vw, 112px); }
+    .pos-topbar { flex-wrap: wrap; }
+    .pos-brand { flex: 1 1 auto; }
+    .pos-topbar-actions { flex: 1 1 100%; justify-content: flex-end; }
+    .pos-outlet-label { max-width: 100%; }
+    .pos-outlet-form .form-select { width: min(40vw, 150px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

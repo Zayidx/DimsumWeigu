@@ -17,10 +17,6 @@ class HppWorkbookSeeder extends Seeder
 {
     public function run(): void
     {
-        if (app()->environment('production')) {
-            throw new RuntimeException('HppWorkbookSeeder hanya boleh dijalankan di local/testing.');
-        }
-
         $path = base_path('hpp.json');
         if (! is_file($path)) {
             throw new RuntimeException('File hpp.json tidak ditemukan di root repository.');
@@ -112,11 +108,22 @@ class HppWorkbookSeeder extends Seeder
 
             $categoryProduct = Category::firstOrCreate(['slug' => 'menu-hpp-workbook'], ['name' => 'Menu HPP Workbook', 'is_active' => true]);
             $unit = Unit::query()->where('code', 'PCS')->firstOrFail();
-            foreach ($source['menu'] as $row) {
+            $menuNumberCounts = collect($source['menu'])->countBy(fn (array $row) => (string) ($row['no'] ?? 0));
+            $menuNumberSeen = [];
+            $menuSkuByIndex = [];
+            foreach ($source['menu'] as $index => $row) {
+                $number = (string) ($row['no'] ?? 0);
+                $baseSku = 'HPP-MENU-'.str_pad($number, 3, '0', STR_PAD_LEFT);
+                $menuNumberSeen[$number] = ($menuNumberSeen[$number] ?? 0) + 1;
+                $menuSkuByIndex[$index] = $menuNumberCounts[$number] > 1 && $menuNumberSeen[$number] > 1
+                    ? $baseSku.'-'.str_pad((string) $menuNumberSeen[$number], 2, '0', STR_PAD_LEFT)
+                    : $baseSku;
+            }
+            foreach ($source['menu'] as $index => $row) {
                 if (! filled($row['nama'] ?? null)) {
                     continue;
                 }
-                $sku = 'HPP-MENU-'.str_pad((string) ($row['no'] ?? 0), 3, '0', STR_PAD_LEFT);
+                $sku = $menuSkuByIndex[$index];
                 Product::withTrashed()->firstOrCreate(['sku' => $sku], [
                     'category_id' => $categoryProduct->id,
                     'unit_id' => $unit->id,
@@ -136,13 +143,15 @@ class HppWorkbookSeeder extends Seeder
             $packagingByName = $ingredientByName;
             $importedRecipes = 0;
             $incompleteRecipes = 0;
-            foreach ($source['menu'] as $menuRow) {
-                $menuProduct = Product::query()->where('sku', 'HPP-MENU-'.str_pad((string) ($menuRow['no'] ?? 0), 3, '0', STR_PAD_LEFT))->first();
+            $incompleteDetails = [];
+            foreach ($source['menu'] as $index => $menuRow) {
+                $menuProduct = Product::query()->where('sku', $menuSkuByIndex[$index])->first();
                 if (! $menuProduct || RecipeVersion::query()->where('product_id', $menuProduct->id)->exists()) {
                     continue;
                 }
                 $bom = [];
                 $complete = true;
+                $incompleteReason = '';
                 foreach ($menuRow['rincian'] ?? [] as $component) {
                     $componentName = mb_strtolower(trim((string) ($component['nama'] ?? '')));
                     $recipeName = $componentName === 'bolognese sauce' ? 'saus bolognese' : $componentName;
@@ -150,6 +159,7 @@ class HppWorkbookSeeder extends Seeder
                     $componentCount = $component['pcs'] ?? null;
                     if (! $sourceRecipe || ! is_numeric($componentCount) || (float) $componentCount <= 0 || empty($sourceRecipe['bahan'])) {
                         $complete = false;
+                        $incompleteReason = "Komponen {$componentName} tidak punya resep atau jumlah menu valid.";
                         break;
                     }
                     $yield = $this->sourceYield($sourceRecipe['keterangan'] ?? []);
@@ -159,6 +169,7 @@ class HppWorkbookSeeder extends Seeder
                         $ingredient = $ingredientByName->get(mb_strtolower($materialName));
                         if (! $ingredient || ! is_numeric($line['qty'] ?? null) || ! is_numeric($line['harga_satuan'] ?? null)) {
                             $complete = false;
+                            $incompleteReason = "Baris bahan {$materialName} pada resep {$recipeName} belum memiliki bahan master, qty, atau harga numerik.";
                             break 2;
                         }
                         $sourceUnit = trim((string) ($line['uom'] ?? ''));
@@ -168,11 +179,13 @@ class HppWorkbookSeeder extends Seeder
                         }
                         if ($sourceUnit !== '' && $this->normalizeUnit($sourceUnit) !== $this->normalizeUnit((string) $ingredient->unit?->symbol)) {
                             $complete = false;
+                            $incompleteReason = "Satuan {$materialName} tidak cocok: resep {$sourceUnit}, master {$ingredient->unit?->symbol}.";
                             break 2;
                         }
                         $quantity = round(((float) $line['qty'] * (float) $componentCount) / $yield, 3);
                         if ($quantity <= 0) {
                             $complete = false;
+                            $incompleteReason = "Kuantitas hasil konversi {$materialName} tidak valid.";
                             break 2;
                         }
                         $bom[$ingredient->id] = ($bom[$ingredient->id] ?? 0) + $quantity;
@@ -183,6 +196,7 @@ class HppWorkbookSeeder extends Seeder
                         $packParts = $this->packagingParts($packCost, $packagingByName);
                         if ($packParts === null) {
                             $complete = false;
+                            $incompleteReason = "Rincian packaging Rp {$packCost} belum dapat direkonsiliasi ke bahan kemasan.";
                             break;
                         }
                         foreach ($packParts as $ingredientId => $quantity) {
@@ -192,6 +206,7 @@ class HppWorkbookSeeder extends Seeder
                 }
                 if (! $complete || $bom === []) {
                     $incompleteRecipes++;
+                    $incompleteDetails[] = trim($menuRow['nama']).': '.($incompleteReason ?: 'BOM kosong.');
 
                     continue;
                 }
@@ -211,11 +226,14 @@ class HppWorkbookSeeder extends Seeder
                 $importedRecipes++;
             }
 
-            return ['recipes' => $importedRecipes, 'incomplete' => $incompleteRecipes];
+            return ['recipes' => $importedRecipes, 'incomplete' => $incompleteRecipes, 'details' => $incompleteDetails];
         });
 
         $this->command?->info('Master bahan dan menu sumber HPP berhasil diimpor tanpa membuat saldo stok.');
         $this->command?->info("Resep menu lengkap yang dapat dipetakan: {$stats['recipes']}; menu yang perlu dilengkapi manual: {$stats['incomplete']}.");
+        foreach ($stats['details'] as $detail) {
+            $this->command?->warn($detail);
+        }
         $this->command?->warn('Recipe lines with missing quantities and source units need review before production; this importer preserves costs and source notes but does not invent BOM quantities.');
     }
 
@@ -244,20 +262,21 @@ class HppWorkbookSeeder extends Seeder
     private function packagingParts(float $target, $ingredients): ?array
     {
         $groups = [
-            ['box pack dimsum', 'sumpit', 'plastik dimsum 24'],
-            ['cup'],
+            ['names' => ['box pack dimsum', 'sumpit', 'plastik dimsum 24'], 'quantity' => 1],
+            ['names' => ['cup'], 'quantity' => 1],
+            ['names' => ['pack chikuro', 'plastik chikuro'], 'quantity' => 4],
         ];
-        foreach ($groups as $names) {
+        foreach ($groups as $group) {
             $parts = [];
             $total = 0.0;
-            foreach ($names as $name) {
+            foreach ($group['names'] as $name) {
                 $item = $ingredients->get($name);
                 if (! $item) {
                     $parts = [];
                     break;
                 }
-                $parts[$item->id] = 1.0;
-                $total += (float) $item->buy_price;
+                $parts[$item->id] = (float) $group['quantity'];
+                $total += (float) $item->buy_price * (float) $group['quantity'];
             }
             if ($parts !== [] && abs($total - $target) <= 1.01) {
                 return $parts;

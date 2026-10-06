@@ -11,13 +11,13 @@
                     <input type="hidden" name="form_nonce" value="{{ $nonce }}">
                     <label class="visually-hidden" for="website">Jangan isi kolom ini</label>
                     <input id="website" name="website" class="position-absolute opacity-0" style="left:-10000px" tabindex="-1" autocomplete="off" aria-hidden="true">
+                    <label class="form-label" for="email">Email</label>
                     <div class="form-group position-relative has-icon-left mb-4">
-                        <label class="visually-hidden" for="email">Email</label>
                         <input id="email" type="email" name="email" value="{{ old('email') }}" class="form-control form-control-xl @error('email') is-invalid @enderror" placeholder="Email" autocomplete="username" required autofocus>
                         <div class="form-control-icon"><i class="bi bi-envelope"></i></div>
                     </div>
+                    <label class="form-label" for="password">Kata sandi</label>
                     <div class="form-group position-relative has-icon-left mb-4">
-                        <label class="visually-hidden" for="password">Kata sandi</label>
                         <input id="password" type="password" name="password" class="form-control form-control-xl" placeholder="Kata sandi" autocomplete="current-password" required>
                         <div class="form-control-icon"><i class="bi bi-shield-lock"></i></div>
                     </div>

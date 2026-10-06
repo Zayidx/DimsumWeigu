@@ -79,6 +79,14 @@
         document.querySelectorAll('.workspace-account-menu[open]').forEach(menu => {
             if (!menu.contains(event.target)) menu.removeAttribute('open');
         });
+        const submenuToggle = event.target.closest('#sidebar .sidebar-item.has-sub > .sidebar-link');
+        if (submenuToggle) {
+            requestAnimationFrame(() => {
+                const submenu = submenuToggle.parentElement.querySelector(':scope > .submenu');
+                submenuToggle.setAttribute('aria-expanded', String(!!submenu?.classList.contains('submenu-open')));
+            });
+            return;
+        }
         if (mobile.matches && event.target.closest('#sidebar .sidebar-link')) window.sidebar?.hide();
     });
 

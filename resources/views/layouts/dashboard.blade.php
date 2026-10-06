@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app-dark.css') }}">
     <link rel="stylesheet" href="{{ asset('mazer/extensions/bootstrap-icons/font/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/dashboard-mobile.css') }}?v={{ config('app.version') }}">
+    <link rel="stylesheet" href="{{ asset('assets/dashboard-mobile.css') }}?v={{ filemtime(public_path('assets/dashboard-mobile.css')) }}">
     @livewireStyles
     <script src="{{ asset('mazer/static/js/initTheme.js') }}"></script>
 </head>
@@ -36,7 +36,6 @@
         <div id="main" class="layout-navbar navbar-fixed">
             <header class="workspace-header">
                 <nav class="workspace-topbar" aria-label="Menu akun">
-                    <button type="button" class="burger-btn btn btn-light" aria-label="Buka menu" aria-controls="sidebar" aria-expanded="false"><i class="bi bi-list fs-4" aria-hidden="true"></i></button>
                     <div class="workspace-heading"><span class="small text-muted">Ruang kerja</span><strong>@yield('page-title', $title ?? 'Dashboard')</strong></div>
                     <div class="workspace-account">
                         @can('notifications-access')
@@ -79,7 +78,8 @@
     @include('layouts.partials.mobile-navigation')
     <div class="workspace-toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div>
     <script src="{{ asset('mazer/compiled/js/app.js') }}"></script>
-    <script src="{{ asset('assets/dashboard-mobile.js') }}?v={{ config('app.version') }}" defer></script>
+    <script src="{{ asset('assets/dashboard-mobile.js') }}?v={{ filemtime(public_path('assets/dashboard-mobile.js')) }}" defer></script>
     @livewireScripts
+    @stack('scripts')
 </body>
 </html>

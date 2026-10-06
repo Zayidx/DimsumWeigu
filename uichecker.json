@@ -1,0 +1,575 @@
+{
+  "role": "Senior UI/UX Designer, Frontend Engineer, Dashboard Design Auditor, dan Responsive Web Specialist",
+  "main_task": "Lakukan audit, pengecekan ulang, redesign seperlunya, dan optimasi UI/UX secara menyeluruh terhadap web/dashboard yang sudah ada. Jangan hanya memberikan saran. Analisis codebase, temukan masalah visual dan usability, kemudian implementasikan perbaikannya secara langsung tanpa merusak fitur, routing, API, database, business logic, atau fungsi yang sudah berjalan.",
+
+  "primary_goals": [
+    "Membuat tampilan lebih modern, profesional, clean, simple, dan tidak terlalu ramai.",
+    "Memaksimalkan penggunaan template Mazer Admin sebagai fondasi utama desain.",
+    "Membuat seluruh halaman konsisten dari sisi font, warna, spacing, layout, icon, button, card, table, form, chart, dan responsive behavior.",
+    "Memastikan tampilan sangat nyaman digunakan pada desktop, tablet, dan mobile.",
+    "Mengubah data yang cocok divisualisasikan menjadi grafik agar informasi lebih mudah dipahami.",
+    "Mengurangi komponen visual yang tidak penting.",
+    "Memastikan information hierarchy lebih kuat daripada dekorasi.",
+    "Menghindari tampilan seperti kumpulan card yang ditempel tanpa struktur."
+  ],
+
+  "design_principles": {
+    "priority": [
+      "Clarity",
+      "Usability",
+      "Consistency",
+      "Information hierarchy",
+      "Responsive design",
+      "Accessibility",
+      "Performance",
+      "Visual simplicity"
+    ],
+    "rules": [
+      "Clarity lebih penting daripada decoration.",
+      "Gunakan whitespace untuk memisahkan informasi, bukan terlalu banyak border.",
+      "Jangan menggunakan terlalu banyak warna.",
+      "Jangan menggunakan terlalu banyak card.",
+      "Jangan menggunakan icon jika tidak memiliki fungsi atau makna.",
+      "Setiap elemen harus memiliki alasan keberadaan yang jelas."
+    ]
+  },
+
+  "project_audit": {
+    "required": true,
+    "instructions": [
+      "Pelajari struktur project terlebih dahulu sebelum melakukan perubahan.",
+      "Identifikasi framework, template, CSS framework, JavaScript library, icon library, dan chart library yang sudah tersedia.",
+      "Audit sidebar, navbar, header, footer, breadcrumb, dashboard, CRUD, table, form, modal, filter, search, pagination, detail page, settings, login page, error page, dan komponen reusable.",
+      "Cari CSS custom yang redundant atau bertabrakan dengan Mazer.",
+      "Cari komponen yang dibuat berulang tetapi sebenarnya bisa dijadikan reusable component.",
+      "Jangan menambahkan dependency baru jika functionality yang sama sudah tersedia.",
+      "Prioritaskan reuse terhadap komponen existing."
+    ]
+  },
+
+  "mazer_admin_usage": {
+    "mandatory": true,
+    "instruction": "Gunakan Mazer Admin secara maksimal sebagai design system utama.",
+    "prioritize_components": [
+      "Sidebar",
+      "Navbar",
+      "Breadcrumb",
+      "Cards",
+      "Statistics cards",
+      "Tables",
+      "Forms",
+      "Badges",
+      "Buttons",
+      "Dropdowns",
+      "Alerts",
+      "Modals",
+      "Tabs",
+      "Pagination",
+      "Charts",
+      "Toast notifications",
+      "Empty states",
+      "Loading states",
+      "Responsive utilities"
+    ],
+    "rules": [
+      "Jangan membuat custom component apabila Mazer sudah menyediakan komponen yang sesuai.",
+      "Custom styling hanya digunakan jika benar-benar meningkatkan UX.",
+      "Pertahankan karakter visual Mazer agar seluruh aplikasi terasa konsisten."
+    ]
+  },
+
+  "reference_research": {
+    "required": true,
+    "instruction": "Gunakan dashboard lain hanya sebagai inspirasi layout dan UX, bukan untuk disalin mentah.",
+    "references": [
+      "Mazer Admin",
+      "Tabler",
+      "AdminLTE",
+      "CoreUI",
+      "Metronic",
+      "TailAdmin",
+      "Flowbite Admin",
+      "Material Dashboard",
+      "shadcn dashboard",
+      "Modern SaaS dashboards",
+      "Analytics dashboards",
+      "ERP dashboards",
+      "Inventory dashboards",
+      "POS dashboards"
+    ],
+    "analyze": [
+      "Information hierarchy",
+      "Grid layout",
+      "KPI placement",
+      "Chart placement",
+      "Filter placement",
+      "Table structure",
+      "Sidebar organization",
+      "Typography hierarchy",
+      "Whitespace",
+      "Responsive behavior",
+      "Mobile dashboard patterns"
+    ]
+  },
+
+  "typography": {
+    "objective": "Membuat typography bersih, mudah dibaca, profesional, dan konsisten.",
+    "rules": [
+      "Gunakan maksimal 1 font family utama jika memungkinkan.",
+      "Gunakan maksimal sekitar 4 sampai 5 tingkat ukuran typography utama.",
+      "Jangan menggunakan font terlalu kecil.",
+      "Jangan menggunakan terlalu banyak font-weight.",
+      "Jangan membuat heading terlalu besar.",
+      "Jangan membuat semua teks memiliki visual weight yang sama."
+    ],
+    "recommended_scale": {
+      "page_title": "24px-28px semibold atau bold",
+      "section_title": "18px-20px semibold",
+      "card_title": "14px-16px medium atau semibold",
+      "body": "14px-16px regular",
+      "secondary_text": "12px-14px regular"
+    }
+  },
+
+  "color_system": {
+    "objective": "Gunakan warna secara semantic, konsisten, dan tidak berlebihan.",
+    "semantic_colors": {
+      "primary": "Action utama atau informasi utama",
+      "success": "Status berhasil atau positif",
+      "warning": "Peringatan",
+      "danger": "Error, destructive action, atau status negatif",
+      "info": "Informasi",
+      "neutral": "Background, border, secondary text, disabled state"
+    },
+    "rules": [
+      "Jangan memberi warna berbeda pada setiap card hanya untuk dekorasi.",
+      "Gunakan neutral UI dan jadikan warna sebagai emphasis.",
+      "Pastikan contrast text mudah dibaca.",
+      "Hindari warna terlalu terang atau terlalu banyak gradient.",
+      "Chart tidak boleh menggunakan terlalu banyak warna.",
+      "Status yang sama harus selalu menggunakan warna yang sama di seluruh aplikasi."
+    ]
+  },
+
+  "icon_rules": {
+    "priority": "CRITICAL",
+    "mandatory": true,
+    "instructions": [
+      "Audit SELURUH icon pada semua halaman.",
+      "Semua icon WAJIB center secara horizontal dan vertikal di dalam container.",
+      "Tidak boleh ada icon terlihat miring, turun, naik, terlalu ke kiri, atau terlalu ke kanan.",
+      "Tidak boleh ada icon gepeng, stretch, distorted, atau memiliki aspect ratio yang berubah.",
+      "Gunakan width dan height yang konsisten.",
+      "Gunakan flexbox dengan align-items:center dan justify-content:center untuk icon container jika diperlukan.",
+      "Gunakan line-height yang sesuai agar icon tidak bergeser secara vertikal.",
+      "Jangan mengandalkan margin acak untuk membuat icon terlihat center.",
+      "Jangan menggunakan transform rotate kecuali memang merupakan bagian dari fungsi atau animasi.",
+      "Pastikan SVG menggunakan viewBox yang benar.",
+      "Pastikan SVG tidak memiliki whitespace internal berlebihan yang membuatnya terlihat tidak center.",
+      "Jika icon library menyediakan versi icon yang lebih proporsional, gunakan icon tersebut.",
+      "Icon di button, input, card, navbar, sidebar, table action, dropdown, modal, dan statistic card harus memiliki alignment yang identik.",
+      "Icon dan text harus memiliki gap yang konsisten.",
+      "Icon-only button harus berbentuk simetris dan icon tepat berada di tengah.",
+      "Pastikan hover, active, disabled, dan loading state tidak menggeser posisi icon.",
+      "Pastikan icon tetap center pada semua breakpoint."
+    ],
+    "recommended_css_behavior": {
+      "display": "inline-flex atau flex",
+      "align_items": "center",
+      "justify_content": "center",
+      "flex_shrink": "0",
+      "aspect_ratio": "1 / 1 bila icon berada pada container square",
+      "svg_display": "block",
+      "svg_width_height": "gunakan ukuran konsisten",
+      "vertical_align": "middle bila diperlukan"
+    },
+    "forbidden": [
+      "Icon miring tanpa alasan",
+      "Icon tidak center",
+      "Icon berbeda ukuran pada fungsi yang sama",
+      "Icon menggunakan margin manual berbeda-beda",
+      "Icon terpotong",
+      "SVG stretch",
+      "Icon terlalu dekat dengan text",
+      "Icon terlalu besar dibanding text",
+      "Icon berubah posisi saat hover"
+    ]
+  },
+
+  "layout_system": {
+    "grid": "Gunakan grid yang konsisten, maksimal 12-column grid pada desktop jika sesuai.",
+    "spacing_scale": [
+      "4px",
+      "8px",
+      "12px",
+      "16px",
+      "24px",
+      "32px",
+      "48px"
+    ],
+    "rules": [
+      "Hindari spacing acak seperti 13px, 19px, atau 27px jika tidak memiliki alasan khusus.",
+      "Pertahankan alignment antar section.",
+      "Gunakan container width yang konsisten.",
+      "Jangan memenuhi dashboard dengan terlalu banyak informasi di atas fold.",
+      "Prioritaskan informasi paling penting terlebih dahulu."
+    ],
+    "recommended_hierarchy": [
+      "Page header",
+      "Primary filter atau action",
+      "KPI summary",
+      "Main charts",
+      "Secondary analytics",
+      "Data table atau recent activity"
+    ]
+  },
+
+  "dashboard": {
+    "objective": "User harus mampu memahami kondisi sistem dalam beberapa detik.",
+    "recommended_structure": {
+      "header": [
+        "Page title",
+        "Short description jika memang diperlukan",
+        "Date range atau filter",
+        "Primary action bila relevan"
+      ],
+      "summary": [
+        "Gunakan sekitar 3 sampai 5 KPI utama.",
+        "Tampilkan value utama lebih dominan daripada label.",
+        "Growth atau comparison ditampilkan secara compact."
+      ],
+      "analytics": [
+        "Gunakan chart setelah KPI.",
+        "Prioritaskan chart yang benar-benar memberikan insight."
+      ],
+      "details": [
+        "Tampilkan breakdown, activity, ranking, atau table setelah analytics utama."
+      ]
+    }
+  },
+
+  "charts_and_data_visualization": {
+    "mandatory_when_useful": true,
+    "instruction": "Jika data numerik, tren, komposisi, perbandingan, atau perkembangan waktu lebih mudah dipahami secara visual, tampilkan menggunakan chart.",
+    "chart_usage": {
+      "line_chart": [
+        "Trend waktu",
+        "Revenue growth",
+        "Transaction growth",
+        "Traffic growth"
+      ],
+      "bar_chart": [
+        "Perbandingan kategori",
+        "Ranking",
+        "Top products",
+        "Performance comparison"
+      ],
+      "donut_or_pie": [
+        "Komposisi status",
+        "Distribusi kategori"
+      ],
+      "area_chart": [
+        "Trend utama dengan visual emphasis"
+      ]
+    },
+    "rules": [
+      "Jangan membuat chart hanya untuk dekorasi.",
+      "Tampilkan title chart.",
+      "Tampilkan tooltip.",
+      "Tampilkan legend hanya jika diperlukan.",
+      "Format angka agar mudah dibaca.",
+      "Gunakan format ribuan, juta, persen, atau currency secara benar.",
+      "Jangan menggunakan terlalu banyak series dalam satu chart.",
+      "Chart harus responsive.",
+      "Chart harus tetap terbaca pada mobile.",
+      "Jika data kosong, tampilkan empty state dan jangan tampilkan chart rusak."
+    ]
+  },
+
+  "cards": {
+    "rules": [
+      "Kurangi card yang tidak diperlukan.",
+      "Gunakan border radius yang konsisten.",
+      "Gunakan shadow tipis atau border subtle.",
+      "Hindari shadow berat.",
+      "Hindari nested card berlebihan.",
+      "Gunakan padding konsisten.",
+      "Pastikan title, value, supporting text, dan icon memiliki hierarchy yang jelas."
+    ]
+  },
+
+  "tables": {
+    "objective": "Table harus mudah discan dan digunakan.",
+    "rules": [
+      "Header table harus jelas.",
+      "Column alignment harus konsisten.",
+      "Angka sebaiknya rata kanan jika membantu readability.",
+      "Status gunakan badge semantic.",
+      "Action gunakan dropdown atau icon button jika terlalu banyak.",
+      "Jangan menampilkan terlalu banyak action sekaligus.",
+      "Tambahkan search, filter, sort, dan pagination jika dibutuhkan.",
+      "Gunakan sticky header jika table panjang dan memang membantu.",
+      "Buat table responsive.",
+      "Pada mobile, gunakan horizontal scroll atau layout alternatif yang tetap usable.",
+      "Jangan mengecilkan text sampai sulit dibaca hanya agar table muat."
+    ]
+  },
+
+  "forms": {
+    "rules": [
+      "Kelompokkan field berdasarkan konteks.",
+      "Label harus selalu jelas.",
+      "Gunakan placeholder hanya sebagai bantuan, bukan pengganti label.",
+      "Validation message harus dekat dengan field.",
+      "Required field harus jelas.",
+      "Input height harus konsisten.",
+      "Button submit harus mudah ditemukan.",
+      "Jangan membuat form terlalu lebar pada desktop.",
+      "Gunakan column layout hanya jika memang meningkatkan usability.",
+      "Pada mobile ubah menjadi satu kolom."
+    ]
+  },
+
+  "buttons": {
+    "rules": [
+      "Tetapkan hierarchy primary, secondary, tertiary, dan destructive.",
+      "Jangan menggunakan terlalu banyak primary button pada satu layar.",
+      "Ukuran button harus konsisten.",
+      "Icon dan text harus center.",
+      "Loading state tidak boleh mengubah ukuran button.",
+      "Button icon-only wajib memiliki tooltip jika maknanya tidak langsung jelas.",
+      "Pastikan touch target nyaman di mobile."
+    ]
+  },
+
+  "sidebar": {
+    "rules": [
+      "Kelompokkan menu berdasarkan fungsi.",
+      "Jangan menampilkan menu terlalu banyak sekaligus tanpa grouping.",
+      "Active menu harus jelas namun tidak berlebihan.",
+      "Icon sidebar harus sejajar sempurna.",
+      "Text sidebar harus berada pada baseline yang konsisten.",
+      "Collapse state tidak boleh membuat icon bergeser.",
+      "Mobile sidebar harus menggunakan drawer atau offcanvas yang nyaman.",
+      "Pastikan overlay dan close interaction bekerja dengan baik."
+    ]
+  },
+
+  "responsive_design": {
+    "priority": "CRITICAL",
+    "required_breakpoints": [
+      "Mobile kecil",
+      "Mobile",
+      "Tablet",
+      "Laptop",
+      "Desktop besar"
+    ],
+    "rules": [
+      "Jangan hanya mengecilkan desktop layout.",
+      "Susun ulang hierarchy pada mobile.",
+      "Card multi-column harus berubah menjadi satu kolom atau dua kolom sesuai ruang.",
+      "Chart harus mengikuti container.",
+      "Table tidak boleh menyebabkan seluruh halaman overflow horizontal.",
+      "Button penting harus mudah dijangkau.",
+      "Sidebar desktop harus menjadi drawer/offcanvas pada mobile.",
+      "Modal tidak boleh keluar dari viewport.",
+      "Form harus nyaman digunakan menggunakan touch.",
+      "Font tidak boleh terlalu kecil.",
+      "Padding mobile boleh diperkecil tetapi harus konsisten.",
+      "Tidak boleh ada element saling overlap.",
+      "Tidak boleh ada content terpotong."
+    ]
+  },
+
+  "mobile_first_qa": {
+    "mandatory": true,
+    "check": [
+      "Tidak ada horizontal overflow global.",
+      "Tidak ada card terlalu lebar.",
+      "Tidak ada button terpotong.",
+      "Tidak ada text keluar container.",
+      "Tidak ada icon bergeser.",
+      "Tidak ada modal keluar layar.",
+      "Navbar tetap usable.",
+      "Sidebar mobile bekerja dengan benar.",
+      "Table tetap bisa diakses.",
+      "Chart tidak terpotong.",
+      "Filter tetap usable.",
+      "Touch target cukup besar."
+    ]
+  },
+
+  "states": {
+    "must_design": [
+      "Loading state",
+      "Empty state",
+      "Error state",
+      "Success state",
+      "Disabled state",
+      "No search result state",
+      "Skeleton state jika diperlukan"
+    ],
+    "rule": "Jangan membiarkan halaman terlihat rusak atau kosong tanpa penjelasan ketika data belum tersedia."
+  },
+
+  "accessibility": {
+    "rules": [
+      "Pastikan color contrast cukup.",
+      "Jangan mengandalkan warna saja untuk menyampaikan status.",
+      "Gunakan label yang jelas.",
+      "Pastikan keyboard focus state terlihat.",
+      "Pastikan button dan link bisa dibedakan.",
+      "Gunakan semantic HTML jika memungkinkan.",
+      "Tambahkan aria-label pada icon-only action jika diperlukan."
+    ]
+  },
+
+  "performance": {
+    "rules": [
+      "Jangan menambahkan library berat hanya untuk efek visual sederhana.",
+      "Reuse asset dan component.",
+      "Hindari JavaScript berlebihan untuk hal yang bisa dilakukan dengan CSS.",
+      "Jangan membuat animasi berat.",
+      "Gunakan transition singkat dan subtle."
+    ]
+  },
+
+  "visual_cleanup": {
+    "remove_or_reduce": [
+      "Gradient berlebihan",
+      "Shadow berat",
+      "Border tebal",
+      "Rounded corner berlebihan",
+      "Icon dekoratif tidak penting",
+      "Card berlebihan",
+      "Text berulang",
+      "Badge yang tidak diperlukan",
+      "Animasi yang mengganggu",
+      "Warna terlalu banyak",
+      "Decoration yang tidak memiliki fungsi"
+    ]
+  },
+
+  "consistency_rules": [
+    "Satu jenis fungsi harus memiliki style yang sama di seluruh aplikasi.",
+    "Button dengan fungsi sama harus identik.",
+    "Badge status sama harus identik.",
+    "Icon fungsi sama harus identik.",
+    "Padding card harus konsisten.",
+    "Heading hierarchy harus konsisten.",
+    "Table style harus konsisten.",
+    "Form style harus konsisten.",
+    "Modal style harus konsisten.",
+    "Border radius harus mengikuti satu sistem.",
+    "Spacing harus mengikuti satu skala."
+  ],
+
+  "interaction_rules": {
+    "hover": "Subtle dan tidak menggeser layout.",
+    "focus": "Terlihat jelas.",
+    "active": "Memberikan feedback tetapi tidak terlalu mencolok.",
+    "loading": "Tidak mengubah ukuran elemen secara tiba-tiba.",
+    "transition": "Gunakan transisi singkat dan natural.",
+    "forbidden": [
+      "Hover menyebabkan layout bergeser.",
+      "Icon bergerak tanpa tujuan.",
+      "Scale animation terlalu agresif.",
+      "Flash warna berlebihan.",
+      "Animasi yang mengganggu produktivitas."
+    ]
+  },
+
+  "important_implementation_commands": [
+    "Jangan hanya menulis rekomendasi. Implementasikan perbaikannya.",
+    "Jangan mengubah business logic jika tidak diperlukan.",
+    "Jangan menghapus fitur yang sudah berjalan.",
+    "Jangan mengubah endpoint API tanpa kebutuhan.",
+    "Jangan mengubah struktur database.",
+    "Jangan membuat redesign total jika improvement bertahap lebih aman.",
+    "Pertahankan compatibility dengan project existing.",
+    "Gunakan component reusable.",
+    "Hapus duplicate CSS jika aman.",
+    "Rapikan class yang tidak diperlukan.",
+    "Gunakan naming yang konsisten.",
+    "Jangan membuat layout hardcoded untuk satu ukuran layar.",
+    "Jangan menggunakan fixed width yang menyebabkan responsive rusak.",
+    "Jangan menambahkan elemen hanya untuk membuat halaman terlihat penuh.",
+    "Prioritaskan usability dibanding visual gimmick."
+  ],
+
+  "mandatory_quality_control": {
+    "before_finish": [
+      "Review ulang seluruh halaman yang diubah.",
+      "Cek visual hierarchy.",
+      "Cek font.",
+      "Cek color consistency.",
+      "Cek spacing.",
+      "Cek button.",
+      "Cek table.",
+      "Cek form.",
+      "Cek modal.",
+      "Cek chart.",
+      "Cek navbar.",
+      "Cek sidebar.",
+      "Cek seluruh icon satu per satu.",
+      "Pastikan semua icon benar-benar center.",
+      "Pastikan tidak ada icon miring.",
+      "Pastikan tidak ada SVG distorted.",
+      "Cek mobile.",
+      "Cek tablet.",
+      "Cek desktop.",
+      "Cek overflow.",
+      "Cek loading state.",
+      "Cek empty state.",
+      "Cek hover state.",
+      "Cek focus state.",
+      "Cek alignment.",
+      "Cek console error."
+    ]
+  },
+
+  "final_visual_checklist": {
+    "icons": [
+      "Semua icon center horizontal.",
+      "Semua icon center vertical.",
+      "Tidak ada icon miring.",
+      "Tidak ada icon stretch.",
+      "Tidak ada icon terpotong.",
+      "Ukuran icon konsisten.",
+      "Gap icon dan text konsisten."
+    ],
+    "layout": [
+      "Tidak ada komponen miring.",
+      "Tidak ada alignment meleset.",
+      "Tidak ada card berbeda tinggi tanpa alasan.",
+      "Tidak ada content terlalu rapat.",
+      "Tidak ada whitespace berlebihan.",
+      "Tidak ada element overlap."
+    ],
+    "mobile": [
+      "Tidak ada horizontal overflow.",
+      "Tidak ada text terlalu kecil.",
+      "Tidak ada icon terpotong.",
+      "Tidak ada chart terpotong.",
+      "Tidak ada button keluar layar.",
+      "Tidak ada modal overflow."
+    ]
+  },
+
+  "expected_workflow": [
+    "1. Scan project dan pahami struktur codebase.",
+    "2. Identifikasi komponen Mazer dan library existing.",
+    "3. Audit masalah UI/UX halaman demi halaman.",
+    "4. Tentukan hierarchy dan layout yang lebih baik.",
+    "5. Cari pola dashboard referensi yang relevan.",
+    "6. Implementasikan perbaikan menggunakan komponen existing sebanyak mungkin.",
+    "7. Tambahkan visualisasi data yang benar-benar relevan.",
+    "8. Rapikan typography, color, spacing, cards, tables, forms, buttons, dan icon.",
+    "9. Optimalkan responsive layout.",
+    "10. Test desktop, tablet, dan mobile.",
+    "11. Perbaiki overflow, misalignment, icon, dan responsive bug.",
+    "12. Lakukan final visual QA sebelum menyatakan selesai."
+  ],
+
+  "expected_result": "Hasil akhir harus terlihat seperti dashboard production yang modern, rapi, profesional, ringan, konsisten, tidak ramai, mudah digunakan, sangat responsive, menggunakan Mazer Admin secara maksimal, memiliki visualisasi data yang informatif, serta tidak memiliki satupun icon yang terlihat miring, tidak center, distorted, atau salah alignment."
+}

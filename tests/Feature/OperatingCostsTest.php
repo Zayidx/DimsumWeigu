@@ -238,8 +238,9 @@ class OperatingCostsTest extends TestCase
     public function test_permission_is_checked_by_service_and_livewire_actions(): void
     {
         auth()->user()->syncRoles([]);
-        $this->get(route('expenses.index'))->assertForbidden();
-        $this->get(route('waste.index'))->assertForbidden();
+        $this->get(route('expenses.index'))->assertRedirect(route('login'));
+        $this->get(route('waste.index'))->assertRedirect(route('login'));
+        $this->assertAuthenticated();
         foreach (['expense', 'waste'] as $method) {
             try {
                 app(OperatingCostService::class)->{$method}($method === 'expense' ? $this->expenseInput() : $this->wasteInput());

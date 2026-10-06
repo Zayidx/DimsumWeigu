@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app-dark.css') }}">
     <link rel="stylesheet" href="{{ asset('mazer/compiled/css/auth.css') }}">
     <link rel="stylesheet" href="{{ asset('mazer/extensions/bootstrap-icons/font/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ asset('assets/dashboard-mobile.css') }}">
+    <link rel="stylesheet" href="{{ \App\Support\StaticAssets::url('dashboard-mobile.css') }}">
     <script src="{{ asset('mazer/static/js/initTheme.js') }}"></script>
 </head>
 <body class="workspace-auth">

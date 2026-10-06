@@ -21,8 +21,13 @@ class RecipeCostServiceTest extends TestCase
         $service = app(RecipeCostService::class);
         $initial = $service->estimate($recipe);
         $ingredient = $recipe->items->first()->ingredient;
+        $recipeItem = $recipe->items->first();
+        $recipeItem->update(['quantity' => (string) ((float) $recipeItem->quantity + 1)]);
+        $quantityChanged = $service->estimate($recipe->fresh());
+        $this->assertGreaterThan((float) $initial, (float) $quantityChanged);
+
         $ingredient->update(['buy_price' => (string) ((float) $ingredient->buy_price + 1)]);
 
-        $this->assertGreaterThan((float) $initial, (float) $service->estimate($recipe->fresh()));
+        $this->assertGreaterThan((float) $quantityChanged, (float) $service->estimate($recipe->fresh()));
     }
 }

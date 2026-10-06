@@ -8,6 +8,7 @@ use App\Livewire\Reports\InventoryReport;
 use App\Models\Outlet;
 use App\Models\Product;
 use App\Models\ProductWarehouse;
+use App\Models\Transaction;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -22,7 +23,9 @@ class AdminReportsTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private Outlet $outlet;
+
     private Warehouse $warehouse;
 
     protected function setUp(): void
@@ -46,6 +49,93 @@ class AdminReportsTest extends TestCase
         foreach (['/users', '/roles', '/units', '/audit-logs', '/notifications', '/settings/store', '/settings/payments', '/settings/bank-accounts', '/reports/sales', '/reports/profit', '/reports/inventory', '/reports/aging'] as $path) {
             $this->get($path)->assertOk();
         }
+    }
+
+    public function test_dashboard_renders_empty_sales_trend_without_a_broken_chart(): void
+    {
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Tren penjualan')
+            ->assertSee('Belum ada penjualan dalam 7 hari terakhir.')
+            ->assertSee('Navigasi cepat')
+            ->assertSee('aria-label="Notifikasi', false)
+            ->assertSee('Outlet aktif')
+            ->assertSee('Menu</span>', false)
+            ->assertDontSee('aria-label="Buka menu"', false)
+            ->assertDontSee('id="dashboard-sales-trend"', false);
+    }
+
+    public function test_dashboard_shows_sales_trend_values_and_payment_status(): void
+    {
+        $transaction = Transaction::query()->create([
+            'number' => 'DASH-PAID-1',
+            'outlet_id' => $this->outlet->id,
+            'warehouse_id' => $this->warehouse->id,
+            'user_id' => $this->user->id,
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'grand_total' => 125000,
+            'occurred_at' => now(),
+        ]);
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('id="dashboard-sales-trend"', false)
+            ->assertSee('Penjualan 7 hari terakhir, per hari')
+            ->assertSee('Rp125.000')
+            ->assertSee('Lunas')
+            ->assertSee('href="'.route('transactions.show', $transaction).'"', false)
+            ->assertSee('bg-light-success text-success', false);
+    }
+
+    public function test_dashboard_periods_compare_the_matching_previous_period(): void
+    {
+        foreach ([['CURRENT', 0, 125000], ['PREVIOUS-WEEK', 8, 50000], ['PREVIOUS-MONTH', 35, 75000]] as [$number, $daysAgo, $total]) {
+            Transaction::query()->create([
+                'number' => $number,
+                'outlet_id' => $this->outlet->id,
+                'warehouse_id' => $this->warehouse->id,
+                'user_id' => $this->user->id,
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'grand_total' => $total,
+                'occurred_at' => now()->subDays($daysAgo),
+            ]);
+        }
+
+        $this->get(route('dashboard', ['period' => 7]))
+            ->assertOk()
+            ->assertSee('+150,0% dari 7 hari sebelumnya')
+            ->assertSee('Penjualan 7 hari terakhir, per hari');
+
+        $this->get(route('dashboard', ['period' => 30]))
+            ->assertOk()
+            ->assertSee('+133,3% dari 30 hari sebelumnya')
+            ->assertSee('dikelompokkan per enam hari')
+            ->assertSee('Rp175.000');
+
+        $this->get(route('dashboard', ['period' => 365]))
+            ->assertOk()
+            ->assertSee('Penjualan 7 hari terakhir, per hari');
+    }
+
+    public function test_dashboard_stock_alert_opens_filtered_inventory(): void
+    {
+        $unit = Unit::create(['name' => 'Pieces', 'symbol' => 'pcs', 'dimension' => 'count', 'is_active' => true]);
+        $product = Product::create(['unit_id' => $unit->id, 'sku' => 'LOW-1', 'title' => 'Produk perlu stok', 'is_active' => true, 'track_stock' => true]);
+        ProductWarehouse::create(['product_id' => $product->id, 'warehouse_id' => $this->warehouse->id, 'stock' => 2, 'reorder_point' => 5]);
+        $otherProduct = Product::create(['unit_id' => $unit->id, 'sku' => 'OTHER-1', 'title' => 'Produk lain', 'is_active' => true, 'track_stock' => true]);
+        ProductWarehouse::create(['product_id' => $otherProduct->id, 'warehouse_id' => $this->warehouse->id, 'stock' => 10, 'reorder_point' => 2]);
+
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Saldo 2,000 / pesan ulang 5,000')
+            ->assertSee('search=LOW-1');
+
+        $this->get(route('inventory.index', ['warehouse' => $this->warehouse->id, 'search' => 'LOW-1']))
+            ->assertOk()
+            ->assertSee('Produk perlu stok')
+            ->assertDontSee('Produk lain');
     }
 
     public function test_forged_role_form_cannot_remove_super_admin_permissions(): void

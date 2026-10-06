@@ -10,6 +10,7 @@ use Database\Seeders\TestDataSeeder;
 use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -21,12 +22,23 @@ class SourceSeederTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
         $this->seed(UserSeeder::class);
-        $this->assertDatabaseCount('products', 0); // Testing does not implicitly load simulations.
+        $this->assertDatabaseHas('products', ['sku' => 'HPP-MENU-001']);
+        $this->assertDatabaseHas('ingredients', ['code' => 'HPP-001']);
+        $this->assertSame(1, User::role('super-admin')->count());
+        $this->assertDatabaseMissing('products', ['sku' => 'TEST-DOR']); // Synthetic simulation data stays opt-in.
         $this->seed(TestDataSeeder::class);
-        foreach (['products' => 13, 'product_units' => 28, 'ingredients' => 13, 'recipe_versions' => 32, 'recipe_items' => 79,
-            'outlets' => 4, 'warehouses' => 5, 'users' => 8, 'ingredient_warehouses' => 13, 'ingredient_inventory_ledgers' => 13] as $table => $count) {
-            $this->assertDatabaseCount($table, $count);
-        }
+        $this->assertSame(13, DB::table('products')->where('sku', 'like', 'TEST-%')->count());
+        $this->assertSame(13, DB::table('ingredients')->where('code', 'like', 'TEST-%')->count());
+        $testProductIds = DB::table('products')->where('sku', 'like', 'TEST-%')->select('id');
+        $testIngredientIds = DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id');
+        $this->assertSame(28, DB::table('product_units')->whereIn('product_id', $testProductIds)->count());
+        $this->assertSame(32, DB::table('recipe_versions')->whereIn('product_id', $testProductIds)->count());
+        $this->assertSame(79, DB::table('recipe_items')->whereIn('ingredient_id', $testIngredientIds)->count());
+        $this->assertSame(4, DB::table('outlets')->count());
+        $this->assertSame(5, DB::table('warehouses')->count());
+        $this->assertSame(8, DB::table('users')->count());
+        $this->assertSame(13, DB::table('ingredient_warehouses')->whereIn('ingredient_id', $testIngredientIds)->count());
+        $this->assertSame(13, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', $testIngredientIds)->count());
         foreach (['DOR' => 4500, 'DME' => 5500, 'DCH' => 6500, 'DMX' => 6000, 'LOR' => 9000, 'LME' => 10000,
             'CGA' => 26000, 'CLA' => 26000, 'CME' => 26000, 'CCH' => 28000, 'BMX' => 90000, 'BME' => 85000, 'BCH' => 100000] as $sku => $price) {
             $this->assertDatabaseHas('products', ['sku' => 'TEST-'.$sku, 'sell_price' => $price, 'stock' => 0]);
@@ -36,7 +48,7 @@ class SourceSeederTest extends TestCase
         $this->assertDatabaseHas('ingredients', ['code' => 'TEST-CHILI-OIL', 'buy_price' => 0.18, 'stock' => 5000]);
         $chili = Ingredient::where('code', 'TEST-CHILI-OIL')->firstOrFail();
         $this->assertSame(19, DB::table('recipe_items')->where('ingredient_id', $chili->id)->where('quantity', 50)->count());
-        $this->assertSame(13, DB::table('ingredient_warehouses')->join('ingredients', 'ingredients.id', '=', 'ingredient_warehouses.ingredient_id')->whereColumn('ingredient_warehouses.stock', 'ingredients.stock')->count());
+        $this->assertSame(13, DB::table('ingredient_warehouses')->join('ingredients', 'ingredients.id', '=', 'ingredient_warehouses.ingredient_id')->where('ingredients.code', 'like', 'TEST-%')->whereColumn('ingredient_warehouses.stock', 'ingredients.stock')->count());
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('products-create'));
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('cash-management-create'));
         $this->assertTrue(Role::findByName('cashier')->hasPermissionTo('pos-checkout'));
@@ -63,9 +75,9 @@ class SourceSeederTest extends TestCase
         $this->seed(DatabaseSeeder::class);
         $this->seed(UserSeeder::class);
         $this->seed(TestDataSeeder::class);
-        $this->assertDatabaseCount('ingredient_inventory_ledgers', 13);
+        $this->assertSame(13, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseCount('users', 8);
-        $this->assertDatabaseCount('recipe_items', 79);
+        $this->assertSame(79, DB::table('recipe_items')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseHas('products', ['sku' => 'TEST-DOR', 'sell_price' => 4700]);
         $this->assertDatabaseHas('ingredients', ['id' => $ingredient->id, 'stock' => 999]);
         $this->assertSame(19, DB::table('recipe_items')->where('ingredient_id', $ingredient->id)->where('quantity', 2)->count());
@@ -78,5 +90,19 @@ class SourceSeederTest extends TestCase
         $this->app->instance('env', 'production');
         $this->expectException(\RuntimeException::class);
         (new TestDataSeeder)->run();
+    }
+
+    public function test_seeded_staff_receive_initial_password_without_overwriting_changed_credentials(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $manager = User::where('email', 'manager@gmail.com')->firstOrFail();
+
+        $manager->forceFill(['password' => 'UnknownOldSeederPassword456!', 'must_change_password' => true, 'password_changed_at' => null])->save();
+        $this->seed(UserSeeder::class);
+        $this->assertTrue(Hash::check('indrawan123', $manager->fresh()->password));
+
+        $manager->forceFill(['password' => 'PersonalManagerPassword789!', 'password_changed_at' => now(), 'must_change_password' => false])->save();
+        $this->seed(UserSeeder::class);
+        $this->assertTrue(Hash::check('PersonalManagerPassword789!', $manager->fresh()->password));
     }
 }

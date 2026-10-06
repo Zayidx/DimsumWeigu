@@ -21,22 +21,39 @@ class InventoryIndex extends Component
     use WithPagination;
 
     public string $search = '';
+
     public ?int $warehouseId = null;
+
     public bool $showForm = false;
+
     public ?int $productId = null;
+
     public string $direction = 'in';
+
     public string $quantity = '';
+
     public string $reason = '';
+
     public string $batchNumber = '';
+
     public string $expiresAt = '';
+
     public string $ledgerSearch = '';
 
     public function mount(): void
     {
-        $this->warehouseId = session('active_warehouse_id') ? (int) session('active_warehouse_id') : null;
+        $requestedWarehouse = request()->query('warehouse');
+        $this->warehouseId = $requestedWarehouse && ctype_digit((string) $requestedWarehouse)
+            ? (int) $requestedWarehouse
+            : (session('active_warehouse_id') ? (int) session('active_warehouse_id') : null);
+        $requestedSearch = request()->query('search', '');
+        $this->search = is_string($requestedSearch) ? mb_substr(trim($requestedSearch), 0, 80) : '';
     }
 
-    public function updatingSearch(): void { $this->resetPage(); }
+    public function updatingSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public function selectWarehouse(int $warehouseId): void
     {
@@ -56,7 +73,10 @@ class InventoryIndex extends Component
         $this->showForm = true;
     }
 
-    public function closeForm(): void { $this->showForm = false; }
+    public function closeForm(): void
+    {
+        $this->showForm = false;
+    }
 
     public function adjust(StockMutationService $stock): void
     {
@@ -109,7 +129,7 @@ class InventoryIndex extends Component
         $this->authorizePermission('inventory-access');
         $outletId = (int) session('active_outlet_id');
         $warehouses = Warehouse::query()->where('is_active', true)
-            ->where(function (Builder $query) use ($outletId, $access) {
+            ->where(function (Builder $query) use ($outletId) {
                 $query->where('outlet_id', $outletId);
                 if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) {
                     $query->orWhereNull('outlet_id');
@@ -144,8 +164,12 @@ class InventoryIndex extends Component
         if ($warehouse->outlet_id) {
             app(OutletAccess::class)->require(auth()->user(), $warehouse->outlet_id);
         }
+
         return $warehouse;
     }
 
-    private function authorizePermission(string $permission): void { abort_unless(auth()->user()?->can($permission), 403); }
+    private function authorizePermission(string $permission): void
+    {
+        abort_unless(auth()->user()?->can($permission), 403);
+    }
 }

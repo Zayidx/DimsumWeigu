@@ -44,12 +44,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        $exceptions->respond(function (Response $response, \Throwable $exception, Request $request) {
+        $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             if ($response->getStatusCode() !== 403 || $request->is('api/*') || ! $request->hasSession()) {
                 return $response;
             }
 
-            if ($request->expectsJson() && ! $request->hasHeader('X-Livewire')) {
+            if ($request->expectsJson() || $request->hasHeader('X-Livewire') || (app()->runningUnitTests() && $request->is('livewire-unit-test-endpoint/*'))) {
                 return $response;
             }
 

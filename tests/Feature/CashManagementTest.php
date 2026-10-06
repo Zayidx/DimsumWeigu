@@ -60,7 +60,7 @@ class CashManagementTest extends TestCase
 
     private function as(User $user, Warehouse $warehouse): void
     {
-        $this->actingAs($user)->withSession(['active_outlet_id' => $warehouse->outlet_id, 'auth.password_confirmed_at' => now()->timestamp]);
+        $this->actingAs($user)->withSession(['active_outlet_id' => $warehouse->outlet_id, 'auth.password_confirmed_at' => now()->timestamp, 'password_hash_web' => $user->getAuthPassword()]);
     }
 
     private function request(string $amount = '250', ?string $key = null): CashHandover
