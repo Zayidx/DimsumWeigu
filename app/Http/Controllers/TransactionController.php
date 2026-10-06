@@ -12,9 +12,11 @@ class TransactionController extends Controller
     public function show(Request $request, int $transaction, OutletAccess $access): View
     {
         abort_unless($request->user()->can('transactions-access'), 403);
-        $outlet = $access->current($request);
+        $outletIds = $access->outletsFor($request->user())->pluck('id');
         $sale = Transaction::query()->with(['customer', 'user:id,name', 'warehouse:id,name', 'details', 'tenders'])
-            ->where('outlet_id', $outlet->id)->whereKey($transaction)->firstOrFail();
+            ->whereIn('outlet_id', $outletIds)
+            ->when($request->user()->hasRole('cashier') && ! $request->user()->hasRole('super-admin'), fn ($query) => $query->where('user_id', $request->user()->id))
+            ->whereKey($transaction)->firstOrFail();
 
         return view('transactions.show', ['transaction' => $sale]);
     }
@@ -23,10 +25,12 @@ class TransactionController extends Controller
     {
         abort_unless($request->user()->can('transactions-access'), 403);
         $size = $request->validate(['size' => ['nullable', 'in:58,80']])['size'] ?? '80';
-        $outlet = $access->current($request);
-        $sale = Transaction::query()->with(['customer', 'user:id,name', 'warehouse:id,name', 'details', 'tenders'])
-            ->where('outlet_id', $outlet->id)->whereKey($transaction)->firstOrFail();
+        $outletIds = $access->outletsFor($request->user())->pluck('id');
+        $sale = Transaction::query()->with(['customer', 'user:id,name', 'warehouse:id,name', 'details', 'tenders', 'outlet'])
+            ->whereIn('outlet_id', $outletIds)
+            ->when($request->user()->hasRole('cashier') && ! $request->user()->hasRole('super-admin'), fn ($query) => $query->where('user_id', $request->user()->id))
+            ->whereKey($transaction)->firstOrFail();
 
-        return view('transactions.receipt', ['transaction' => $sale, 'outlet' => $outlet, 'width' => $size]);
+        return view('transactions.receipt', ['transaction' => $sale, 'outlet' => $sale->outlet, 'width' => $size]);
     }
 }

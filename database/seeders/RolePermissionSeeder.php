@@ -56,7 +56,12 @@ class RolePermissionSeeder extends Seeder
         $roleMap = [
             'manager' => fn (string $name) => ! str_starts_with($name, 'users-') && ! str_starts_with($name, 'roles-') && ! str_starts_with($name, 'payment-settings-') && ! str_starts_with($name, 'api-tokens-') && $name !== 'cashier-shifts-force-close',
             'finance' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'reports-', 'payables-', 'receivables-', 'expenses-', 'cash-management-', 'payment-settings-', 'bank-accounts-', 'transactions-', 'customers-', 'audit-logs-', 'notifications-']) || in_array($name, ['supplier-returns-access', 'supplier-returns-approve', 'waste-access'], true),
-            'cashier' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'pos-', 'cashier-shifts-', 'customers-', 'transactions-', 'dine-in-']) && $name !== 'cashier-shifts-force-close' || in_array($name, ['cash-management-access', 'cash-management-create'], true),
+            'cashier' => fn (string $name) => in_array($name, [
+                'dashboard-access', 'pos-access', 'pos-checkout', 'pos-hold', 'pos-discount',
+                'cashier-shifts-access', 'cashier-shifts-open', 'cashier-shifts-close',
+                'customers-access', 'customers-create', 'transactions-access',
+                'cash-management-access', 'cash-management-create',
+            ], true),
             'warehouse' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'inventory-', 'batches-', 'transfers-', 'stock-opnames-', 'products-access', 'categories-access', 'units-access', 'suppliers-', 'purchase-orders-', 'goods-receivings-', 'supplier-returns-', 'ingredients-', 'recipes-', 'production-', 'waste-', 'reports-access', 'reports-export']),
         ];
 

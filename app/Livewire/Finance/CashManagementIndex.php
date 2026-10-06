@@ -130,20 +130,26 @@ class CashManagementIndex extends Component
     {
         $this->permit('cash-management-access');
         $currentIds = $this->currentWarehouses()->pluck('id');
+        $cashierOnly = auth()->user()->hasRole('cashier') && ! auth()->user()->hasRole('super-admin');
+        $shift = CashierShift::where('open_user_id', auth()->id())->where('outlet_id', $this->outletId())->where('status', 'open')->first();
         $outletIds = app(OutletAccess::class)->outletsFor(auth()->user())->pluck('id');
         $destinations = Warehouse::where('is_active', true)->where(function ($q) use ($outletIds) {
             $q->whereIn('outlet_id', $outletIds);
-            if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) {
+            if (auth()->user()->hasRole('super-admin') || auth()->user()->canAny(['warehouses-access', 'cash-management-create'])) {
                 $q->orWhere(fn ($c) => $c->whereNull('outlet_id')->where('type', 'central'));
             }
         })->with('outlet:id,name')->orderBy('name')->get();
 
         return view('livewire.finance.cash-management-index', [
-            'handovers' => CashHandover::where(fn ($q) => $q->whereIn('source_warehouse_id', $currentIds)->orWhereIn('destination_warehouse_id', $currentIds))->with(['source:id,name', 'destination:id,name', 'requester:id,name', 'approver:id,name', 'receiver:id,name'])->latest()->paginate(20, ['*'], 'handoverPage'),
+            'handovers' => CashHandover::where(fn ($q) => $q->whereIn('source_warehouse_id', $currentIds)->orWhereIn('destination_warehouse_id', $currentIds))
+                ->when($cashierOnly, fn ($q) => $q->where(fn ($mine) => $mine->where('requested_by', auth()->id())
+                    ->orWhere('confirmed_by', auth()->id())
+                    ->orWhere(fn ($incoming) => $incoming->where('destination_warehouse_id', $shift?->warehouse_id ?? 0)->where('status', 'approved'))))
+                ->with(['source:id,name', 'destination:id,name', 'requester:id,name', 'approver:id,name', 'receiver:id,name'])->latest()->paginate(20, ['*'], 'handoverPage'),
             'ledger' => $this->ledgerQuery()->with(['warehouse:id,name', 'user:id,name'])->latest('id')->paginate(25, ['*'], 'ledgerPage'),
-            'sources' => $this->currentWarehouses()->where('is_active', true)->orderBy('name')->get(), 'destinations' => $destinations,
+            'sources' => $this->currentWarehouses()->where('is_active', true)->when($cashierOnly, fn ($q) => $q->whereKey($shift?->warehouse_id ?? 0))->orderBy('name')->get(), 'destinations' => $destinations,
             'warehouses' => $this->currentWarehouses()->orderBy('name')->get(), 'currentIds' => $currentIds,
-            'shift' => CashierShift::where('open_user_id', auth()->id())->where('outlet_id', $this->outletId())->where('status', 'open')->first(),
+            'shift' => $shift,
         ])->layout('layouts.dashboard', ['title' => __('Manajemen kas')]);
     }
 
@@ -154,7 +160,9 @@ class CashManagementIndex extends Component
             abort(404);
         }
 
-        return WarehouseCashLedger::whereIn('warehouse_id', $ids)->when($this->ledgerWarehouse !== '', fn ($q) => $q->where('warehouse_id', (int) $this->ledgerWarehouse));
+        return WarehouseCashLedger::whereIn('warehouse_id', $ids)
+            ->when(auth()->user()->hasRole('cashier') && ! auth()->user()->hasRole('super-admin'), fn ($q) => $q->whereIn('cashier_shift_id', CashierShift::query()->select('id')->where('open_user_id', auth()->id())))
+            ->when($this->ledgerWarehouse !== '', fn ($q) => $q->where('warehouse_id', (int) $this->ledgerWarehouse));
     }
 
     private function currentWarehouses()

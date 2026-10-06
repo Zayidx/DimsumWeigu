@@ -16,6 +16,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -90,6 +91,25 @@ class CashManagementTest extends TestCase
         $this->assertDatabaseHas('cash_handovers', ['id' => $handover->id, 'status' => 'confirmed', 'approved_by' => $this->manager->id, 'confirmed_by' => $this->receiver->id]);
         $this->assertDatabaseHas('audit_logs', ['event' => 'cash_handover.approved', 'outlet_id' => $this->source->outlet_id]);
         $this->assertDatabaseHas('audit_logs', ['event' => 'cash_handover.confirmed', 'outlet_id' => $this->destination->outlet_id]);
+    }
+
+    public function test_cashier_can_send_shift_cash_to_central_warehouse_for_warehouse_confirmation(): void
+    {
+        $central = Warehouse::create(['code' => 'CENTRAL-CASH', 'name' => 'Gudang pusat', 'type' => 'central', 'is_active' => true]);
+        $receiver = User::create(['name' => 'Petugas gudang', 'email' => 'warehouse-cash@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $receiver->assignRole('warehouse');
+        $receiver->givePermissionTo('warehouses-access', Permission::findOrCreate('cash-handovers-confirm', 'web'));
+        $receiver->outlets()->attach($this->source->outlet_id, ['is_default' => true]);
+
+        $handover = app(CashHandoverService::class)->request($this->source->id, $central->id, '250', 'Setoran omzet hari ini', (string) Str::uuid());
+        $this->as($this->manager, $this->source);
+        app(CashHandoverService::class)->approve($handover->id);
+        $this->as($receiver, $this->source);
+        app(CashHandoverService::class)->confirm($handover->id);
+
+        $this->assertDatabaseHas('cash_handovers', ['id' => $handover->id, 'status' => 'confirmed', 'confirmed_by' => $receiver->id]);
+        $this->assertDatabaseHas('warehouse_cash_ledgers', ['warehouse_id' => $central->id, 'type' => 'handover_in', 'amount' => 250]);
+        $this->assertSame('750.00', $this->sourceShift->fresh()->expected_cash);
     }
 
     public function test_approval_rechecks_cash_and_closed_source_shift_atomically(): void

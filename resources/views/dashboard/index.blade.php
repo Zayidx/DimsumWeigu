@@ -1,18 +1,19 @@
 @extends('layouts.dashboard')
 
 @section('page-title', 'Ringkasan')
-@section('subtitle', 'Kondisi penjualan dan operasional · '.$outlet->name)
+@section('subtitle', 'Kondisi penjualan dan operasional · '.$scopeLabel)
 
 @section('content')
     @if (session('status'))<div class="alert alert-light-success alert-dismissible show fade" role="status">{{ session('status') }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button></div>@endif
     @php($trendMaximum = max($salesTrend->pluck('total')->all() ?: [0]))
-    @if ($availableWarehouses->count() > 1)
+    @if ($outlets->count() > 1 || $availableWarehouses->count() > 1)
         <form method="get" action="{{ route('dashboard') }}" class="dashboard-filter card mb-3"><div class="card-body d-flex flex-wrap align-items-end gap-2">
-            <div class="flex-grow-1"><label for="dashboard-warehouse" class="form-label mb-1">Lokasi data dashboard</label><select id="dashboard-warehouse" name="warehouse" class="form-select"><option value="">Semua gudang · {{ $outlet->name }}</option>@foreach ($availableWarehouses as $warehouse)<option value="{{ $warehouse->id }}" @selected($selectedWarehouse?->id === $warehouse->id)>{{ $warehouse->name }}</option>@endforeach</select></div>
+            @if ($outlets->count() > 1)<div class="flex-grow-1"><label for="dashboard-outlet" class="form-label mb-1">Outlet</label><select id="dashboard-outlet" name="outlet" class="form-select"><option value="">Semua outlet</option>@foreach ($outlets as $option)<option value="{{ $option->id }}" @selected($selectedOutlet?->id === $option->id)>{{ $option->name }}</option>@endforeach</select></div>@endif
+            <div class="flex-grow-1"><label for="dashboard-warehouse" class="form-label mb-1">Gudang</label><select id="dashboard-warehouse" name="warehouse" class="form-select"><option value="">Semua gudang</option>@foreach ($availableWarehouses as $warehouse)<option value="{{ $warehouse->id }}" @selected($selectedWarehouse?->id === $warehouse->id)>{{ $warehouse->name }}</option>@endforeach</select></div>
             <input type="hidden" name="period" value="{{ $trendDays }}"><button class="btn btn-outline-primary" type="submit">Terapkan lokasi</button>
         </div></form>
     @endif
-    <p class="text-muted small mb-3">Angka dan antrean untuk {{ $selectedWarehouse?->name ?? 'semua gudang di '.$outlet->name }}; notifikasi berlaku untuk seluruh outlet. Penjualan menghitung transaksi selesai, termasuk yang belum lunas.</p>
+    <p class="text-muted small mb-3">Angka dan antrean untuk {{ $selectedWarehouse?->name ?? $scopeLabel }}. Penjualan menghitung transaksi selesai, termasuk yang belum lunas.</p>
     <div class="row g-3 mb-4 dashboard-metrics">
         <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body"><h2 class="dashboard-metric-label">Penjualan hari ini</h2><p class="dashboard-metric-value mb-0">Rp{{ number_format($todaySales, 0, ',', '.') }}</p><small class="text-muted">Nilai transaksi selesai, belum tentu diterima tunai.</small></div></div></div>
         <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body"><h2 class="dashboard-metric-label">Transaksi hari ini</h2><p class="dashboard-metric-value mb-0">{{ number_format($todayTransactions) }}</p><small class="text-muted">Transaksi selesai sejak pukul 00.00.</small></div></div></div>
@@ -24,8 +25,8 @@
         <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div><h2 class="card-title mb-1">Tren penjualan</h2><p class="text-muted small mb-0">{{ $trendDays === 30 ? 'Per 6 hari' : 'Per hari' }} · {{ $trendStart->translatedFormat('d M') }} – {{ today()->translatedFormat('d M Y') }}</p></div>
             <nav class="dashboard-periods" aria-label="Periode tren penjualan">
-                <a href="{{ route('dashboard', array_filter(['period' => 7, 'warehouse' => $selectedWarehouse?->id])) }}" class="btn btn-sm {{ $trendDays === 7 ? 'btn-primary' : 'btn-outline-primary' }}" @if($trendDays === 7) aria-current="true" @endif>7 hari</a>
-                <a href="{{ route('dashboard', array_filter(['period' => 30, 'warehouse' => $selectedWarehouse?->id])) }}" class="btn btn-sm {{ $trendDays === 30 ? 'btn-primary' : 'btn-outline-primary' }}" @if($trendDays === 30) aria-current="true" @endif>30 hari</a>
+                <a href="{{ route('dashboard', array_filter(['period' => 7, 'warehouse' => $selectedWarehouse?->id, 'outlet' => $selectedOutlet?->id])) }}" class="btn btn-sm {{ $trendDays === 7 ? 'btn-primary' : 'btn-outline-primary' }}" @if($trendDays === 7) aria-current="true" @endif>7 hari</a>
+                <a href="{{ route('dashboard', array_filter(['period' => 30, 'warehouse' => $selectedWarehouse?->id, 'outlet' => $selectedOutlet?->id])) }}" class="btn btn-sm {{ $trendDays === 30 ? 'btn-primary' : 'btn-outline-primary' }}" @if($trendDays === 30) aria-current="true" @endif>30 hari</a>
             </nav>
         </div>
         <div class="card-body">
@@ -40,7 +41,7 @@
             @if ($trendMaximum > 0)
                 <div class="dashboard-chart-controls mb-2"><span class="text-muted small">{{ auth()->user()->can('reports-access') ? 'Pilih batang atau tanggal untuk membuka laporan.' : 'Rincian penjualan per tanggal.' }}</span><div class="btn-group btn-group-sm" role="group" aria-label="Tampilan tren"><button type="button" class="btn btn-primary" id="dashboard-show-chart" aria-pressed="true">Grafik</button><button type="button" class="btn btn-outline-primary" id="dashboard-show-table" aria-pressed="false">Tabel</button></div></div>
                 <div id="dashboard-sales-trend" class="dashboard-sales-chart" aria-hidden="true"></div>
-                <div class="table-responsive dashboard-sales-table visually-hidden" id="dashboard-sales-table"><table id="dashboard-sales-data" class="table table-striped align-middle mb-0"><caption>Penjualan {{ $trendDays }} hari terakhir, {{ $trendDays === 30 ? 'dikelompokkan per enam hari' : 'per hari' }}</caption><thead><tr><th scope="col">Tanggal</th><th scope="col" class="text-end">Penjualan</th></tr></thead><tbody>@foreach ($salesTrend as $day)<tr><th scope="row">@can('reports-access')<a href="{{ route('reports.sales', array_filter(['from' => $day['from'], 'to' => $day['to'], 'warehouse' => $selectedWarehouse?->id])) }}">{{ $day['date'] }}</a>@else{{ $day['date'] }}@endcan</th><td class="text-end">Rp{{ number_format($day['total'], 0, ',', '.') }}</td></tr>@endforeach</tbody></table></div>
+                <div class="table-responsive dashboard-sales-table visually-hidden" id="dashboard-sales-table"><table id="dashboard-sales-data" class="table table-striped align-middle mb-0"><caption>Penjualan {{ $trendDays }} hari terakhir, {{ $trendDays === 30 ? 'dikelompokkan per enam hari' : 'per hari' }}</caption><thead><tr><th scope="col">Tanggal</th><th scope="col" class="text-end">Penjualan</th></tr></thead><tbody>@foreach ($salesTrend as $day)<tr><th scope="row">@can('reports-access')<a href="{{ route('reports.sales', array_filter(['from' => $day['from'], 'to' => $day['to'], 'warehouse' => $selectedWarehouse?->id, 'outlet' => $selectedOutlet?->id])) }}">{{ $day['date'] }}</a>@else{{ $day['date'] }}@endcan</th><td class="text-end">Rp{{ number_format($day['total'], 0, ',', '.') }}</td></tr>@endforeach</tbody></table></div>
             @else
                 <div class="dashboard-chart-empty"><i class="bi bi-bar-chart-line" aria-hidden="true"></i><span>Belum ada penjualan dalam {{ $trendDays }} hari terakhir.</span></div>
             @endif
@@ -125,7 +126,7 @@
                 const rupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
                 const shortRupiah = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 });
                 const darkMode = () => document.documentElement.getAttribute('data-bs-theme') === 'dark';
-                const reportUrls = @js($salesTrend->map(fn ($day) => auth()->user()->can('reports-access') ? route('reports.sales', array_filter(['from' => $day['from'], 'to' => $day['to'], 'warehouse' => $selectedWarehouse?->id])) : null)->values());
+                const reportUrls = @js($salesTrend->map(fn ($day) => auth()->user()->can('reports-access') ? route('reports.sales', array_filter(['from' => $day['from'], 'to' => $day['to'], 'warehouse' => $selectedWarehouse?->id, 'outlet' => $selectedOutlet?->id])) : null)->values());
                 const chart = new ApexCharts(target, {
                     chart: { type: 'bar', height: 260, background: 'transparent', toolbar: { show: false }, fontFamily: 'Nunito, sans-serif', animations: { enabled: false }, events: { dataPointSelection: (event, context, config) => { const url = reportUrls[config.dataPointIndex]; if (url) window.location.assign(url); } } },
                     series: [{ name: 'Penjualan', data: @js($salesTrend->pluck('total')->values()) }],

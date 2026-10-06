@@ -4,8 +4,12 @@ namespace Tests\Feature;
 
 use App\Livewire\Admin\RolesIndex;
 use App\Livewire\Catalog\UnitsIndex;
+use App\Livewire\Reports\AgingReport;
 use App\Livewire\Reports\InventoryReport;
+use App\Livewire\Reports\ProfitReport;
 use App\Livewire\Reports\SalesReport;
+use App\Livewire\Sales\TransactionsIndex;
+use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\OperationalNotification;
 use App\Models\Outlet;
@@ -64,12 +68,11 @@ class AdminReportsTest extends TestCase
             ->assertSee('Belum ada penjualan dalam 7 hari terakhir.')
             ->assertSee('Navigasi cepat')
             ->assertSee('aria-label="Notifikasi', false)
-            ->assertSee('Outlet aktif')
             ->assertSee('class="burger-btn workspace-menu-toggle"', false)
             ->assertSee('aria-label="Buka menu"', false)
             ->assertSee('workspace-sidebar-brand', false)
             ->assertSee('aria-label="Menu akun"', false)
-            ->assertSee('workspace-sidebar-outlet', false)
+            ->assertDontSee('workspace-sidebar-outlet', false)
             ->assertDontSee('workspace-topbar', false)
             ->assertDontSee('id="dashboard-sales-trend"', false);
     }
@@ -103,6 +106,7 @@ class AdminReportsTest extends TestCase
             ['cashier', 'Ruang kerja kasir', 'Transaksi saya hari ini', 'Sisa utang'],
             ['warehouse', 'Ruang kerja gudang', 'Stok perlu dicek', 'Penjualan saya hari ini'],
             ['finance', 'Ruang kerja keuangan', 'Sisa utang', 'Stok perlu dicek'],
+            ['manager', 'Ruang kerja manajer', 'Serah terima kas aktif', 'Sisa utang'],
         ] as [$role, $title, $visible, $hidden]) {
             $user = User::create(['name' => ucfirst($role), 'email' => $role.'@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
             $user->assignRole($role);
@@ -132,6 +136,48 @@ class AdminReportsTest extends TestCase
         $this->actingAs($cashier)->withSession(['active_outlet_id' => $this->outlet->id])
             ->get(route('dashboard'))->assertOk()->assertSee('OWN-SALE')->assertSee('Rp12.000')
             ->assertDontSee('OTHER-SALE')->assertDontSee('Rp90.000');
+    }
+
+    public function test_cashier_transaction_history_and_receipts_are_limited_to_own_sales(): void
+    {
+        $cashier = User::create(['name' => 'Kasir riwayat', 'email' => 'history-cashier@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $cashier->assignRole('cashier');
+        $cashier->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        $own = Transaction::create(['number' => 'OWN-HISTORY', 'outlet_id' => $this->outlet->id, 'warehouse_id' => $this->warehouse->id, 'user_id' => $cashier->id, 'status' => 'completed', 'payment_status' => 'paid', 'grand_total' => 12000, 'occurred_at' => now()]);
+        $other = Transaction::create(['number' => 'OTHER-HISTORY', 'outlet_id' => $this->outlet->id, 'warehouse_id' => $this->warehouse->id, 'user_id' => $this->user->id, 'status' => 'completed', 'payment_status' => 'paid', 'grand_total' => 90000, 'occurred_at' => now()]);
+
+        $this->actingAs($cashier)->withSession(['active_outlet_id' => $this->outlet->id])
+            ->get(route('transactions.index'))->assertOk()->assertSee('OWN-HISTORY')->assertDontSee('OTHER-HISTORY');
+        $this->get(route('transactions.show', $own))->assertOk();
+        $this->get(route('transactions.show', $other))->assertNotFound();
+        $this->get(route('transactions.receipt', $other))->assertNotFound();
+    }
+
+    public function test_cashier_shift_history_excludes_other_cashiers(): void
+    {
+        $cashier = User::create(['name' => 'Kasir shift', 'email' => 'shift-cashier@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $cashier->assignRole('cashier');
+        $cashier->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        foreach ([[$cashier, '12500'], [$this->user, '98765']] as [$operator, $openingCash]) {
+            CashierShift::create(['user_id' => $operator->id, 'outlet_id' => $this->outlet->id, 'warehouse_id' => $this->warehouse->id, 'status' => 'closed', 'opening_cash' => $openingCash, 'expected_cash' => $openingCash, 'actual_cash' => $openingCash, 'opened_at' => now()->subHour(), 'closed_at' => now()]);
+        }
+
+        $this->actingAs($cashier)->withSession(['active_outlet_id' => $this->outlet->id])
+            ->get(route('shifts.index'))->assertOk()->assertSee('<td>Kasir shift</td>', false)->assertDontSee('<td>Administrator</td>', false);
+    }
+
+    public function test_cashier_permission_migration_removes_finance_access_and_keeps_pos_access(): void
+    {
+        $role = Role::findByName('cashier', 'web');
+        $role->givePermissionTo(['payables-access', 'suppliers-access', 'cash-management-access']);
+
+        $migration = require database_path('migrations/2026_10_06_120000_limit_cashier_finance_permissions.php');
+        $migration->up();
+
+        $this->assertFalse($role->fresh()->hasPermissionTo('payables-access'));
+        $this->assertFalse($role->fresh()->hasPermissionTo('suppliers-access'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('cash-management-access'));
+        $this->assertTrue($role->fresh()->hasPermissionTo('pos-access'));
     }
 
     public function test_finance_dashboard_totals_exclude_another_outlet(): void
@@ -236,11 +282,41 @@ class AdminReportsTest extends TestCase
             ->assertSee('id="dashboard-show-table"', false)
             ->assertSee('from='.today()->toDateString().'&amp;to='.today()->toDateString().'&amp;warehouse='.$this->warehouse->id, false);
 
-        $this->get(route('dashboard', ['warehouse' => $otherWarehouse->id]))->assertNotFound();
+        $this->get(route('dashboard', ['warehouse' => $otherWarehouse->id]))->assertOk()->assertSee('Rp90.000');
         $this->get(route('reports.sales', ['from' => today()->toDateString(), 'to' => today()->toDateString(), 'warehouse' => $this->warehouse->id]))
             ->assertOk()->assertSee('Rp 10.000')->assertDontSee('HIDDEN-WH')->assertDontSee('HIDDEN-OUTLET');
+        $this->get(route('reports.sales', ['warehouse' => $otherWarehouse->id]))->assertOk()->assertSee('HIDDEN-OUTLET');
+        $finance = User::create(['name' => 'Finance terbatas', 'email' => 'finance-limited@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $finance->assignRole('finance');
+        $finance->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        $this->flushSession();
+        $this->actingAs($finance)->withSession(['active_outlet_id' => $this->outlet->id]);
+        $this->get(route('dashboard', ['warehouse' => $otherWarehouse->id]))->assertNotFound();
         $this->get(route('reports.sales', ['warehouse' => $otherWarehouse->id]))->assertNotFound();
         Livewire::test(SalesReport::class)->set('warehouseId', (string) $otherWarehouse->id)->assertNotFound();
+    }
+
+    public function test_sales_report_combines_permitted_outlets_and_filters_by_outlet_name(): void
+    {
+        $secondOutlet = Outlet::create(['code' => 'SALES-SECOND', 'slug' => 'sales-second', 'name' => 'Outlet Pekayon', 'is_active' => true]);
+        $secondWarehouse = Warehouse::create(['outlet_id' => $secondOutlet->id, 'code' => 'SALES-SECOND-WH', 'name' => 'Gudang Pekayon', 'type' => 'branch', 'is_active' => true]);
+        foreach ([[$this->warehouse, 'FIRST-SALE', 10000], [$secondWarehouse, 'SECOND-SALE', 20000]] as [$warehouse, $number, $total]) {
+            Transaction::create(['number' => $number, 'outlet_id' => $warehouse->outlet_id, 'warehouse_id' => $warehouse->id, 'user_id' => $this->user->id, 'status' => 'completed', 'payment_status' => 'paid', 'grand_total' => $total, 'occurred_at' => now()]);
+        }
+
+        $this->get(route('reports.sales'))->assertOk()->assertSee('FIRST-SALE')->assertSee('SECOND-SALE')->assertSee('Outlet Pekayon')->assertSee('sales-chart-daily')->assertSee('sales-chart-outlets');
+        $this->get(route('reports.sales', ['outlet' => $secondOutlet->id]))->assertOk()->assertSee('SECOND-SALE')->assertDontSee('FIRST-SALE');
+        $finance = User::create(['name' => 'Finance outlet satu', 'email' => 'finance-first@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
+        $finance->assignRole('finance');
+        $finance->outlets()->attach($this->outlet->id, ['is_default' => true]);
+        $this->flushSession();
+        $this->actingAs($finance)->withSession(['active_outlet_id' => $this->outlet->id]);
+        $this->get(route('reports.sales'))->assertOk()->assertSee('FIRST-SALE')->assertDontSee('SECOND-SALE');
+        $this->get(route('reports.sales', ['outlet' => $secondOutlet->id]))->assertNotFound();
+        Livewire::test(ProfitReport::class)->set('outletId', (string) $secondOutlet->id)->assertNotFound();
+        Livewire::test(InventoryReport::class)->set('outletId', (string) $secondOutlet->id)->assertNotFound();
+        Livewire::test(AgingReport::class)->set('outletId', (string) $secondOutlet->id)->assertNotFound();
+        Livewire::test(TransactionsIndex::class)->set('outletId', (string) $secondOutlet->id)->assertNotFound();
     }
 
     public function test_dashboard_notification_links_open_the_authorized_work_area(): void
@@ -251,7 +327,7 @@ class AdminReportsTest extends TestCase
 
         $this->get(route('dashboard'))->assertOk()->assertSee('Piutang harus ditagih')
             ->assertSee('href="'.route('receivables.index').'"', false)
-            ->assertDontSee('Piutang outlet rahasia');
+            ->assertSee('Piutang outlet rahasia');
     }
 
     public function test_forged_role_form_cannot_remove_super_admin_permissions(): void
@@ -271,7 +347,7 @@ class AdminReportsTest extends TestCase
         Livewire::test(UnitsIndex::class)->set('fromUnitId', (string) $kg->id)->set('toUnitId', (string) $gram->id)->set('factor', '999999999999')->call('saveConversion')->assertHasErrors('factor');
     }
 
-    public function test_inventory_export_includes_cost_and_excludes_another_outlet(): void
+    public function test_inventory_export_combines_permitted_outlets_and_filters_by_outlet(): void
     {
         $unit = Unit::create(['name' => 'Pieces', 'symbol' => 'pcs', 'dimension' => 'count', 'is_active' => true]);
         $product = Product::create(['unit_id' => $unit->id, 'sku' => 'EXPORT-1', 'title' => '=Unsafe name', 'buy_price' => 4000, 'is_active' => true]);
@@ -283,7 +359,10 @@ class AdminReportsTest extends TestCase
         $csv = base64_decode($test->effects['download']['content']);
         $this->assertStringContainsString('20000', $csv);
         $this->assertStringContainsString("'=Unsafe name", $csv);
-        $this->assertStringNotContainsString('Other warehouse', $csv);
+        $this->assertStringContainsString('Other warehouse', $csv);
+        $filtered = Livewire::test(InventoryReport::class)->set('outletId', (string) $this->outlet->id)->call('export')->assertFileDownloaded();
+        $filteredCsv = base64_decode($filtered->effects['download']['content']);
+        $this->assertStringNotContainsString('Other warehouse', $filteredCsv);
     }
 
     public function test_failed_payment_configuration_does_not_flash_credentials(): void

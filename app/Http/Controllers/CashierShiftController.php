@@ -16,7 +16,7 @@ class CashierShiftController extends Controller
     {
         $outlet = $access->current($request);
         $query = CashierShift::query()->with(['user:id,name', 'warehouse:id,name'])->where('outlet_id', $outlet->id)->latest('opened_at');
-        if (! $request->user()->can('cashier-shifts-close') && ! $request->user()->can('cashier-shifts-force-close')) {
+        if (($request->user()->hasRole('cashier') && ! $request->user()->hasRole('super-admin')) || (! $request->user()->can('cashier-shifts-close') && ! $request->user()->can('cashier-shifts-force-close'))) {
             $query->where('user_id', $request->user()->id);
         }
 
@@ -25,18 +25,21 @@ class CashierShiftController extends Controller
 
     public function create(Request $request, OutletAccess $access): View
     {
-        $outlet = $access->current($request);
+        $outlets = $access->outletsFor($request->user())->get(['id', 'name']);
+        $requestedOutlet = $request->query('outlet');
+        $outlet = $requestedOutlet === null ? $access->current($request) : $access->require($request->user(), (int) $requestedOutlet);
         $warehouses = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->where('is_sales_enabled', true)->orderBy('name')->get();
         $shift = CashierShift::query()->where('open_user_id', $request->user()->id)->where('status', 'open')->first();
 
-        return view('shifts.create', compact('outlet', 'warehouses', 'shift'));
+        return view('shifts.create', compact('outlet', 'outlets', 'warehouses', 'shift'));
     }
 
     public function store(Request $request, OutletAccess $access, CashierShiftService $service): RedirectResponse
     {
-        $data = $request->validate(['warehouse_id' => ['required', 'integer'], 'opening_cash' => ['required', 'numeric', 'min:0', 'max:9999999999999.99']]);
-        $outlet = $access->current($request);
+        $data = $request->validate(['outlet_id' => ['nullable', 'integer'], 'warehouse_id' => ['required', 'integer'], 'opening_cash' => ['required', 'numeric', 'min:0', 'max:9999999999999.99']]);
+        $outlet = isset($data['outlet_id']) ? $access->require($request->user(), (int) $data['outlet_id']) : $access->current($request);
         $shift = $service->open($outlet->id, (int) $data['warehouse_id'], (string) $data['opening_cash']);
+        $request->session()->put('active_outlet_id', $outlet->id);
         $request->session()->put('active_warehouse_id', $shift->warehouse_id);
 
         return redirect()->route('dashboard')->with('status', __('Shift berhasil dibuka.'));

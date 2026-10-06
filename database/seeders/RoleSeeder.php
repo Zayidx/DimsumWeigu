@@ -80,22 +80,12 @@ class RoleSeeder extends Seeder
             'cashier-shifts-access',
             'cashier-shifts-open',
             'cashier-shifts-close',
-            'sales-analysis-access',
-            'outlet-operations-access',
-            'outlet-operations-create',
             'cash-handovers-access',
             'cash-handovers-create',
             'outlet-stock-returns-access',
             'outlet-stock-returns-create',
             'customers-access',
             'customers-create',
-            'receivables-access',
-            'receivables-pay',
-            'payables-access',
-            'payables-pay',
-            'suppliers-access',
-            'dine-orders-access',
-            'dine-orders-process',
         ])->get();
         $this->grant($cashierRole, $cashierPermissions);
 

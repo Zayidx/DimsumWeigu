@@ -15,10 +15,6 @@
 </head>
 <body class="workspace-shell {{ request()->routeIs('pos.index') ? 'workspace-pos' : '' }}">
     <a class="skip-link" href="#workspace-content">Langsung ke isi halaman</a>
-    @php
-        $workspaceOutlets = $outlets ?? app(\App\Support\OutletAccess::class)->outletsFor(auth()->user())->get(['id', 'name']);
-        $workspaceOutlet = $workspaceOutlets->firstWhere('id', (int) session('active_outlet_id'));
-    @endphp
     <div id="app">
         @include('layouts.partials.sidebar')
         <div id="main" class="layout-navbar navbar-fixed">

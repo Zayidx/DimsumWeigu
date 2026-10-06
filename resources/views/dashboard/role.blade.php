@@ -1,16 +1,19 @@
 @extends('layouts.dashboard')
 
 @section('page-title', $roleTitle)
-@section('subtitle', $roleDescription.' · '.$outlet->name)
+@section('subtitle', $roleDescription.' · '.($role === 'cashier' ? $outlet->name : $scopeLabel))
 
 @section('content')
-    @if (in_array($role, ['warehouse', 'finance'], true) && $availableWarehouses->count() > 1)
+    @if (in_array($role, ['manager', 'warehouse', 'finance'], true) && ($outlets->count() > 1 || $availableWarehouses->count() > 1))
         <form method="get" action="{{ route('dashboard') }}" class="card dashboard-filter">
             <div class="card-body d-flex flex-wrap align-items-end gap-3">
+                @if ($outlets->count() > 1)
+                    <div class="flex-grow-1"><label for="dashboard-outlet" class="form-label">Outlet</label><select id="dashboard-outlet" name="outlet" class="form-select"><option value="">Semua outlet</option>@foreach ($outlets as $option)<option value="{{ $option->id }}" @selected($selectedOutlet?->id === $option->id)>{{ $option->name }}</option>@endforeach</select></div>
+                @endif
                 <div class="flex-grow-1">
                     <label for="dashboard-warehouse" class="form-label">Lokasi data</label>
                     <select id="dashboard-warehouse" name="warehouse" class="form-select">
-                        <option value="">Semua gudang · {{ $outlet->name }}</option>
+                        <option value="">Semua gudang</option>
                         @foreach ($availableWarehouses as $warehouse)
                             <option value="{{ $warehouse->id }}" @selected($selectedWarehouse?->id === $warehouse->id)>{{ $warehouse->name }}</option>
                         @endforeach

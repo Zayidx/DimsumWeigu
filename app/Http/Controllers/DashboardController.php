@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\CashHandover;
 use App\Models\CashierShift;
 use App\Models\OperationalNotification;
 use App\Models\Outlet;
@@ -28,19 +29,29 @@ class DashboardController extends Controller
     {
         $outlet = $access->current($request);
         $user = $request->user();
-        $availableWarehouses = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $outlets = $access->outletsFor($user)->get(['id', 'name']);
+        $requestedOutlet = $request->query('outlet');
+        $selectedOutlet = is_scalar($requestedOutlet) && ctype_digit((string) $requestedOutlet)
+            ? $outlets->firstWhere('id', (int) $requestedOutlet) : null;
+        abort_if($requestedOutlet !== null && ! $selectedOutlet, 404);
+        $outletIds = $selectedOutlet ? [$selectedOutlet->id] : $outlets->pluck('id')->all();
+        if ($user->hasRole('cashier') && ! $user->hasRole('super-admin')) {
+            abort_if($selectedOutlet && $selectedOutlet->id !== $outlet->id, 404);
+            $outletIds = [$outlet->id];
+        }
+        $availableWarehouses = Warehouse::query()->whereIn('outlet_id', $outletIds)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
         $requestedWarehouse = $request->query('warehouse');
         $selectedWarehouse = is_scalar($requestedWarehouse) && ctype_digit((string) $requestedWarehouse)
             ? $availableWarehouses->firstWhere('id', (int) $requestedWarehouse) : null;
         abort_if($requestedWarehouse !== null && ! $selectedWarehouse, 404);
         $warehouseId = $selectedWarehouse?->id;
-        if (! $user->hasAnyRole(['super-admin', 'manager'])) {
-            $role = $user->hasRole('finance') ? 'finance' : ($user->hasRole('warehouse') ? 'warehouse' : ($user->hasRole('cashier') ? 'cashier' : 'custom'));
+        if (! $user->hasRole('super-admin')) {
+            $role = $user->hasRole('manager') ? 'manager' : ($user->hasRole('finance') ? 'finance' : ($user->hasRole('warehouse') ? 'warehouse' : ($user->hasRole('cashier') ? 'cashier' : 'custom')));
 
-            return $this->roleDashboard($request, $outlet, $role, $availableWarehouses, $selectedWarehouse);
+            return $this->roleDashboard($request, $outlet, $role, $availableWarehouses, $selectedWarehouse, $outlets, $selectedOutlet, $outletIds);
         }
         $today = now()->startOfDay();
-        $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('occurred_at', '>=', $today)->whereIn('status', ['completed', 'paid']);
+        $sales = Transaction::query()->whereIn('outlet_id', $outletIds)->where('occurred_at', '>=', $today)->whereIn('status', ['completed', 'paid']);
         if ($warehouseId) {
             $sales->where('warehouse_id', $warehouseId);
         }
@@ -48,7 +59,7 @@ class DashboardController extends Controller
         $trendDays = is_string($requestedPeriod) && in_array($requestedPeriod, ['7', '30'], true) ? (int) $requestedPeriod : 7;
         $trendStart = today()->subDays($trendDays - 1);
         $trendRows = Transaction::query()
-            ->where('outlet_id', $outlet->id)
+            ->whereIn('outlet_id', $outletIds)
             ->whereBetween('occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])
             ->whereIn('status', ['completed', 'paid'])
             ->when($warehouseId, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
@@ -69,7 +80,7 @@ class DashboardController extends Controller
             })->values()
             : $dailyTrend;
         $previousTrendTotal = Transaction::query()
-            ->where('outlet_id', $outlet->id)
+            ->whereIn('outlet_id', $outletIds)
             ->whereBetween('occurred_at', [$trendStart->copy()->subDays($trendDays)->startOfDay(), $trendStart->copy()->subDay()->endOfDay()])
             ->whereIn('status', ['completed', 'paid'])
             ->when($warehouseId, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
@@ -96,14 +107,14 @@ class DashboardController extends Controller
             $oldest = (clone $query)->min('created_at');
             $tasks->push(['label' => $label, 'count' => $count, 'oldest' => $oldest, 'url' => route($route)]);
         };
-        $addTask('production-requests-access', 'Permintaan produksi aktif', ProductionRequest::query()->where('outlet_id', $outlet->id)->whereIn('status', ['draft', 'purchasing', 'approved', 'received'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'production-requests.index');
+        $addTask('production-requests-access', 'Permintaan produksi aktif', ProductionRequest::query()->whereIn('outlet_id', $outletIds)->whereIn('status', ['draft', 'purchasing', 'approved', 'received'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'production-requests.index');
         $addTask('goods-receivings-access', 'Pesanan menunggu penerimaan', PurchaseOrder::query()->whereIn('status', ['ordered', 'partial'])->whereIn('warehouse_id', $warehouseIds), 'goods-receivings.index');
         $addTask('payables-access', 'Utang jatuh tempo', Payable::query()->whereIn('status', ['unpaid', 'partial'])->whereDate('due_at', '<=', today())->where(function (Builder $q) use ($warehouseIds): void {
             $q->whereHas('receiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds))
                 ->orWhereHas('ingredientReceiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds));
         }), 'payables.index');
-        $addTask('receivables-access', 'Piutang jatuh tempo', Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereDate('due_at', '<=', today())->whereHas('transaction', fn (Builder $q) => $q->where('outlet_id', $outlet->id)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))), 'receivables.index');
-        $addTask('cashier-shifts-access', 'Shift masih terbuka', CashierShift::query()->where('outlet_id', $outlet->id)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'shifts.index');
+        $addTask('receivables-access', 'Piutang jatuh tempo', Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereDate('due_at', '<=', today())->whereHas('transaction', fn (Builder $q) => $q->whereIn('outlet_id', $outletIds)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))), 'receivables.index');
+        $addTask('cashier-shifts-access', 'Shift masih terbuka', CashierShift::query()->whereIn('outlet_id', $outletIds)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId)), 'shifts.index');
 
         $quickActions = collect();
         if ($user->can('cashier-shifts-open') && ! $shift) {
@@ -124,18 +135,18 @@ class DashboardController extends Controller
 
         $notifications = collect();
         if ($user->can('notifications-access')) {
-            $notifications = OperationalNotification::query()->whereNull('read_at')->where(function (Builder $q) use ($outlet, $user): void {
-                $q->where(fn (Builder $personal) => $personal->where('user_id', $user->id)->where(fn (Builder $scope) => $scope->whereNull('outlet_id')->orWhere('outlet_id', $outlet->id)))
-                    ->orWhere(fn (Builder $shared) => $shared->whereNull('user_id')->where('outlet_id', $outlet->id));
+            $notifications = OperationalNotification::query()->whereNull('read_at')->where(function (Builder $q) use ($outletIds, $user): void {
+                $q->where(fn (Builder $personal) => $personal->where('user_id', $user->id)->where(fn (Builder $scope) => $scope->whereNull('outlet_id')->orWhereIn('outlet_id', $outletIds)))
+                    ->orWhere(fn (Builder $shared) => $shared->whereNull('user_id')->whereIn('outlet_id', $outletIds));
             })->orderByRaw("CASE WHEN type LIKE '%overdue' THEN 0 ELSE 1 END")->latest()->limit(4)->get();
         }
 
-        $periodSales = Transaction::query()->where('outlet_id', $outlet->id)->whereBetween('occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])->whereIn('status', ['completed', 'paid'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId));
+        $periodSales = Transaction::query()->whereIn('outlet_id', $outletIds)->whereBetween('occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])->whereIn('status', ['completed', 'paid'])->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId));
         $topProducts = collect();
         $busyHours = collect();
         if ($user->can('reports-access')) {
             $topProducts = TransactionDetail::query()->join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
-                ->where('transactions.outlet_id', $outlet->id)->whereBetween('transactions.occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])
+                ->whereIn('transactions.outlet_id', $outletIds)->whereBetween('transactions.occurred_at', [$trendStart->copy()->startOfDay(), today()->endOfDay()])
                 ->whereIn('transactions.status', ['completed', 'paid'])->when($warehouseId, fn (Builder $q) => $q->where('transactions.warehouse_id', $warehouseId))
                 ->selectRaw('transaction_details.product_name, transaction_details.unit_name, SUM(transaction_details.quantity) as quantity')
                 ->groupBy('transaction_details.product_name', 'transaction_details.unit_name')->orderByDesc('quantity')->limit(5)->get();
@@ -161,16 +172,18 @@ class DashboardController extends Controller
             'previousTrendTotal' => (float) $previousTrendTotal,
             'trendChangePercent' => $previousTrendTotal > 0 ? (($trendTotal - $previousTrendTotal) / $previousTrendTotal) * 100 : null,
             'todayTransactions' => (clone $sales)->count(),
-            'openShifts' => CashierShift::query()->where('outlet_id', $outlet->id)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->count(),
+            'openShifts' => CashierShift::query()->whereIn('outlet_id', $outletIds)->where('status', 'open')->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->count(),
             'lowStock' => $lowStock,
             'lowStockCount' => $lowStockCount,
             'shift' => $shift,
-            'recentTransactions' => $user->can('transactions-access') ? Transaction::query()->with('customer:id,name')->where('outlet_id', $outlet->id)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->latest('occurred_at')->limit(8)->get() : collect(),
-            'outlets' => $access->outletsFor($request->user())->get(['id', 'name']),
+            'recentTransactions' => $user->can('transactions-access') ? Transaction::query()->with('customer:id,name')->whereIn('outlet_id', $outletIds)->when($warehouseId, fn (Builder $q) => $q->where('warehouse_id', $warehouseId))->latest('occurred_at')->limit(8)->get() : collect(),
+            'outlets' => $outlets,
+            'selectedOutlet' => $selectedOutlet,
+            'scopeLabel' => $selectedOutlet?->name ?? 'semua outlet yang dapat diakses',
         ]);
     }
 
-    private function roleDashboard(Request $request, Outlet $outlet, string $role, Collection $warehouses, ?Warehouse $selectedWarehouse): View
+    private function roleDashboard(Request $request, Outlet $outlet, string $role, Collection $warehouses, ?Warehouse $selectedWarehouse, Collection $outlets, ?Outlet $selectedOutlet, array $outletIds): View
     {
         $user = $request->user();
         $warehouseId = $selectedWarehouse?->id;
@@ -179,11 +192,12 @@ class DashboardController extends Controller
         $workItems = collect();
         $actions = collect();
         $recentTransactions = collect();
-        $titles = ['cashier' => 'Ruang kerja kasir', 'warehouse' => 'Ruang kerja gudang', 'finance' => 'Ruang kerja keuangan', 'custom' => 'Ruang kerja saya'];
+        $titles = ['cashier' => 'Ruang kerja kasir', 'warehouse' => 'Ruang kerja gudang', 'finance' => 'Ruang kerja keuangan', 'manager' => 'Ruang kerja manajer', 'custom' => 'Ruang kerja saya'];
         $descriptions = [
             'cashier' => 'Shift dan transaksi Anda pada outlet aktif.',
             'warehouse' => 'Stok, penerimaan, dan produksi pada lokasi terpilih.',
             'finance' => 'Tagihan dan penagihan pada lokasi terpilih.',
+            'manager' => 'Penjualan, shift, stok, dan serah terima pada lokasi terpilih.',
             'custom' => 'Akses cepat ke fitur yang tersedia untuk akun Anda.',
         ];
         $addAction = function (string $permission, string $label, string $route, string $icon) use ($user, $actions): void {
@@ -198,11 +212,14 @@ class DashboardController extends Controller
         };
 
         if ($role === 'cashier') {
-            $shift = CashierShift::query()->with('warehouse:id,name')->where('outlet_id', $outlet->id)->where('open_user_id', $user->id)->where('status', 'open')->latest('opened_at')->first();
+            $shift = CashierShift::query()->with('warehouse:id,name')->whereIn('outlet_id', $outletIds)->where('open_user_id', $user->id)->where('status', 'open')->latest('opened_at')->first();
             $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);
             $metrics->push(['label' => 'Shift saya', 'value' => $shift ? 'Terbuka' : 'Belum dibuka', 'detail' => $shift?->warehouse?->name ?? 'Buka shift sebelum melayani penjualan.']);
             $metrics->push(['label' => 'Transaksi saya hari ini', 'value' => number_format((clone $sales)->count()), 'detail' => 'Transaksi selesai milik Anda.']);
             $metrics->push(['label' => 'Penjualan saya hari ini', 'value' => 'Rp'.number_format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Nilai transaksi selesai, termasuk yang belum lunas.']);
+            if ($shift && $user->can('cash-management-access')) {
+                $metrics->push(['label' => 'Kas shift saat ini', 'value' => 'Rp'.number_format((float) $shift->expected_cash, 0, ',', '.'), 'detail' => 'Kas fisik yang diharapkan pada shift aktif.']);
+            }
             if ($user->can('transactions-access')) {
                 $recentTransactions = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->latest('occurred_at')->limit(5)->get();
             }
@@ -213,11 +230,30 @@ class DashboardController extends Controller
             }
             $addAction('pos-access', 'Buka kasir', 'pos.index', 'bi-cart3');
             $addAction('transactions-access', 'Daftar transaksi', 'transactions.index', 'bi-receipt');
+            $addAction('cash-management-access', 'Serah terima kas', 'cash-management.index', 'bi-bank');
+        } elseif ($role === 'manager') {
+            $sales = Transaction::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)
+                ->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);
+            $openShifts = CashierShift::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)->where('status', 'open');
+            $lowStock = ProductWarehouse::query()->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')
+                ->whereHas('product', fn (Builder $q) => $q->where('is_active', true));
+            $handovers = CashHandover::query()->whereIn('source_warehouse_id', $warehouseIds)->whereIn('status', ['pending', 'approved']);
+            $metrics->push(['label' => 'Penjualan hari ini', 'value' => 'Rp'.number_format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Transaksi selesai pada lokasi terpilih.']);
+            $metrics->push(['label' => 'Shift terbuka', 'value' => number_format((clone $openShifts)->count()), 'detail' => 'Kasir yang sedang bertugas.']);
+            $metrics->push(['label' => 'Stok perlu dicek', 'value' => number_format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
+            $metrics->push(['label' => 'Serah terima kas aktif', 'value' => number_format((clone $handovers)->count()), 'detail' => 'Menunggu persetujuan atau penerimaan.']);
+            $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
+            $addWorkItem('cash-management-access', 'Tinjau serah terima kas', (clone $handovers)->count(), 'cash-management.index');
+            $addAction('transactions-access', 'Pantau transaksi', 'transactions.index', 'bi-receipt');
+            $addAction('cashier-shifts-access', 'Pantau shift', 'shifts.index', 'bi-clock-history');
+            $addAction('inventory-access', 'Periksa stok', 'inventory.index', 'bi-box-seam');
+            $addAction('cash-management-access', 'Serah terima kas', 'cash-management.index', 'bi-bank');
         } elseif ($role === 'warehouse') {
             $lowStock = ProductWarehouse::query()->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')->whereHas('product', fn (Builder $q) => $q->where('is_active', true));
             $orders = PurchaseOrder::query()->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['ordered', 'partial']);
-            $requests = ProductionRequest::query()->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['draft', 'purchasing', 'approved', 'received']);
-            $production = ProductionOrder::query()->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds)->where('status', 'in_production');
+            $requests = ProductionRequest::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['draft', 'purchasing', 'approved', 'received']);
+            $production = ProductionOrder::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)->where('status', 'in_production');
+            $incomingCash = CashHandover::query()->whereIn('destination_warehouse_id', $warehouseIds)->where('status', 'approved');
             if ($user->can('inventory-access')) {
                 $metrics->push(['label' => 'Stok perlu dicek', 'value' => number_format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
                 $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
@@ -234,15 +270,20 @@ class DashboardController extends Controller
                 $metrics->push(['label' => 'Sedang diproduksi', 'value' => number_format((clone $production)->count()), 'detail' => 'Pesanan produksi belum selesai.']);
                 $addWorkItem('production-orders-access', 'Lanjutkan produksi', (clone $production)->count(), 'production-orders.index');
             }
+            if ($user->can('cash-management-access')) {
+                $metrics->push(['label' => 'Kas menunggu diterima', 'value' => number_format((clone $incomingCash)->count()), 'detail' => 'Serah terima yang sudah dikirim ke lokasi terpilih.']);
+                $addWorkItem('cash-management-access', 'Konfirmasi penerimaan kas', (clone $incomingCash)->count(), 'cash-management.index');
+            }
             $addAction('inventory-access', 'Buka inventori', 'inventory.index', 'bi-box-seam');
             $addAction('goods-receivings-access', 'Penerimaan barang', 'goods-receivings.index', 'bi-box-arrow-in-down');
             $addAction('production-orders-access', 'Produksi', 'production-orders.index', 'bi-gear');
+            $addAction('cash-management-access', 'Penerimaan kas', 'cash-management.index', 'bi-bank');
         } elseif ($role === 'finance') {
             $payables = Payable::query()->whereIn('status', ['unpaid', 'partial'])->where(function (Builder $q) use ($warehouseIds): void {
                 $q->whereHas('receiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds))
                     ->orWhereHas('ingredientReceiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds));
             });
-            $receivables = Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereHas('transaction', fn (Builder $q) => $q->where('outlet_id', $outlet->id)->whereIn('warehouse_id', $warehouseIds));
+            $receivables = Receivable::query()->whereIn('status', ['unpaid', 'partial'])->whereHas('transaction', fn (Builder $q) => $q->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds));
             if ($user->can('payables-access')) {
                 $balance = (clone $payables)->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as balance')->value('balance');
                 $overdue = (clone $payables)->whereDate('due_at', '<=', today())->count();
@@ -303,6 +344,9 @@ class DashboardController extends Controller
             'roleDescription' => $descriptions[$role],
             'availableWarehouses' => $warehouses,
             'selectedWarehouse' => $selectedWarehouse,
+            'outlets' => $outlets,
+            'selectedOutlet' => $selectedOutlet,
+            'scopeLabel' => $selectedOutlet?->name ?? 'semua outlet yang dapat diakses',
             'metrics' => $metrics,
             'workItems' => $workItems,
             'actions' => $actions->take(4),

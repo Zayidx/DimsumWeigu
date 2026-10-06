@@ -17,6 +17,7 @@
             <form method="POST" action="{{ route('profile.avatar') }}" enctype="multipart/form-data">@csrf<label for="avatar" class="form-label">Pilih foto profil</label><input id="avatar" type="file" name="avatar" class="form-control" accept="image/png,image/jpeg,image/webp" required><button class="btn btn-outline-primary mt-2">Unggah foto</button></form>
         </div></div></div>
         <div class="col-12 col-xl-5"><div class="card"><div class="card-header"><h4 class="card-title">Kata sandi</h4></div><div class="card-body"><form method="POST" action="{{ route('profile.password.update') }}">@csrf @method('PUT')
+            <div class="form-group mb-3"><label for="password_username">Email akun</label><input id="password_username" type="email" name="username" class="form-control" value="{{ auth()->user()->email }}" autocomplete="username" readonly></div>
             <div class="form-group mb-3"><label for="current_password">Kata sandi saat ini</label><input id="current_password" type="password" name="current_password" class="form-control" autocomplete="current-password" required></div>
             <div class="form-group mb-3"><label for="password">Kata sandi baru</label><input id="password" type="password" name="password" class="form-control" autocomplete="new-password" required></div>
             <div class="form-group mb-3"><label for="password_confirmation">Ulangi kata sandi baru</label><input id="password_confirmation" type="password" name="password_confirmation" class="form-control" autocomplete="new-password" required></div>

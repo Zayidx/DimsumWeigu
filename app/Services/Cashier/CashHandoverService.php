@@ -89,7 +89,7 @@ class CashHandoverService
 
     public function confirm(int $id): CashHandover
     {
-        $this->permit('cash-management-create');
+        abort_unless(auth()->user()?->canAny(['cash-management-create', 'cash-handovers-confirm']), 403);
         PasswordStepUp::requireRecent();
 
         return DB::transaction(function () use ($id) {
@@ -161,7 +161,7 @@ class CashHandoverService
                 abort_unless($warehouse->outlet_id === (int) session('active_outlet_id'), 404);
             }
         } else {
-            abort_unless($warehouse->type === 'central' && (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')), 404);
+            abort_unless($warehouse->type === 'central' && (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access') || (! $current && auth()->user()->can('cash-management-create'))), 404);
         }
 
         return $warehouse;
