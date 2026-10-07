@@ -22,6 +22,9 @@ class HppWorkbookSeeder extends Seeder
             throw new RuntimeException('File hpp.json tidak ditemukan di root repository.');
         }
         $source = json_decode(file_get_contents($path), true, 512, JSON_THROW_ON_ERROR);
+        if (($source['sumber'] ?? null) !== 'Weigu - ALL HPP.xlsx') {
+            throw new RuntimeException('Sumber data hpp.json harus Weigu - ALL HPP.xlsx. Perbarui snapshot JSON dari workbook tersebut sebelum seeding.');
+        }
         foreach (['bahan_baku', 'menu', 'resep', 'kemasan'] as $key) {
             if (! is_array($source[$key] ?? null)) {
                 throw new RuntimeException("Data {$key} pada hpp.json tidak valid.");
@@ -105,6 +108,11 @@ class HppWorkbookSeeder extends Seeder
                     $seedIngredient($code, trim($row['nama']), $row['uom'] ?? 'pcs', $row['harga_satuan'], 'Sumber hpp.json · Packaging baris '.($row['sumber']['baris'] ?? '?').'; harga per unit.', $packagingCategory);
                 }
             }
+            $missingBox = collect($source['kemasan'])->first(fn (array $row) => mb_strtolower(trim((string) ($row['nama'] ?? ''))) === 'kotak box dimsum 4 pcs');
+            if ($missingBox && ! is_numeric($missingBox['harga_satuan'] ?? null)) {
+                $code = 'HPP-P-'.str_pad((string) ($missingBox['no'] ?? 7), 3, '0', STR_PAD_LEFT);
+                $seedIngredient($code, trim($missingBox['nama']), $missingBox['uom'] ?? 'pcs', 0, 'Kemasan dimsum 4 pcs yang belum memiliki harga pada sumber Excel; Finance perlu mengisi harga aktual sebelum digunakan untuk HPP.', $packagingCategory);
+            }
 
             $categoryProduct = Category::firstOrCreate(['slug' => 'menu-hpp-workbook'], ['name' => 'Menu HPP Workbook', 'is_active' => true]);
             $unit = Unit::query()->where('code', 'PCS')->firstOrFail();
@@ -124,7 +132,7 @@ class HppWorkbookSeeder extends Seeder
                     continue;
                 }
                 $sku = $menuSkuByIndex[$index];
-                Product::withTrashed()->firstOrCreate(['sku' => $sku], [
+                $menuProduct = Product::withTrashed()->firstOrCreate(['sku' => $sku], [
                     'category_id' => $categoryProduct->id,
                     'unit_id' => $unit->id,
                     'title' => trim($row['nama']),
@@ -133,23 +141,98 @@ class HppWorkbookSeeder extends Seeder
                     'stock' => 0,
                     'is_active' => true,
                     'is_sellable' => true,
-                    'track_stock' => true,
+                    'track_stock' => false,
+                    'is_semi_finished' => false,
                     'description' => 'Menu impor hpp.json; resep per unit harus ditinjau sebelum produksi. Ringkasan sumber: '.($row['sumber']['sheet'] ?? 'Menu Summary').' baris '.($row['sumber']['baris'] ?? '?').'.',
                 ]);
+                if ($menuProduct->trashed()) {
+                    $menuProduct->restore();
+                }
+                // Menu packs are assembled at POS from their active recipe; the warehouse does not hold finished menu stock.
+                $menuProduct->forceFill(['track_stock' => false, 'is_semi_finished' => false])->save();
             }
 
             $sourceRecipes = collect($source['resep'])->filter(fn ($row) => filled($row['nama'] ?? null))->keyBy(fn ($row) => mb_strtolower(trim($row['nama'])));
             $ingredientByName = Ingredient::query()->where('code', 'like', 'HPP-%')->orderBy('code')->get()->keyBy(fn (Ingredient $item) => mb_strtolower(trim($item->name)));
             $packagingByName = $ingredientByName;
+            $componentCategory = Category::firstOrCreate(['slug' => 'hpp-semi-finished'], ['name' => 'Produk Setengah Jadi HPP', 'is_active' => true]);
+            $componentProducts = [];
+            $componentNames = collect($source['menu'])->flatMap(fn (array $menu) => collect($menu['rincian'] ?? [])->pluck('nama'))
+                ->merge(['Dimsum ori topping wortel', 'Lumpia keju ori', 'Lumpia keju mentai'])->filter()->unique();
+            foreach ($componentNames as $componentName) {
+                $key = mb_strtolower(trim((string) $componentName));
+                $recipeName = $key === 'bolognese sauce' ? 'saus bolognese' : $key;
+                $sourceRecipe = $sourceRecipes->get($recipeName);
+                if (! $sourceRecipe || empty($sourceRecipe['bahan'])) {
+                    continue;
+                }
+                $sku = 'HPP-SF-'.strtoupper(substr(hash('sha256', $key), 0, 10));
+                $product = Product::withTrashed()->firstOrCreate(['sku' => $sku], [
+                    'category_id' => $componentCategory->id, 'unit_id' => $unit->id, 'title' => trim((string) ($sourceRecipe['nama'] ?? $componentName)),
+                    'buy_price' => 0, 'sell_price' => 0, 'stock' => 0, 'is_active' => true,
+                    'is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true,
+                    'description' => 'Produk setengah jadi dari resep komponen hpp.json; stok bertambah melalui hasil produksi.',
+                ]);
+                if ($product->trashed()) {
+                    $product->restore();
+                }
+                $product->forceFill(['is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true, 'is_active' => true])->save();
+                $componentProducts[$key] = $product;
+                if (RecipeVersion::query()->where('product_id', $product->id)->exists()) {
+                    continue;
+                }
+                $yield = $this->sourceYield($sourceRecipe['keterangan'] ?? []);
+                $rows = [];
+                foreach ($sourceRecipe['bahan'] as $line) {
+                    $name = mb_strtolower(trim((string) ($line['nama'] ?? '')));
+                    $ingredient = $ingredientByName->get($name);
+                    if (! $ingredient || ! is_numeric($line['qty'] ?? null) || ! is_numeric($line['harga_satuan'] ?? null)
+                        || (filled($line['uom'] ?? null) && $this->normalizeUnit((string) $line['uom']) !== $this->normalizeUnit((string) $ingredient->unit?->symbol))) {
+                        $rows = [];
+                        break;
+                    }
+                    $quantity = round((float) $line['qty'] / $yield, 3);
+                    if ($quantity <= 0) {
+                        $rows = [];
+                        break;
+                    }
+                    $rows[$ingredient->id] = ($rows[$ingredient->id] ?? 0) + $quantity;
+                }
+                if ($rows === []) {
+                    $componentProducts[$key] = null;
+
+                    continue;
+                }
+                $version = RecipeVersion::query()->create([
+                    'product_id' => $product->id, 'unit_id' => $product->unit_id, 'version' => 1,
+                    'yield_quantity' => 1, 'is_active' => true, 'starts_at' => now(),
+                    'notes' => 'Resep per satu unit produk setengah jadi; kuantitas dinormalisasi dengan yield dari hpp.json.',
+                ]);
+                foreach ($rows as $ingredientId => $quantity) {
+                    $ingredient = $ingredientByName->firstWhere('id', $ingredientId);
+                    $version->items()->create([
+                        'ingredient_id' => $ingredientId, 'unit_id' => $ingredient->unit_id,
+                        'quantity' => number_format($quantity, 3, '.', ''), 'base_quantity' => number_format($quantity, 3, '.', ''), 'waste_percent' => 0,
+                    ]);
+                }
+            }
             $importedRecipes = 0;
             $incompleteRecipes = 0;
             $incompleteDetails = [];
             foreach ($source['menu'] as $index => $menuRow) {
-                $menuProduct = Product::query()->where('sku', $menuSkuByIndex[$index])->first();
-                if (! $menuProduct || RecipeVersion::query()->where('product_id', $menuProduct->id)->exists()) {
+                $menuProduct = Product::withTrashed()->where('sku', $menuSkuByIndex[$index])->first();
+                if (! $menuProduct) {
+                    continue;
+                }
+                $existingActive = RecipeVersion::query()->where('product_id', $menuProduct->id)->where('is_active', true)->first();
+                if ($existingActive && ! str_starts_with((string) $existingActive->notes, 'Impor hpp.json')) {
+                    continue;
+                }
+                if ($existingActive?->productItems()->exists()) {
                     continue;
                 }
                 $bom = [];
+                $bomProducts = [];
                 $complete = true;
                 $incompleteReason = '';
                 foreach ($menuRow['rincian'] ?? [] as $component) {
@@ -157,38 +240,20 @@ class HppWorkbookSeeder extends Seeder
                     $recipeName = $componentName === 'bolognese sauce' ? 'saus bolognese' : $componentName;
                     $sourceRecipe = $sourceRecipes->get($recipeName);
                     $componentCount = $component['pcs'] ?? null;
-                    if (! $sourceRecipe || ! is_numeric($componentCount) || (float) $componentCount <= 0 || empty($sourceRecipe['bahan'])) {
+                    $componentProduct = $componentProducts[$componentName] ?? null;
+                    if (! $sourceRecipe || ! $componentProduct || ! is_numeric($componentCount) || (float) $componentCount <= 0 || empty($sourceRecipe['bahan'])) {
                         $complete = false;
-                        $incompleteReason = "Komponen {$componentName} tidak punya resep atau jumlah menu valid.";
+                        $incompleteReason = "Komponen {$componentName} belum memiliki resep setengah jadi yang lengkap atau jumlah menu valid.";
                         break;
                     }
-                    $yield = $this->sourceYield($sourceRecipe['keterangan'] ?? []);
+                    $bomProducts[$componentProduct->id] = ($bomProducts[$componentProduct->id] ?? 0) + (float) $componentCount;
                     $componentIncludesPackaging = false;
                     foreach ($sourceRecipe['bahan'] as $line) {
                         $materialName = trim((string) ($line['nama'] ?? ''));
-                        $ingredient = $ingredientByName->get(mb_strtolower($materialName));
-                        if (! $ingredient || ! is_numeric($line['qty'] ?? null) || ! is_numeric($line['harga_satuan'] ?? null)) {
-                            $complete = false;
-                            $incompleteReason = "Baris bahan {$materialName} pada resep {$recipeName} belum memiliki bahan master, qty, atau harga numerik.";
-                            break 2;
-                        }
-                        $sourceUnit = trim((string) ($line['uom'] ?? ''));
                         $normalizedMaterialName = mb_strtolower($materialName);
                         if (str_contains($normalizedMaterialName, 'cup') || in_array($normalizedMaterialName, ['box pack dimsum', 'sumpit', 'plastik dimsum 24', 'pack chikuro', 'plastik chikuro'], true)) {
                             $componentIncludesPackaging = true;
                         }
-                        if ($sourceUnit !== '' && $this->normalizeUnit($sourceUnit) !== $this->normalizeUnit((string) $ingredient->unit?->symbol)) {
-                            $complete = false;
-                            $incompleteReason = "Satuan {$materialName} tidak cocok: resep {$sourceUnit}, master {$ingredient->unit?->symbol}.";
-                            break 2;
-                        }
-                        $quantity = round(((float) $line['qty'] * (float) $componentCount) / $yield, 3);
-                        if ($quantity <= 0) {
-                            $complete = false;
-                            $incompleteReason = "Kuantitas hasil konversi {$materialName} tidak valid.";
-                            break 2;
-                        }
-                        $bom[$ingredient->id] = ($bom[$ingredient->id] ?? 0) + $quantity;
                     }
 
                     $packCost = (float) ($component['hpp_pack'] ?? 0);
@@ -204,16 +269,23 @@ class HppWorkbookSeeder extends Seeder
                         }
                     }
                 }
-                if (! $complete || $bom === []) {
+                if (! $complete || $bomProducts === []) {
+                    if ($existingActive) {
+                        $existingActive->update(['is_active' => false, 'ends_at' => now()]);
+                    }
                     $incompleteRecipes++;
                     $incompleteDetails[] = trim($menuRow['nama']).': '.($incompleteReason ?: 'BOM kosong.');
 
                     continue;
                 }
+                if ($existingActive) {
+                    $existingActive->update(['is_active' => false, 'ends_at' => now()]);
+                }
                 $version = RecipeVersion::query()->create([
-                    'product_id' => $menuProduct->id, 'unit_id' => $menuProduct->unit_id, 'version' => 1,
+                    'product_id' => $menuProduct->id, 'unit_id' => $menuProduct->unit_id,
+                    'version' => (int) RecipeVersion::query()->where('product_id', $menuProduct->id)->max('version') + 1,
                     'yield_quantity' => 1, 'is_active' => true, 'starts_at' => now(),
-                    'notes' => 'Impor hpp.json · BOM per 1 unit menu, diratakan dari rincian resep. Estimasi HPP memakai harga Master Bahan terkini; bandingkan dengan ringkasan sumber karena ongkos energi dan selisih formula dapat berbeda.',
+                    'notes' => 'Impor hpp.json - assembly per satu unit menu dari produk setengah jadi dan kemasan.',
                 ]);
                 foreach ($bom as $ingredientId => $quantity) {
                     $ingredient = $ingredientByName->firstWhere('id', $ingredientId);
@@ -221,6 +293,12 @@ class HppWorkbookSeeder extends Seeder
                         'ingredient_id' => $ingredientId, 'unit_id' => $ingredient->unit_id,
                         'quantity' => number_format($quantity, 3, '.', ''), 'base_quantity' => number_format($quantity, 3, '.', ''),
                         'waste_percent' => 0,
+                    ]);
+                }
+                foreach ($bomProducts as $componentProductId => $quantity) {
+                    $version->productItems()->create([
+                        'product_id' => $componentProductId, 'unit_id' => $unit->id,
+                        'quantity' => number_format($quantity, 3, '.', ''), 'waste_percent' => 0,
                     ]);
                 }
                 $importedRecipes++;
@@ -233,6 +311,11 @@ class HppWorkbookSeeder extends Seeder
         $this->command?->info("Resep menu lengkap yang dapat dipetakan: {$stats['recipes']}; menu yang perlu dilengkapi manual: {$stats['incomplete']}.");
         foreach ($stats['details'] as $detail) {
             $this->command?->warn($detail);
+        }
+        foreach ($source['kemasan'] as $packaging) {
+            if (filled($packaging['nama'] ?? null) && ! is_numeric($packaging['harga_satuan'] ?? null)) {
+                $this->command?->warn('Kemasan "'.trim($packaging['nama']).'" dilewati karena harga satuan belum tersedia pada sumber.');
+            }
         }
         $this->command?->warn('Recipe lines with missing quantities and source units need review before production; this importer preserves costs and source notes but does not invent BOM quantities.');
     }

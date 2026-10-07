@@ -22,4 +22,9 @@ class ProductionRequest extends Model
     {
         return $this->hasOne(ProductionOrder::class);
     }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 }

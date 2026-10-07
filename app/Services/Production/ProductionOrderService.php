@@ -7,6 +7,7 @@ use App\Models\ProductBatch;
 use App\Models\ProductionOrder;
 use App\Models\ProductionRequest;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\Inventory\StockMutationService;
 use App\Support\AuditLogger;
 use App\Support\FixedDecimal;
@@ -17,14 +18,16 @@ use Illuminate\Validation\ValidationException;
 
 class ProductionOrderService
 {
-    public function startFromRequest(User $actor, int $requestId): ProductionOrder
+    public function startFromRequest(User $actor, int $requestId, ?int $productionShiftId = null): ProductionOrder
     {
         $this->assertActor($actor);
         abort_unless($actor->can('production-orders-create'), 403);
 
-        return DB::transaction(function () use ($actor, $requestId): ProductionOrder {
+        return DB::transaction(function () use ($actor, $requestId, $productionShiftId): ProductionOrder {
             $request = ProductionRequest::query()->with(['items.recipe.items.ingredient'])->lockForUpdate()->findOrFail($requestId);
             app(OutletAccess::class)->require($actor, $request->outlet_id);
+            $warehouse = Warehouse::query()->whereKey($request->warehouse_id)->where('is_active', true)->firstOrFail();
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Produksi hanya dapat dilakukan di Gudang Bersama.'));
             $existing = ProductionOrder::query()->where('production_request_id', $request->id)->first();
             if ($existing) {
                 return $existing->load(['items.product', 'items.materials.ingredient']);
@@ -34,6 +37,7 @@ class ProductionOrderService
             }
             $order = ProductionOrder::query()->create([
                 'number' => 'PROD-'.now()->format('Y').'-'.strtoupper(Str::random(10)), 'production_request_id' => $request->id,
+                'production_shift_id' => $productionShiftId,
                 'outlet_id' => $request->outlet_id, 'warehouse_id' => $request->warehouse_id,
                 'created_by' => $actor->id, 'status' => 'in_production', 'notes' => $request->notes,
             ]);
@@ -81,6 +85,8 @@ class ProductionOrderService
         return DB::transaction(function () use ($actor, $orderId, $actualMaterials, $outputs): ProductionOrder {
             $order = ProductionOrder::query()->with(['items.materials.ingredient', 'request.materials'])->lockForUpdate()->findOrFail($orderId);
             app(OutletAccess::class)->require($actor, $order->outlet_id);
+            $warehouse = Warehouse::query()->whereKey($order->warehouse_id)->where('is_active', true)->firstOrFail();
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Produksi hanya dapat diselesaikan di Gudang Bersama.'));
             if ($order->status === 'completed') {
                 return $order;
             }

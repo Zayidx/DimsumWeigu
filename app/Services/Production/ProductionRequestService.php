@@ -50,7 +50,7 @@ class ProductionRequestService
             }
             app(OutletAccess::class)->require($actor, $outletId);
             $warehouse = Warehouse::query()->whereKey($warehouseId)->where('is_active', true)->lockForUpdate()->firstOrFail();
-            abort_unless($warehouse->type === 'central' || (int) $warehouse->outlet_id === $outletId, 403);
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403);
             $request = ProductionRequest::query()->create([
                 'number' => 'PR-'.now()->format('Y').'-'.strtoupper(Str::random(10)), 'outlet_id' => $outletId,
                 'warehouse_id' => $warehouseId, 'created_by' => $actor->id, 'status' => 'requested', 'notes' => $notes,
@@ -110,6 +110,11 @@ class ProductionRequestService
                     'unit_cost' => (string) $ingredient->buy_price, 'estimated_cost' => FixedDecimal::moneyText($estimatedCents),
                 ]);
             }
+            $hasShortage = $request->materials()->where('purchase_quantity', '>', 0)->exists();
+            if (! $hasShortage) {
+                $request->update(['status' => 'approved', 'approved_by' => $actor->id]);
+                app(AuditLogger::class)->record('production_request.approved_from_stock', $request, ['status' => 'requested'], ['status' => 'approved']);
+            }
             app(AuditLogger::class)->record('production_request.created', $request, null, ['number' => $request->number, 'lines' => count($lines), 'materials' => count($requirements)]);
 
             return $request->load(['items.product', 'materials.ingredient']);
@@ -117,15 +122,16 @@ class ProductionRequestService
     }
 
     /** Finance approves and issues one raw-material purchase order for the live shortage. */
-    public function approveAndPurchase(User $actor, int $requestId, ?int $supplierId, ?string $invoiceReference = null, array $unitCosts = []): ?IngredientPurchaseOrder
+    public function approveAndPurchase(User $actor, int $requestId, ?int $supplierId, ?string $invoiceReference = null, array $unitCosts = [], array $purchaseQuantities = []): ?IngredientPurchaseOrder
     {
         abort_unless($actor->can('production-requests-approve'), 403);
         abort_unless($actor->can('purchase-orders-create'), 403);
         $this->assertActor($actor);
 
-        return DB::transaction(function () use ($actor, $requestId, $supplierId, $invoiceReference, $unitCosts): ?IngredientPurchaseOrder {
+        return DB::transaction(function () use ($actor, $requestId, $supplierId, $invoiceReference, $unitCosts, $purchaseQuantities): ?IngredientPurchaseOrder {
             $request = ProductionRequest::query()->with('materials')->lockForUpdate()->findOrFail($requestId);
             app(OutletAccess::class)->require($actor, $request->outlet_id);
+            $this->assertSharedWarehouse($request->warehouse_id);
             if (! in_array($request->status, ['requested', 'purchasing'], true)) {
                 throw ValidationException::withMessages(['request' => __('Permintaan ini sudah diproses.')]);
             }
@@ -152,7 +158,9 @@ class ProductionRequestService
                 $needed = FixedDecimal::quantity((string) $material->required_quantity);
                 $shortage = max(0, $needed - $available);
                 $material->update(['available_quantity' => FixedDecimal::quantityText($available), 'purchase_quantity' => FixedDecimal::quantityText($shortage)]);
-                if ($shortage === 0) {
+                $requestedPurchase = $this->quantity((string) ($purchaseQuantities[$ingredient->id] ?? '0'));
+                $purchaseQty = max($shortage, $requestedPurchase);
+                if ($purchaseQty === 0) {
                     continue;
                 }
                 $rawPrice = (string) ($unitCosts[$ingredient->id] ?? $ingredient->buy_price);
@@ -161,8 +169,8 @@ class ProductionRequestService
                 } catch (\InvalidArgumentException) {
                     throw ValidationException::withMessages(['unitCosts.'.$ingredient->id => __('Harga harus angka dengan maksimal delapan desimal.')]);
                 }
-                $lineCents = self::costCents($shortage, $priceMicro);
-                $purchaseLines[] = ['ingredient_id' => $ingredient->id, 'quantity' => $shortage, 'unit_cost' => FixedDecimal::fromScaled($priceMicro, 8), 'line_total' => FixedDecimal::moneyText($lineCents)];
+                $lineCents = self::costCents($purchaseQty, $priceMicro);
+                $purchaseLines[] = ['ingredient_id' => $ingredient->id, 'quantity' => $purchaseQty, 'unit_cost' => FixedDecimal::fromScaled($priceMicro, 8), 'line_total' => FixedDecimal::moneyText($lineCents)];
                 $totalCents += $lineCents;
             }
             if ($purchaseLines === []) {
@@ -170,6 +178,9 @@ class ProductionRequestService
                 app(AuditLogger::class)->record('production_request.approved_from_stock', $request, ['status' => $request->getOriginal('status')], ['status' => 'approved']);
 
                 return null;
+            }
+            if (! $supplierId) {
+                throw ValidationException::withMessages(['supplierId' => __('Pilih pemasok untuk bahan yang akan dibeli.')]);
             }
             $supplier = Supplier::query()->whereKey($supplierId)->where('is_active', true)->firstOrFail();
             $order = IngredientPurchaseOrder::query()->create([
@@ -216,6 +227,7 @@ class ProductionRequestService
             }
             $order = IngredientPurchaseOrder::query()->with('items')->lockForUpdate()->findOrFail($purchaseOrderId);
             app(OutletAccess::class)->require($actor, $order->request()->value('outlet_id'));
+            $this->assertSharedWarehouse($order->warehouse_id);
             if (! in_array($order->status, ['ordered', 'partially_received'], true)) {
                 throw ValidationException::withMessages(['purchaseOrder' => __('Purchase order ini tidak dapat diterima lagi.')]);
             }
@@ -325,6 +337,14 @@ class ProductionRequestService
             $average++;
         }
         $ingredient->update(['stock' => FixedDecimal::quantityText($totalStock), 'buy_price' => FixedDecimal::fromScaled($average, 8)]);
+    }
+
+    private function assertSharedWarehouse(int $warehouseId): Warehouse
+    {
+        $warehouse = Warehouse::query()->whereKey($warehouseId)->where('is_active', true)->firstOrFail();
+        abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Bahan baku dan produksinya hanya dikelola di Gudang Bersama.'));
+
+        return $warehouse;
     }
 
     private static function costCents(int $quantityMilli, int $unitCostMicro): int

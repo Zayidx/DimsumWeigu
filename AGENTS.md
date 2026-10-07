@@ -29,3 +29,17 @@ Copy `.env.example` to `.env` for local setup and keep secrets out of commits. U
 ## Commits and Pull Requests
 
 The short Git history uses concise task-oriented subjects (for example, `Update MVP`). Keep new commit subjects brief and action-oriented. Pull requests should describe the affected workflow, summarize migration or configuration changes, list test commands and results, link related issues when available, and include screenshots for visible UI changes.
+
+<!-- antislop:start -->
+## Anti Slop
+
+For UI work, use the installed `antislop` plugin. Read its core guidance, then the relevant skills before reviewing or editing an interface:
+
+- Core: `antislop`
+- UI and visual design: `antislop-ui`
+- Accessibility and interaction: `antislop-human`
+- Responsive layouts: `antislop-layoutmobile`
+- UI copy: `antislop-copywriting`
+
+Resolve the Anti Slop usage mode before UI review or edits: explicit session choice first, then the saved global preference, otherwise ask. Resolve design direction from `DESIGN.md` or the user's brief; do not invent brand direction without labeling the work as a draft without direction. Preserve existing Mazer design and POS workflow unless the user asks to change them.
+<!-- antislop:end -->

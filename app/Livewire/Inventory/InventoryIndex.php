@@ -66,10 +66,11 @@ class InventoryIndex extends Component
     public function openAdjustment(int $productId): void
     {
         $this->authorizePermission('inventory-access');
+        $warehouse = $this->warehouseForUser((int) $this->warehouseId);
         Product::query()->whereKey($productId)->firstOrFail();
         $this->productId = $productId;
         $this->reset(['direction', 'quantity', 'reason', 'batchNumber', 'expiresAt']);
-        $this->direction = 'in';
+        $this->direction = $warehouse->outlet_id === null ? 'in' : 'out';
         $this->showForm = true;
     }
 
@@ -90,9 +91,12 @@ class InventoryIndex extends Component
             'expiresAt' => ['nullable', 'date', 'after:today'],
         ]);
         $warehouse = $this->warehouseForUser((int) $this->warehouseId);
+        if ($warehouse->outlet_id !== null && $data['direction'] === 'in') {
+            throw ValidationException::withMessages(['direction' => __('Stok outlet hanya dapat bertambah melalui penerimaan transfer dari Gudang Bersama.')]);
+        }
         $product = Product::query()->whereKey($data['productId'])->firstOrFail();
-        if (! $product->track_stock) {
-            throw ValidationException::withMessages(['productId' => __('Produk ini tidak melacak stok.')]);
+        if (! $product->track_stock || ! $product->is_semi_finished) {
+            throw ValidationException::withMessages(['productId' => __('Gudang hanya mengelola stok produk setengah jadi yang melacak stok.')]);
         }
         if ($product->track_batches && $data['direction'] === 'in' && blank($data['batchNumber'])) {
             throw ValidationException::withMessages(['batchNumber' => __('Nomor batch wajib diisi untuk produk ini.')]);
@@ -142,15 +146,17 @@ class InventoryIndex extends Component
         }
         $stocks = ProductWarehouse::query()->with(['product.category:id,name', 'product.unit:id,name,symbol', 'warehouse:id,name'])
             ->where('warehouse_id', $warehouseId)
-            ->whereHas('product', fn (Builder $query) => $query->where('is_active', true))
+            ->whereHas('product', fn (Builder $query) => $query->where('is_active', true)->where('is_semi_finished', true))
             ->when($this->search !== '', fn (Builder $query) => $query->whereHas('product', fn (Builder $product) => $product->where('title', 'like', '%'.$this->search.'%')->orWhere('sku', 'like', '%'.$this->search.'%')->orWhere('barcode', 'like', '%'.$this->search.'%')))
             ->orderBy('stock')->paginate(25);
         $ledger = InventoryLedger::query()->with(['product:id,title,sku', 'warehouse:id,name'])
             ->when($warehouseId, fn (Builder $query) => $query->where('warehouse_id', $warehouseId))
+            ->whereHas('product', fn (Builder $product) => $product->where('is_semi_finished', true))
             ->when($this->ledgerSearch !== '', fn (Builder $query) => $query->whereHas('product', fn (Builder $product) => $product->where('title', 'like', '%'.$this->ledgerSearch.'%')->orWhere('sku', 'like', '%'.$this->ledgerSearch.'%')))
             ->latest('created_at')->limit(20)->get();
 
         return view('livewire.inventory.inventory-index', compact('warehouses', 'warehouseId', 'stocks', 'ledger'))
+            ->with('isSharedWarehouse', $warehouses->firstWhere('id', $warehouseId)?->type === 'central')
             ->layout('layouts.dashboard', ['title' => __('Inventori')]);
     }
 

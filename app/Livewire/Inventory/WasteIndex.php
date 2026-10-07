@@ -2,17 +2,18 @@
 
 namespace App\Livewire\Inventory;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\OutletWasteRecord;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Warehouse;
 use App\Services\Finance\OperatingCostService;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class WasteIndex extends Component
 {
@@ -94,14 +95,9 @@ class WasteIndex extends Component
         $this->permit('reports-export');
         $rows = $this->query()->with(['product:id,title,sku', 'warehouse:id,name', 'batch:id,batch_number', 'user:id,name'])->orderBy('created_at')->get();
 
-        return response()->streamDownload(function () use ($rows) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Tanggal', 'Gudang', 'Produk', 'SKU', 'Batch', 'Jumlah', 'HPP satuan', 'Nilai waste', 'Alasan', 'Catatan', 'Petugas']);
-            foreach ($rows as $row) {
-                fputcsv($handle, array_map(CsvCell::safe(...), [$row->created_at->format('Y-m-d H:i:s'), $row->warehouse?->name, $row->product?->title, $row->product?->sku, $row->batch?->batch_number, $row->quantity, $row->unit_cost, $row->cost_total, $row->reason, $row->notes, $row->user?->name]));
-            }
-            fclose($handle);
-        }, 'waste-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($row) => [$row->created_at->format('Y-m-d H:i:s'), $row->warehouse?->name, $row->product?->title, $row->product?->sku, $row->batch?->batch_number, $row->quantity, $row->unit_cost, $row->cost_total, $row->reason, $row->notes, $row->user?->name])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Tanggal', 'Gudang', 'Produk', 'SKU', 'Batch', 'Jumlah', 'HPP satuan', 'Nilai waste', 'Alasan', 'Catatan', 'Petugas'], $data, 'Waste'), 'waste-'.today()->toDateString().'.xlsx');
     }
 
     public function render()

@@ -55,6 +55,18 @@ class StockMutationService
             $product = Product::query()->when(in_array($type, ['supplier_return', 'waste'], true), fn ($query) => $query->withTrashed())->lockForUpdate()->findOrFail($productId);
             $warehouse = Warehouse::query()->whereKey($warehouseId)->where('is_active', true)->firstOrFail();
             $this->assertWarehouseScope($warehouse);
+            if ($deltaUnits > 0 && (! $product->is_semi_finished || ($warehouse->outlet_id !== null && $type !== 'transfer_in'))) {
+                throw ValidationException::withMessages(['stock' => __('Gudang outlet hanya dapat menerima produk setengah jadi melalui transfer dari Gudang Bersama.')]);
+            }
+            if ($type === 'production_output' && ($warehouse->type !== 'central' || $warehouse->outlet_id !== null || ! $product->is_semi_finished)) {
+                throw ValidationException::withMessages(['stock' => __('Hasil produksi hanya boleh menambah stok setengah jadi di Gudang Bersama.')]);
+            }
+            if ($type === 'transfer_out' && ($warehouse->type !== 'central' || $warehouse->outlet_id !== null || ! $product->is_semi_finished)) {
+                throw ValidationException::withMessages(['stock' => __('Gudang Bersama hanya dapat mengirim produk setengah jadi ke outlet.')]);
+            }
+            if ($type === 'transfer_in' && ($warehouse->type === 'central' || $warehouse->outlet_id === null || ! $product->is_semi_finished)) {
+                throw ValidationException::withMessages(['stock' => __('Stok transfer hanya dapat diterima sebagai produk setengah jadi di gudang outlet.')]);
+            }
             $balance = ProductWarehouse::query()->firstOrCreate(
                 ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
                 ['stock' => 0, 'reserved_stock' => 0, 'min_stock' => $product->min_stock, 'reorder_point' => $product->reorder_point],

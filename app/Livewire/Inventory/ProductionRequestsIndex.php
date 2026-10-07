@@ -31,6 +31,8 @@ class ProductionRequestsIndex extends Component
 
     public array $unitCosts = [];
 
+    public array $purchaseQuantities = [];
+
     public ?int $selectedRequestId = null;
 
     public ?int $selectedPurchaseId = null;
@@ -76,11 +78,14 @@ class ProductionRequestsIndex extends Component
         ]);
         $actor = User::query()->findOrFail(auth()->id());
         $outletId = (int) session('active_outlet_id');
-        $warehouse = Warehouse::query()->where('code', 'PUSAT')->where('is_active', true)->firstOrFail();
+        $warehouse = Warehouse::query()->where('code', 'PUSAT')->where('type', 'central')->whereNull('outlet_id')->where('is_active', true)->firstOrFail();
         $request = $service->create($actor, $outletId, $warehouse->id, $data['lines'], $data['notes'] ?: null, $this->idempotencyKey);
         $this->showForm = false;
         $this->idempotencyKey = (string) Str::uuid();
-        $this->dispatch('toast', type: 'success', message: __('Permintaan :number dikirim. Kebutuhan bahan dihitung dari resep.', ['number' => $request->number]));
+        $message = $request->status === 'approved'
+            ? __('Permintaan :number langsung disetujui karena bahan tersedia di gudang.', ['number' => $request->number])
+            : __('Permintaan :number dikirim ke Finance karena ada bahan yang perlu dibeli.', ['number' => $request->number]);
+        $this->dispatch('toast', type: 'success', message: $message);
     }
 
     public function openApproval(int $id): void
@@ -92,8 +97,9 @@ class ProductionRequestsIndex extends Component
         $this->approvalMaterials = $request->materials->map(fn ($line) => [
             'ingredient_id' => $line->ingredient_id, 'name' => $line->ingredient->name,
             'unit' => $line->ingredient->unit?->symbol, 'quantity' => (string) $line->purchase_quantity,
-        ])->filter(fn ($line) => (float) $line['quantity'] > 0)->values()->all();
+        ])->values()->all();
         $this->unitCosts = $request->materials->mapWithKeys(fn ($line) => [$line->ingredient_id => (string) $line->unit_cost])->all();
+        $this->purchaseQuantities = $request->materials->mapWithKeys(fn ($line) => [$line->ingredient_id => (string) $line->purchase_quantity])->all();
         $this->showApproval = true;
     }
 
@@ -102,13 +108,26 @@ class ProductionRequestsIndex extends Component
         abort_unless(auth()->user()->can('production-requests-approve'), 403);
         $this->validate([
             'selectedRequestId' => ['required', 'integer', 'exists:production_requests,id'],
-            'supplierId' => [$this->approvalMaterials === [] ? 'nullable' : 'required', 'integer', 'exists:suppliers,id'],
+            'supplierId' => [collect($this->purchaseQuantities)->sum(fn ($quantity) => (float) $quantity) <= 0 ? 'nullable' : 'required', 'integer', 'exists:suppliers,id'],
             'unitCosts' => ['required', 'array'], 'unitCosts.*' => ['required', 'numeric', 'min:0', 'max:9999999999.99999999', 'regex:/^\d+(?:\.\d{1,8})?$/'],
+            'purchaseQuantities' => ['required', 'array'], 'purchaseQuantities.*' => ['required', 'numeric', 'min:0', 'max:999999999999.999', 'regex:/^\d+(?:\.\d{1,3})?$/'],
         ]);
-        $order = $service->approveAndPurchase(User::query()->findOrFail(auth()->id()), $this->selectedRequestId, $this->supplierId !== '' ? (int) $this->supplierId : null, null, $this->unitCosts);
+        $order = $service->approveAndPurchase(User::query()->findOrFail(auth()->id()), $this->selectedRequestId, $this->supplierId !== '' ? (int) $this->supplierId : null, null, $this->unitCosts, $this->purchaseQuantities);
         $this->showApproval = false;
         $message = $order ? __('Pembelian bahan :number dibuat.', ['number' => $order->number]) : __('Permintaan disetujui karena stok bahan sudah mencukupi.');
         $this->dispatch('toast', type: 'success', message: $message);
+    }
+
+    public function getPurchaseTotalProperty(): float
+    {
+        if (! $this->selectedRequestId) {
+            return 0;
+        }
+
+        $materials = ProductionRequest::query()->with('materials')->find($this->selectedRequestId)?->materials ?? collect();
+
+        return $materials->sum(fn ($material) => (float) ($this->purchaseQuantities[$material->ingredient_id] ?? 0)
+            * (float) ($this->unitCosts[$material->ingredient_id] ?? $material->unit_cost));
     }
 
     public function openReceiving(int $purchaseId): void
@@ -158,8 +177,8 @@ class ProductionRequestsIndex extends Component
         $outletIds = app(OutletAccess::class)->outletsFor(auth()->user())->select('outlets.id');
 
         return view('livewire.inventory.production-requests-index', [
-            'requests' => ProductionRequest::query()->with(['items.product', 'materials.ingredient.unit', 'items.recipe'])->whereIn('outlet_id', $outletIds)->latest()->limit(100)->get(),
-            'purchases' => IngredientPurchaseOrder::query()->with(['request', 'items.ingredient.unit'])->whereHas('request', fn ($q) => $q->whereIn('outlet_id', $outletIds))->whereIn('status', ['ordered', 'partially_received'])->latest()->get(),
+            'requests' => ProductionRequest::query()->with(['items.product', 'materials.ingredient.unit', 'items.recipe'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->latest()->limit(100)->get(),
+            'purchases' => IngredientPurchaseOrder::query()->with(['request', 'items.ingredient.unit'])->whereHas('request', fn ($q) => $q->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id')))->whereIn('status', ['ordered', 'partially_received'])->latest()->get(),
             'products' => Product::query()->where('is_active', true)->where('is_semi_finished', true)->whereHas('recipeVersions', fn ($q) => $q->whereColumn('recipe_versions.unit_id', 'products.unit_id')->where('is_active', true))->orderBy('title')->get(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name')->get(),
         ])->layout('layouts.dashboard', ['title' => __('Permintaan produksi')]);

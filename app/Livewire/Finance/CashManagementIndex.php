@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Finance;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\BankAccount;
 use App\Models\BankAccountLedger;
 use App\Models\CashHandover;
@@ -12,13 +13,13 @@ use App\Services\Cashier\CashHandoverService;
 use App\Services\Cashier\CashierShiftService;
 use App\Services\Finance\BankAccountLedgerService;
 use App\Services\Finance\CashDepositService;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use App\Support\PasswordStepUp;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CashManagementIndex extends Component
 {
@@ -147,14 +148,9 @@ class CashManagementIndex extends Component
         PasswordStepUp::requireRecent();
         $rows = $this->ledgerQuery()->with('warehouse:id,name')->orderBy('id')->get();
 
-        return response()->streamDownload(function () use ($rows) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Tanggal', 'Gudang', 'Shift', 'Tipe', 'Jumlah', 'Saldo sebelum', 'Saldo sesudah', 'Referensi', 'Catatan']);
-            foreach ($rows as $row) {
-                fputcsv($handle, array_map(CsvCell::safe(...), [$row->created_at->format('Y-m-d H:i:s'), $row->warehouse?->name, $row->cashier_shift_id, $row->type, $row->amount, $row->balance_before, $row->balance_after, $row->reference_type.':'.$row->reference_id, $row->note]));
-            }
-            fclose($handle);
-        }, 'cash-ledger-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($row) => [$row->created_at->format('Y-m-d H:i:s'), $row->warehouse?->name, $row->cashier_shift_id, $row->type, $row->amount, $row->balance_before, $row->balance_after, $row->reference_type.':'.$row->reference_id, $row->note])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Tanggal', 'Gudang', 'Shift', 'Tipe', 'Jumlah', 'Saldo sebelum', 'Saldo sesudah', 'Referensi', 'Catatan'], $data, 'Ledger Kas'), 'cash-ledger-'.today()->toDateString().'.xlsx');
     }
 
     public function render()

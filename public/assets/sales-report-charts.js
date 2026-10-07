@@ -10,8 +10,11 @@
     function draw() {
         scheduled = false;
         const root = document.querySelector('[data-sales-report]');
-        if (!root || root.dataset.salesCharts === lastPayload) return;
-        lastPayload = root.dataset.salesCharts;
+        if (!root) return;
+        const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const payload = `${root.dataset.salesCharts}|${dark ? 'dark' : 'light'}`;
+        if (payload === lastPayload) return;
+        lastPayload = payload;
         charts.forEach(chart => chart.destroy());
         charts.clear();
 
@@ -22,18 +25,18 @@
 
         let data;
         try {
-            const bytes = Uint8Array.from(atob(lastPayload), character => character.charCodeAt(0));
+            const bytes = Uint8Array.from(atob(root.dataset.salesCharts), character => character.charCodeAt(0));
             data = JSON.parse(new TextDecoder().decode(bytes));
         } catch (_) {
             return;
         }
 
-        const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
         const base = {
             chart: { height: 300, background: 'transparent', toolbar: { show: false }, fontFamily: 'Nunito, sans-serif', animations: { enabled: false } },
             theme: { mode: dark ? 'dark' : 'light' },
             dataLabels: { enabled: false },
-            grid: { borderColor: dark ? '#42445a' : '#e5eaf1', strokeDashArray: 4 },
+            foreColor: dark ? '#c2b6a9' : '#746b63',
+            grid: { borderColor: dark ? '#4b4138' : '#e4ded7', strokeDashArray: 4 },
             tooltip: { y: { formatter: value => rupiah.format(value) } },
             noData: { text: 'Belum ada data' },
         };
@@ -54,14 +57,14 @@
             chart.render();
         };
         add('sales-chart-daily', {
-            chart: { ...base.chart, type: 'area' }, colors: ['#435ebe'],
+            chart: { ...base.chart, type: 'area' }, colors: [dark ? '#c7987e' : '#805945'],
             series: [{ name: 'Penjualan', data: data.daily.values }],
             xaxis: { categories: data.daily.labels, labels: { rotate: -45, hideOverlappingLabels: true } },
             yaxis: { labels: { formatter: value => `Rp${compact.format(value)}` } },
             stroke: { width: 3, curve: 'smooth' }, fill: { type: 'solid', opacity: 0.18 },
         });
         add('sales-chart-outlets', {
-            chart: { ...base.chart, type: 'bar' }, colors: ['#435ebe'],
+            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#c7987e' : '#805945'],
             series: [{ name: 'Penjualan', data: data.outlets.values }],
             xaxis: { categories: data.outlets.labels, labels: { trim: true } },
             yaxis: { labels: { formatter: value => `Rp${compact.format(value)}` } },
@@ -70,12 +73,13 @@
         add('sales-chart-methods', {
             chart: { ...base.chart, type: 'donut' },
             labels: data.methods.labels.map(method => ({ cash: 'Tunai', qris: 'QRIS', 'pay-later': 'Piutang', 'bank-transfer': 'Transfer' })[method] || method),
-            series: data.methods.values, colors: ['#435ebe', '#57caeb', '#5ddab4', '#ffb54a', '#9694ff'],
+            series: data.methods.values, colors: dark ? ['#c7987e', '#b6a18f', '#82917a', '#c19a61', '#a77e78'] : ['#805945', '#746b63', '#71806d', '#a8844f', '#936d68'],
+            stroke: { colors: [dark ? '#292521' : '#ffffff'], width: 2 },
             legend: { position: 'bottom' },
             plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, formatter: () => rupiah.format(data.methods.values.reduce((sum, value) => sum + value, 0)) } } } } },
         });
         add('sales-chart-products', {
-            chart: { ...base.chart, type: 'bar' }, colors: ['#57caeb'],
+            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#b6a18f' : '#9b806e'],
             series: [{ name: 'Penjualan', data: data.products.values }],
             xaxis: { categories: data.products.labels, labels: { formatter: value => `Rp${compact.format(value)}` } },
             plotOptions: { bar: { horizontal: true, borderRadius: 4 } },

@@ -1,14 +1,11 @@
 {
-  "sumber": "Weigu - ALL HPP Revisi fix.xlsx",
+  "sumber": "Weigu - ALL HPP.xlsx",
   "mata_uang": "IDR",
   "catatan": [
-    "Nilai diambil dari nilai tersimpan Excel, termasuk hasil rumus; tidak dibulatkan atau dikoreksi.",
-    "Nama dan satuan mengikuti Excel; spasi awal dan akhir teks dihapus.",
-    "null berarti sel kosong, bukan nol. Nomor asli dipertahankan walaupun berulang atau melompat.",
-    "HPP ringkasan menu dan total cost resep berasal dari sheet masing-masing dan dapat berbeda.",
-    "Rincian resep dengan qty atau harga kosong dipertahankan sebagaimana sumber; biaya saus belum tentu tercakup.",
-    "Total cost resep adalah nilai untuk skala resep pada Excel; tidak selalu harga per pcs, khususnya basic preparation kopi.",
-    "Master Bahan baris 45, nomor 42, hanya berisi nomor tanpa data bahan."
+    "Nilai diambil dari nilai tersimpan pada workbook sumber, termasuk hasil rumus; tidak dibulatkan atau dikoreksi.",
+    "Nama dan satuan mengikuti workbook; sel kosong direpresentasikan sebagai null, bukan nol.",
+    "Ringkasan menu dan total cost resep mengikuti sheet masing-masing dan dapat berbeda.",
+    "Satu kemasan kotak untuk menu dimsum isi 4 pcs tidak tercantum di workbook; item ditambahkan dengan harga dan jumlah null karena nilainya tidak tersedia pada sumber."
   ],
   "menu": [
     {
@@ -166,7 +163,7 @@
           }
         },
         {
-          "nama": "Dimsum Mentai Sauce",
+          "nama": "Dimsum Mentai Sauce ",
           "pcs": 4,
           "hpp": 799,
           "total_hpp": 3196,
@@ -220,7 +217,7 @@
           }
         },
         {
-          "nama": "Dimsum Mentai Sauce",
+          "nama": "Dimsum Mentai Sauce ",
           "pcs": 6,
           "hpp": 799,
           "total_hpp": 4794,
@@ -274,7 +271,7 @@
           }
         },
         {
-          "nama": "Dimsum Mentai Sauce",
+          "nama": "Dimsum Mentai Sauce ",
           "pcs": 8,
           "hpp": 799,
           "total_hpp": 6392,
@@ -466,7 +463,7 @@
           }
         },
         {
-          "nama": "Dimsum Mentai Sauce",
+          "nama": "Dimsum Mentai Sauce ",
           "pcs": 2,
           "hpp": 799,
           "total_hpp": 1598,
@@ -544,7 +541,7 @@
           }
         },
         {
-          "nama": "Dimsum Mentai Sauce",
+          "nama": "Dimsum Mentai Sauce ",
           "pcs": 3,
           "hpp": 799,
           "total_hpp": 2397,
@@ -706,7 +703,7 @@
           }
         },
         {
-          "nama": "Lumpia Mentai Sauce",
+          "nama": "Lumpia Mentai Sauce ",
           "pcs": 3,
           "hpp": 799,
           "total_hpp": 2397,
@@ -760,7 +757,7 @@
           }
         },
         {
-          "nama": "Lumpia Mentai Sauce",
+          "nama": "Lumpia Mentai Sauce ",
           "pcs": 5,
           "hpp": 799,
           "total_hpp": 3995,
@@ -844,7 +841,7 @@
           }
         },
         {
-          "nama": "Chikuro Mentai Sauce",
+          "nama": "Chikuro Mentai Sauce ",
           "pcs": 1,
           "hpp": 1586,
           "total_hpp": 1586,
@@ -1268,7 +1265,7 @@
           }
         },
         {
-          "nama": "Maizena",
+          "nama": "Maizena ",
           "qty": 3.1,
           "uom": "gr",
           "harga_satuan": 50,
@@ -1409,7 +1406,7 @@
       ]
     },
     {
-      "nama": "Dimsum Mentai Sauce",
+      "nama": "Dimsum Mentai Sauce ",
       "kategori": "Mentai Sauce",
       "sumber": {
         "sheet": "Mentai Sauce",
@@ -1469,7 +1466,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.31,
           "uom": "gr",
           "harga_satuan": 75,
@@ -1493,7 +1490,7 @@
       ]
     },
     {
-      "nama": "Lumpia Mentai Sauce",
+      "nama": "Lumpia Mentai Sauce ",
       "kategori": "Mentai Sauce",
       "sumber": {
         "sheet": "Mentai Sauce",
@@ -1553,7 +1550,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.31,
           "uom": "gr",
           "harga_satuan": 75,
@@ -1577,7 +1574,7 @@
       ]
     },
     {
-      "nama": "Chikuro Mentai Sauce",
+      "nama": "Chikuro Mentai Sauce ",
       "kategori": "Mentai Sauce",
       "sumber": {
         "sheet": "Mentai Sauce",
@@ -1637,7 +1634,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.7,
           "uom": "gr",
           "harga_satuan": 75,
@@ -2339,7 +2336,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.5,
           "uom": "gr",
           "harga_satuan": 75,
@@ -2497,7 +2494,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.5,
           "uom": "gr",
           "harga_satuan": 75,
@@ -2666,7 +2663,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.4,
           "uom": "gr",
           "harga_satuan": 75,
@@ -2743,7 +2740,7 @@
           }
         },
         {
-          "nama": "Kulit Dimsum",
+          "nama": "Kulit Dimsum ",
           "qty": 1,
           "uom": "pcs",
           "harga_satuan": 132.978723,
@@ -2835,7 +2832,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.4,
           "uom": "gr",
           "harga_satuan": 75,
@@ -2912,7 +2909,7 @@
           }
         },
         {
-          "nama": "Kulit Dimsum",
+          "nama": "Kulit Dimsum ",
           "qty": 1,
           "uom": "pcs",
           "harga_satuan": 132.978723,
@@ -3004,7 +3001,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.4,
           "uom": "gr",
           "harga_satuan": 75,
@@ -3081,7 +3078,7 @@
           }
         },
         {
-          "nama": "Kulit Dimsum",
+          "nama": "Kulit Dimsum ",
           "qty": 1,
           "uom": "pcs",
           "harga_satuan": 132.978723,
@@ -3173,7 +3170,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.4,
           "uom": "gr",
           "harga_satuan": 75,
@@ -3250,7 +3247,7 @@
           }
         },
         {
-          "nama": "Kulit Dimsum",
+          "nama": "Kulit Dimsum ",
           "qty": 1,
           "uom": "pcs",
           "harga_satuan": 132.978723,
@@ -3342,7 +3339,7 @@
           }
         },
         {
-          "nama": "Minyak Wijen",
+          "nama": "Minyak Wijen ",
           "qty": 0.4,
           "uom": "gr",
           "harga_satuan": 75,
@@ -3419,7 +3416,7 @@
           }
         },
         {
-          "nama": "Kulit Dimsum",
+          "nama": "Kulit Dimsum ",
           "qty": 1,
           "uom": "pcs",
           "harga_satuan": 132.978723,
@@ -3576,7 +3573,7 @@
       ]
     },
     {
-      "nama": "Creamer",
+      "nama": "Creamer ",
       "kategori": "KOPI EVENT",
       "sumber": {
         "sheet": "KOPI EVENT",
@@ -3729,7 +3726,7 @@
     },
     {
       "no": 7,
-      "nama": "Minyak Wijen",
+      "nama": "Minyak Wijen ",
       "weight": 600,
       "uom": "gr",
       "harga_satuan": 75,
@@ -4005,7 +4002,7 @@
     },
     {
       "no": 30,
-      "nama": "Maizena",
+      "nama": "Maizena ",
       "weight": 300,
       "uom": "gr",
       "harga_satuan": 50,
@@ -4041,7 +4038,7 @@
     },
     {
       "no": 33,
-      "nama": "Kulit Dimsum",
+      "nama": "Kulit Dimsum ",
       "weight": 47,
       "uom": "pcs",
       "harga_satuan": 132.978723,
@@ -4163,7 +4160,7 @@
     },
     {
       "no": 2,
-      "nama": "Sumpit",
+      "nama": "Sumpit ",
       "qty": 3000,
       "uom": "Pcs",
       "harga_satuan": 88,
@@ -4175,7 +4172,7 @@
     },
     {
       "no": 3,
-      "nama": "Cup",
+      "nama": "Cup ",
       "qty": 350,
       "uom": "Pcs",
       "harga_satuan": 100,
@@ -4220,6 +4217,18 @@
         "sheet": "Packaging",
         "baris": 7
       }
+    },
+    {
+      "no": 7,
+      "nama": "Kotak box dimsum 4 pcs",
+      "qty": null,
+      "uom": "Pcs",
+      "harga_satuan": null,
+      "harga_total": null,
+      "sumber": {
+        "sheet": "Tambahan manual",
+        "baris": null
+      }
     }
   ],
   "energi": {
@@ -4227,7 +4236,7 @@
     "rincian": [
       {
         "no": 1,
-        "keterangan": "Sewa Lapak",
+        "keterangan": "Sewa Lapak ",
         "total_harga": 1900000,
         "pembagi": 26,
         "satuan_pembagi": "Day",

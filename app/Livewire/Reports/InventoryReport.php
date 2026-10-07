@@ -2,12 +2,13 @@
 
 namespace App\Livewire\Reports;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\ProductWarehouse;
 use App\Models\Warehouse;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InventoryReport extends Component
@@ -50,14 +51,9 @@ class InventoryReport extends Component
         $rows = (clone $query)->with(['product:id,title,sku,unit_id,reorder_point,buy_price', 'product.unit:id,name,symbol', 'warehouse:id,name,outlet_id'])->orderBy('product_id')->get();
         $outletNames = $access->outletsFor(auth()->user())->pluck('name', 'id');
 
-        return response()->streamDownload(function () use ($rows, $outletNames): void {
-            $stream = fopen('php://output', 'w');
-            fputcsv($stream, ['Produk', 'SKU', 'Outlet', 'Gudang', 'Satuan', 'Stok', 'Reserved', 'Reorder point', 'Nilai beli']);
-            foreach ($rows as $row) {
-                fputcsv($stream, array_map(CsvCell::safe(...), [$row->product?->title, $row->product?->sku, $outletNames[$row->warehouse?->outlet_id] ?? '', $row->warehouse?->name, $row->product?->unit?->symbol, $row->stock, $row->reserved_stock, $row->reorder_point, (float) $row->stock * (float) ($row->product?->buy_price ?? 0)]));
-            }
-            fclose($stream);
-        }, 'inventory-'.($this->outletId ?: 'all').'-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($row) => [$row->product?->title, $row->product?->sku, $outletNames[$row->warehouse?->outlet_id] ?? '', $row->warehouse?->name, $row->product?->unit?->symbol, $row->stock, $row->reserved_stock, $row->reorder_point, (float) $row->stock * (float) ($row->product?->buy_price ?? 0)])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Produk', 'SKU', 'Outlet', 'Gudang', 'Satuan', 'Stok', 'Reserved', 'Reorder point', 'Nilai beli'], $data, 'Inventori'), 'inventory-'.($this->outletId ?: 'all').'-'.today()->toDateString().'.xlsx');
     }
 
     public function render(OutletAccess $access)

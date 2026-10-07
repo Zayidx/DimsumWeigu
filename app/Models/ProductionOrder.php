@@ -22,4 +22,14 @@ class ProductionOrder extends Model
     {
         return $this->belongsTo(ProductionRequest::class, 'production_request_id');
     }
+
+    public function shift()
+    {
+        return $this->belongsTo(ProductionShift::class, 'production_shift_id');
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 }

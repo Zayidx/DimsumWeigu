@@ -24,7 +24,7 @@ class ReceivablesIndex extends Component
         $this->permit('receivables-collect');
         $receivable = $this->query()->whereKey($id)->firstOrFail();
         $this->receivableId = $id;
-        $this->amount = number_format((float)$receivable->amount - (float)$receivable->paid_amount, 2, '.', '');
+        $this->amount = \App\Support\DisplayNumber::format((float)$receivable->amount - (float)$receivable->paid_amount, 2, '.', '');
         $this->method = 'bank-transfer'; $this->reference = ''; $this->idempotencyKey = (string) Str::uuid(); $this->showForm = true;
     }
 

@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Reports;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\Payable;
 use App\Models\Receivable;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AgingReport extends Component
@@ -20,17 +22,15 @@ class AgingReport extends Component
         abort_unless(auth()->user()->can('reports-export'), 403);
         [$receivables,$payables] = $this->reports($access);
 
-        return response()->streamDownload(function () use ($receivables, $payables): void {
-            $stream = fopen('php://output', 'w');
-            fputcsv($stream, ['Jenis', 'Kelompok umur', 'Jumlah dokumen', 'Saldo']);
-            foreach (['Piutang' => $receivables, 'Hutang' => $payables] as $type => $rows) {
-                foreach (self::BUCKETS as $key => $label) {
-                    $row = $rows->firstWhere('bucket', $key);
-                    fputcsv($stream, [$type, $label, $row->item_count ?? 0, $row->outstanding ?? 0]);
-                }
+        $data = [];
+        foreach (['Piutang' => $receivables, 'Hutang' => $payables] as $type => $rows) {
+            foreach (self::BUCKETS as $key => $label) {
+                $row = $rows->firstWhere('bucket', $key);
+                $data[] = [$type, $label, $row->item_count ?? 0, $row->outstanding ?? 0];
             }
-            fclose($stream);
-        }, 'aging-'.($this->outletId ?: 'all').'-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        }
+
+        return Excel::download(new MasterDataExcelExport(['Jenis', 'Kelompok umur', 'Jumlah dokumen', 'Saldo'], $data, 'Aging'), 'aging-'.($this->outletId ?: 'all').'-'.today()->toDateString().'.xlsx');
     }
 
     public function render(OutletAccess $access)

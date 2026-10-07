@@ -30,7 +30,7 @@ class PayablesIndex extends Component
         $this->permit('payables-pay');
         $payable = $this->query()->whereKey($id)->firstOrFail();
         $this->payableId = $id;
-        $this->amount = number_format((float) $payable->amount - (float) $payable->paid_amount, 2, '.', '');
+        $this->amount = \App\Support\DisplayNumber::format((float) $payable->amount - (float) $payable->paid_amount, 2, '.', '');
         $this->method = 'bank-transfer';
         $this->reference = '';
         $this->idempotencyKey = (string) Str::uuid();

@@ -15,9 +15,9 @@
                             <td>{{ $payable->ingredient_goods_receiving_id ? 'Bahan baku' : 'Produk' }}</td>
                             <td>{{ $payable->supplier?->name ?? '—' }}</td>
                             <td>{{ $payable->due_at?->format('d/m/Y') ?? '—' }}</td>
-                            <td>Rp {{ number_format((float) $payable->amount, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format((float) $payable->paid_amount, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($remaining, 0, ',', '.') }}</td>
+                            <td>Rp {{ \App\Support\DisplayNumber::format((float) $payable->amount, 0, ',', '.') }}</td>
+                            <td>Rp {{ \App\Support\DisplayNumber::format((float) $payable->paid_amount, 0, ',', '.') }}</td>
+                            <td>Rp {{ \App\Support\DisplayNumber::format($remaining, 0, ',', '.') }}</td>
                             <td><span class="badge {{ $payable->status === 'paid' ? 'bg-light-success text-success' : 'bg-light-warning text-warning' }}">{{ str($payable->status)->headline() }}</span></td>
                             <td>@if($remaining > 0)@can('payables-pay')<button wire:click="openPayment({{ $payable->id }})" class="btn btn-sm btn-primary">Bayar</button>@endcan @endif</td>
                         </tr>

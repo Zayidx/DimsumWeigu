@@ -29,9 +29,11 @@ class PurchasingService
         if ($items === []) {
             throw ValidationException::withMessages(['items' => __('Tambahkan setidaknya satu produk.')]);
         }
+
         return DB::transaction(function () use ($supplierId, $warehouseId, $items, $notes, $expectedAt) {
             $supplier = Supplier::query()->whereKey($supplierId)->where('is_active', true)->firstOrFail();
             $warehouse = $this->warehouseForUser($warehouseId);
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Pembelian stok gudang hanya ditujukan ke Gudang Bersama.'));
             $order = PurchaseOrder::query()->create([
                 'number' => 'PO-'.now()->format('ymdHis').'-'.Str::upper(Str::random(5)),
                 'supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'created_by' => auth()->id(),
@@ -39,7 +41,7 @@ class PurchasingService
             ]);
             $subtotal = $taxTotal = 0;
             foreach ($items as $row) {
-                $product = Product::query()->whereKey((int) ($row['product_id'] ?? 0))->where('is_active', true)->firstOrFail();
+                $product = Product::query()->whereKey((int) ($row['product_id'] ?? 0))->where('is_active', true)->where('track_stock', true)->where('is_semi_finished', true)->firstOrFail();
                 $quantity = FixedDecimal::quantity((string) ($row['quantity'] ?? '0'));
                 $unitCost = FixedDecimal::money((string) ($row['unit_cost'] ?? '0'));
                 $taxRate = (int) round((float) ($row['tax_rate'] ?? 0) * 100);
@@ -60,6 +62,7 @@ class PurchasingService
             }
             $order->forceFill(['subtotal' => FixedDecimal::moneyText($subtotal), 'tax_total' => FixedDecimal::moneyText($taxTotal), 'grand_total' => FixedDecimal::moneyText($subtotal + $taxTotal)])->save();
             $this->audit->record('purchase_order.created', $order, null, ['number' => $order->number, 'supplier_id' => $supplier->id, 'warehouse_id' => $warehouse->id, 'item_count' => count($items)]);
+
             return $order->load('items.product', 'supplier', 'warehouse');
         }, attempts: 3);
     }
@@ -67,15 +70,18 @@ class PurchasingService
     public function order(int $purchaseOrderId): PurchaseOrder
     {
         abort_unless(auth()->user()?->can('purchase-orders-order'), 403);
+
         return DB::transaction(function () use ($purchaseOrderId) {
             $order = PurchaseOrder::query()->with('items')->whereKey($purchaseOrderId)->lockForUpdate()->firstOrFail();
-            $this->warehouseForUser($order->warehouse_id);
+            $warehouse = $this->warehouseForUser($order->warehouse_id);
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Pembelian stok hanya dapat diproses untuk Gudang Bersama.'));
             if ($order->status !== 'draft' || $order->items->isEmpty()) {
                 throw ValidationException::withMessages(['order' => __('Hanya PO draft dengan item yang dapat dipesan.')]);
             }
             $before = ['status' => $order->status];
             $order->forceFill(['status' => 'ordered', 'ordered_at' => today()])->save();
             $this->audit->record('purchase_order.ordered', $order, $before, ['status' => $order->status, 'ordered_at' => $order->ordered_at?->toDateString()]);
+
             return $order->refresh();
         }, attempts: 3);
     }
@@ -83,6 +89,7 @@ class PurchasingService
     public function cancel(int $purchaseOrderId): PurchaseOrder
     {
         abort_unless(auth()->user()?->can('purchase-orders-cancel'), 403);
+
         return DB::transaction(function () use ($purchaseOrderId) {
             $order = PurchaseOrder::query()->whereKey($purchaseOrderId)->lockForUpdate()->firstOrFail();
             $this->warehouseForUser($order->warehouse_id);
@@ -92,6 +99,7 @@ class PurchasingService
             $before = ['status' => $order->status];
             $order->forceFill(['status' => 'cancelled'])->save();
             $this->audit->record('purchase_order.cancelled', $order, $before, ['status' => $order->status]);
+
             return $order->refresh();
         }, attempts: 3);
     }
@@ -103,16 +111,19 @@ class PurchasingService
         if ($idempotencyKey === '' || strlen($idempotencyKey) > 96) {
             throw ValidationException::withMessages(['idempotency_key' => __('Kunci penerimaan tidak valid.')]);
         }
+
         return DB::transaction(function () use ($purchaseOrderId, $receivedItems, $idempotencyKey, $notes) {
             $existing = GoodsReceiving::query()->where('idempotency_key', $idempotencyKey)->first();
             if ($existing) {
                 if ($existing->purchase_order_id !== $purchaseOrderId) {
                     throw ValidationException::withMessages(['idempotency_key' => __('Kunci ini sudah digunakan untuk PO lain.')]);
                 }
+
                 return $existing->load('items');
             }
             $order = PurchaseOrder::query()->with('items.product')->whereKey($purchaseOrderId)->lockForUpdate()->firstOrFail();
             $warehouse = $this->warehouseForUser($order->warehouse_id);
+            abort_unless($warehouse->type === 'central' && $warehouse->outlet_id === null, 403, __('Penerimaan stok pembelian hanya dapat dicatat di Gudang Bersama.'));
             if (! in_array($order->status, ['ordered', 'partial'], true)) {
                 throw ValidationException::withMessages(['order' => __('PO belum dipesan atau sudah selesai.')]);
             }
@@ -190,6 +201,7 @@ class PurchasingService
                 'number' => $receiving->number, 'purchase_order_id' => $order->id,
                 'accepted_payable' => FixedDecimal::moneyText($payableAmount), 'item_count' => count($receivedItems),
             ]);
+
             return $receiving->load('items', 'order');
         }, attempts: 3);
     }
@@ -202,6 +214,7 @@ class PurchasingService
         } else {
             app(OutletAccess::class)->require(auth()->user(), $warehouse->outlet_id);
         }
+
         return $warehouse;
     }
 }

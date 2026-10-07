@@ -60,7 +60,7 @@
                         <div class="card-header"><h2 id="role-work-title" class="card-title mb-0">Pekerjaan yang perlu dicek</h2></div>
                         <div class="card-body dashboard-role-list">
                             @foreach ($workItems as $item)
-                                <a href="{{ $item['url'] }}"><span>{{ $item['label'] }}</span><strong>{{ number_format($item['count']) }}</strong></a>
+                                <a href="{{ $item['url'] }}"><span>{{ $item['label'] }}</span><strong>{{ \App\Support\DisplayNumber::format($item['count']) }}</strong></a>
                             @endforeach
                         </div>
                     </section>
@@ -76,7 +76,7 @@
                 @foreach ($recentTransactions as $transaction)
                     <a href="{{ route('transactions.show', $transaction) }}">
                         <span>{{ $transaction->number }}<small class="d-block text-muted">{{ $transaction->occurred_at?->format('d M Y, H:i') }}</small></span>
-                        <strong>Rp{{ number_format($transaction->grand_total, 0, ',', '.') }}</strong>
+                        <strong>Rp{{ \App\Support\DisplayNumber::format($transaction->grand_total, 0, ',', '.') }}</strong>
                     </a>
                 @endforeach
             </div>

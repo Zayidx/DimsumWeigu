@@ -1,4 +1,4 @@
-﻿<div>
+<div>
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <p class="text-muted mb-0">Resep dapat menggabungkan bahan baku dan produk setengah jadi. Untuk menu paket, pilih satuan paket agar HPP dan pemakaian stok dihitung per paket.</p>
         @can('recipes-create')<button class="btn btn-primary" wire:click="create"><i class="bi bi-journal-plus me-1"></i>Buat versi resep</button>@endcan
@@ -13,10 +13,10 @@
                         <td><strong>{{ $recipe->product?->title }}</strong><div class="small text-muted">{{ $recipe->product?->sku }} · {{ $recipe->unit?->symbol }}</div></td>
                         <td>v{{ $recipe->version }}</td>
                         <td>
-                            @foreach($recipe->items as $item)<div>{{ $item->ingredient?->name }}: {{ number_format((float)$item->quantity, 3, ',', '.') }} {{ $item->ingredient?->unit?->symbol }}</div>@endforeach
-                            @foreach($recipe->productItems as $item)<div>{{ $item->product?->title }}: {{ number_format((float)$item->quantity, 3, ',', '.') }} {{ $item->unit?->symbol }}</div>@endforeach
+                            @foreach($recipe->items as $item)<div>{{ $item->ingredient?->name }}: {{ \App\Support\DisplayNumber::format((float)$item->quantity, 3, ',', '.') }} {{ $item->ingredient?->unit?->symbol }}</div>@endforeach
+                            @foreach($recipe->productItems as $item)<div>{{ $item->product?->title }}: {{ \App\Support\DisplayNumber::format((float)$item->quantity, 3, ',', '.') }} {{ $item->unit?->symbol }}</div>@endforeach
                         </td>
-                        <td class="text-end fw-semibold">Rp {{ number_format((float)$recipe->estimated_hpp, 2, ',', '.') }}</td>
+                        <td class="text-end fw-semibold">Rp {{ \App\Support\DisplayNumber::format((float)$recipe->estimated_hpp, 2, ',', '.') }}</td>
                         <td>{{ $recipe->starts_at?->format('d/m/Y H:i') ?? '—' }}</td>
                     </tr>
                 @empty
@@ -45,9 +45,9 @@
                                 <div class="col-12 col-md-2"><label class="form-label" for="recipe-type-{{ $index }}">Jenis</label><select id="recipe-type-{{ $index }}" wire:model.live="lines.{{ $index }}.type" class="form-select"><option value="ingredient">Bahan</option><option value="product">Setengah jadi</option></select></div>
                                 <div class="col-12 col-md-4">
                                     @if(($line['type'] ?? 'ingredient') === 'product')
-                                        <label class="form-label" for="recipe-product-{{ $index }}">Produk setengah jadi</label><select id="recipe-product-{{ $index }}" wire:model="lines.{{ $index }}.component_product_id" class="form-select" required><option value="">Pilih produk</option>@foreach($semiFinishedProducts as $component)<option value="{{ $component->id }}">{{ $component->title }} · {{ $component->unit?->symbol }} · Rp {{ number_format((float)$component->buy_price, 0, ',', '.') }}</option>@endforeach</select>
+                                        <label class="form-label" for="recipe-product-{{ $index }}">Produk setengah jadi</label><select id="recipe-product-{{ $index }}" wire:model="lines.{{ $index }}.component_product_id" class="form-select" required><option value="">Pilih produk</option>@foreach($semiFinishedProducts as $component)<option value="{{ $component->id }}">{{ $component->title }} · {{ $component->unit?->symbol }} · Rp {{ \App\Support\DisplayNumber::format((float)$component->buy_price, 0, ',', '.') }}</option>@endforeach</select>
                                     @else
-                                        <label class="form-label" for="recipe-ingredient-{{ $index }}">Bahan baku / saus / kemasan</label><select id="recipe-ingredient-{{ $index }}" wire:model="lines.{{ $index }}.ingredient_id" class="form-select" required><option value="">Pilih bahan</option>@foreach($ingredients as $ingredient)<option value="{{ $ingredient->id }}">{{ $ingredient->name }} · {{ $ingredient->unit?->symbol }} · Rp {{ number_format((float)$ingredient->buy_price, 0, ',', '.') }}</option>@endforeach</select>
+                                        <label class="form-label" for="recipe-ingredient-{{ $index }}">Bahan baku / saus / kemasan</label><select id="recipe-ingredient-{{ $index }}" wire:model="lines.{{ $index }}.ingredient_id" class="form-select" required><option value="">Pilih bahan</option>@foreach($ingredients as $ingredient)<option value="{{ $ingredient->id }}">{{ $ingredient->name }} · {{ $ingredient->unit?->symbol }} · Rp {{ \App\Support\DisplayNumber::format((float)$ingredient->buy_price, 0, ',', '.') }}</option>@endforeach</select>
                                     @endif
                                 </div>
                                 <div class="col-6 col-md-3"><label class="form-label" for="recipe-qty-{{ $index }}">Qty / output</label><input id="recipe-qty-{{ $index }}" type="number" min="0.001" step="0.001" wire:model="lines.{{ $index }}.quantity" class="form-control" required></div>

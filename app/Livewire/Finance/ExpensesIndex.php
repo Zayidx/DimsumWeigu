@@ -2,16 +2,17 @@
 
 namespace App\Livewire\Finance;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\ExpenseCategory;
 use App\Models\OutletExpense;
 use App\Models\Warehouse;
 use App\Services\Finance\OperatingCostService;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ExpensesIndex extends Component
 {
@@ -95,14 +96,9 @@ class ExpensesIndex extends Component
         $this->permit('reports-export');
         $rows = $this->query()->with(['warehouse:id,name', 'user:id,name'])->orderBy('occurred_on')->get();
 
-        return response()->streamDownload(function () use ($rows) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Tanggal', 'Gudang', 'Kategori', 'Jumlah', 'Metode', 'Referensi', 'Keterangan', 'Petugas']);
-            foreach ($rows as $row) {
-                fputcsv($handle, array_map(CsvCell::safe(...), [$row->occurred_on->toDateString(), $row->warehouse?->name, $row->category, $row->amount, $row->method, $row->reference, $row->description, $row->user?->name]));
-            }
-            fclose($handle);
-        }, 'expenses-'.today()->toDateString().'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($row) => [$row->occurred_on->toDateString(), $row->warehouse?->name, $row->category, $row->amount, $row->method, $row->reference, $row->description, $row->user?->name])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Tanggal', 'Gudang', 'Kategori', 'Jumlah', 'Metode', 'Referensi', 'Keterangan', 'Petugas'], $data, 'Pengeluaran'), 'expenses-'.today()->toDateString().'.xlsx');
     }
 
     public function render()

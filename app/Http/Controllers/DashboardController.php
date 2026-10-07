@@ -15,6 +15,7 @@ use App\Models\Receivable;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\Warehouse;
+use App\Support\DisplayNumber;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -215,10 +216,10 @@ class DashboardController extends Controller
             $shift = CashierShift::query()->with('warehouse:id,name')->whereIn('outlet_id', $outletIds)->where('open_user_id', $user->id)->where('status', 'open')->latest('opened_at')->first();
             $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);
             $metrics->push(['label' => 'Shift saya', 'value' => $shift ? 'Terbuka' : 'Belum dibuka', 'detail' => $shift?->warehouse?->name ?? 'Buka shift sebelum melayani penjualan.']);
-            $metrics->push(['label' => 'Transaksi saya hari ini', 'value' => number_format((clone $sales)->count()), 'detail' => 'Transaksi selesai milik Anda.']);
-            $metrics->push(['label' => 'Penjualan saya hari ini', 'value' => 'Rp'.number_format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Nilai transaksi selesai, termasuk yang belum lunas.']);
+            $metrics->push(['label' => 'Transaksi saya hari ini', 'value' => DisplayNumber::format((clone $sales)->count()), 'detail' => 'Transaksi selesai milik Anda.']);
+            $metrics->push(['label' => 'Penjualan saya hari ini', 'value' => 'Rp'.DisplayNumber::format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Nilai transaksi selesai, termasuk yang belum lunas.']);
             if ($shift && $user->can('cash-management-access')) {
-                $metrics->push(['label' => 'Kas shift saat ini', 'value' => 'Rp'.number_format((float) $shift->expected_cash, 0, ',', '.'), 'detail' => 'Kas fisik yang diharapkan pada shift aktif.']);
+                $metrics->push(['label' => 'Kas shift saat ini', 'value' => 'Rp'.DisplayNumber::format((float) $shift->expected_cash, 0, ',', '.'), 'detail' => 'Kas fisik yang diharapkan pada shift aktif.']);
             }
             if ($user->can('transactions-access')) {
                 $recentTransactions = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->latest('occurred_at')->limit(5)->get();
@@ -238,10 +239,10 @@ class DashboardController extends Controller
             $lowStock = ProductWarehouse::query()->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')
                 ->whereHas('product', fn (Builder $q) => $q->where('is_active', true));
             $handovers = CashHandover::query()->whereIn('source_warehouse_id', $warehouseIds)->whereIn('status', ['pending', 'approved']);
-            $metrics->push(['label' => 'Penjualan hari ini', 'value' => 'Rp'.number_format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Transaksi selesai pada lokasi terpilih.']);
-            $metrics->push(['label' => 'Shift terbuka', 'value' => number_format((clone $openShifts)->count()), 'detail' => 'Kasir yang sedang bertugas.']);
-            $metrics->push(['label' => 'Stok perlu dicek', 'value' => number_format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
-            $metrics->push(['label' => 'Serah terima kas aktif', 'value' => number_format((clone $handovers)->count()), 'detail' => 'Menunggu persetujuan atau penerimaan.']);
+            $metrics->push(['label' => 'Penjualan hari ini', 'value' => 'Rp'.DisplayNumber::format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Transaksi selesai pada lokasi terpilih.']);
+            $metrics->push(['label' => 'Shift terbuka', 'value' => DisplayNumber::format((clone $openShifts)->count()), 'detail' => 'Kasir yang sedang bertugas.']);
+            $metrics->push(['label' => 'Stok perlu dicek', 'value' => DisplayNumber::format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
+            $metrics->push(['label' => 'Serah terima kas aktif', 'value' => DisplayNumber::format((clone $handovers)->count()), 'detail' => 'Menunggu persetujuan atau penerimaan.']);
             $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
             $addWorkItem('cash-management-access', 'Tinjau serah terima kas', (clone $handovers)->count(), 'cash-management.index');
             $addAction('transactions-access', 'Pantau transaksi', 'transactions.index', 'bi-receipt');
@@ -255,23 +256,23 @@ class DashboardController extends Controller
             $production = ProductionOrder::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)->where('status', 'in_production');
             $incomingCash = CashHandover::query()->whereIn('destination_warehouse_id', $warehouseIds)->where('status', 'approved');
             if ($user->can('inventory-access')) {
-                $metrics->push(['label' => 'Stok perlu dicek', 'value' => number_format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
+                $metrics->push(['label' => 'Stok perlu dicek', 'value' => DisplayNumber::format((clone $lowStock)->count()), 'detail' => 'Saldo mencapai batas pesan ulang.']);
                 $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
             }
             if ($user->can('goods-receivings-access')) {
-                $metrics->push(['label' => 'Menunggu penerimaan', 'value' => number_format((clone $orders)->count()), 'detail' => 'Pesanan yang masih perlu diterima.']);
+                $metrics->push(['label' => 'Menunggu penerimaan', 'value' => DisplayNumber::format((clone $orders)->count()), 'detail' => 'Pesanan yang masih perlu diterima.']);
                 $addWorkItem('goods-receivings-access', 'Terima barang', (clone $orders)->count(), 'goods-receivings.index');
             }
             if ($user->can('production-requests-access')) {
-                $metrics->push(['label' => 'Permintaan produksi aktif', 'value' => number_format((clone $requests)->count()), 'detail' => 'Permintaan pada lokasi terpilih.']);
+                $metrics->push(['label' => 'Permintaan produksi aktif', 'value' => DisplayNumber::format((clone $requests)->count()), 'detail' => 'Permintaan pada lokasi terpilih.']);
                 $addWorkItem('production-requests-access', 'Tinjau permintaan produksi', (clone $requests)->count(), 'production-requests.index');
             }
             if ($user->can('production-orders-access')) {
-                $metrics->push(['label' => 'Sedang diproduksi', 'value' => number_format((clone $production)->count()), 'detail' => 'Pesanan produksi belum selesai.']);
+                $metrics->push(['label' => 'Sedang diproduksi', 'value' => DisplayNumber::format((clone $production)->count()), 'detail' => 'Pesanan produksi belum selesai.']);
                 $addWorkItem('production-orders-access', 'Lanjutkan produksi', (clone $production)->count(), 'production-orders.index');
             }
             if ($user->can('cash-management-access')) {
-                $metrics->push(['label' => 'Kas menunggu diterima', 'value' => number_format((clone $incomingCash)->count()), 'detail' => 'Serah terima yang sudah dikirim ke lokasi terpilih.']);
+                $metrics->push(['label' => 'Kas menunggu diterima', 'value' => DisplayNumber::format((clone $incomingCash)->count()), 'detail' => 'Serah terima yang sudah dikirim ke lokasi terpilih.']);
                 $addWorkItem('cash-management-access', 'Konfirmasi penerimaan kas', (clone $incomingCash)->count(), 'cash-management.index');
             }
             $addAction('inventory-access', 'Buka inventori', 'inventory.index', 'bi-box-seam');
@@ -287,15 +288,15 @@ class DashboardController extends Controller
             if ($user->can('payables-access')) {
                 $balance = (clone $payables)->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as balance')->value('balance');
                 $overdue = (clone $payables)->whereDate('due_at', '<=', today())->count();
-                $metrics->push(['label' => 'Sisa utang', 'value' => 'Rp'.number_format((float) $balance, 0, ',', '.'), 'detail' => 'Belum dibayar pada lokasi terpilih.']);
-                $metrics->push(['label' => 'Utang jatuh tempo', 'value' => number_format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
+                $metrics->push(['label' => 'Sisa utang', 'value' => 'Rp'.DisplayNumber::format((float) $balance, 0, ',', '.'), 'detail' => 'Belum dibayar pada lokasi terpilih.']);
+                $metrics->push(['label' => 'Utang jatuh tempo', 'value' => DisplayNumber::format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
                 $addWorkItem('payables-access', 'Tinjau utang jatuh tempo', $overdue, 'payables.index');
             }
             if ($user->can('receivables-access')) {
                 $balance = (clone $receivables)->selectRaw('COALESCE(SUM(amount - paid_amount), 0) as balance')->value('balance');
                 $overdue = (clone $receivables)->whereDate('due_at', '<=', today())->count();
-                $metrics->push(['label' => 'Sisa piutang', 'value' => 'Rp'.number_format((float) $balance, 0, ',', '.'), 'detail' => 'Belum diterima pada lokasi terpilih.']);
-                $metrics->push(['label' => 'Piutang jatuh tempo', 'value' => number_format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
+                $metrics->push(['label' => 'Sisa piutang', 'value' => 'Rp'.DisplayNumber::format((float) $balance, 0, ',', '.'), 'detail' => 'Belum diterima pada lokasi terpilih.']);
+                $metrics->push(['label' => 'Piutang jatuh tempo', 'value' => DisplayNumber::format($overdue), 'detail' => 'Jatuh tempo hari ini atau sebelumnya.']);
                 $addWorkItem('receivables-access', 'Tinjau piutang jatuh tempo', $overdue, 'receivables.index');
             }
             $addAction('payables-access', 'Buka utang', 'payables.index', 'bi-wallet2');

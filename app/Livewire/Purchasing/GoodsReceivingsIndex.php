@@ -5,6 +5,7 @@ namespace App\Livewire\Purchasing;
 use App\Models\GoodsReceiving;
 use App\Models\PurchaseOrder;
 use App\Services\Purchasing\PurchasingService;
+use App\Support\DisplayNumber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -15,8 +16,11 @@ class GoodsReceivingsIndex extends Component
     use WithPagination;
 
     public ?int $purchaseOrderId = null;
+
     public array $items = [];
+
     public string $notes = '';
+
     public bool $showForm = false;
 
     public function begin(int $id): void
@@ -27,13 +31,22 @@ class GoodsReceivingsIndex extends Component
         $this->items = [];
         foreach ($order->items as $item) {
             $open = max(0, (float) $item->quantity_ordered - (float) $item->quantity_received);
-            if ($open > 0) $this->items[$item->id] = ['quantity' => number_format($open, 3, '.', ''), 'accepted' => number_format($open, 3, '.', ''), 'batch_number' => '', 'expires_at' => '', 'qc_note' => ''];
+            if ($open > 0) {
+                $this->items[$item->id] = ['quantity' => DisplayNumber::format($open, 3, '.', ''), 'accepted' => DisplayNumber::format($open, 3, '.', ''), 'batch_number' => '', 'expires_at' => '', 'qc_note' => ''];
+            }
         }
         $this->notes = '';
         $this->showForm = true;
     }
 
-    public function closeForm(): void { $this->showForm = false; $this->purchaseOrderId = null; $this->items = []; $this->notes = ''; $this->resetValidation(); }
+    public function closeForm(): void
+    {
+        $this->showForm = false;
+        $this->purchaseOrderId = null;
+        $this->items = [];
+        $this->notes = '';
+        $this->resetValidation();
+    }
 
     public function receive(PurchasingService $service): void
     {
@@ -54,6 +67,7 @@ class GoodsReceivingsIndex extends Component
     public function render()
     {
         $this->authorizePermission('goods-receivings-access');
+
         return view('livewire.purchasing.goods-receivings-index', [
             'orders' => $this->allowedOrders()->with(['supplier:id,name', 'warehouse:id,name'])->withCount('items')->latest('ordered_at')->paginate(20),
             'receivings' => GoodsReceiving::query()->with(['supplier:id,name', 'warehouse:id,name', 'order:id,number'])->whereIn('warehouse_id', $this->allowedOrders()->select('warehouse_id'))->latest('received_at')->limit(25)->get(),
@@ -63,11 +77,11 @@ class GoodsReceivingsIndex extends Component
 
     private function allowedOrders(): Builder
     {
-        $outletId = (int) session('active_outlet_id');
-        return PurchaseOrder::query()->whereIn('status', ['ordered', 'partial'])->whereHas('warehouse', function (Builder $query) use ($outletId) {
-            $query->where('outlet_id', $outletId);
-            if (auth()->user()->hasRole('super-admin') || auth()->user()->can('warehouses-access')) $query->orWhereNull('outlet_id');
-        });
+        return PurchaseOrder::query()->whereIn('status', ['ordered', 'partial'])->whereHas('warehouse', fn (Builder $query) => $query->where('type', 'central')->whereNull('outlet_id'));
     }
-    private function authorizePermission(string $permission): void { abort_unless(auth()->user()?->can($permission), 403); }
+
+    private function authorizePermission(string $permission): void
+    {
+        abort_unless(auth()->user()?->can($permission), 403);
+    }
 }

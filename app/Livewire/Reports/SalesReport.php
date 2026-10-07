@@ -2,16 +2,17 @@
 
 namespace App\Livewire\Reports;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\CashierShift;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\TransactionTender;
 use App\Models\Warehouse;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SalesReport extends Component
@@ -70,14 +71,9 @@ class SalesReport extends Component
         $query = $this->query($access);
         $rows = (clone $query)->with(['user:id,name', 'warehouse:id,name', 'customer:id,name', 'tenders'])->orderBy('occurred_at')->get();
 
-        return response()->streamDownload(function () use ($rows): void {
-            $stream = fopen('php://output', 'w');
-            fputcsv($stream, ['Nomor', 'Waktu', 'Pelanggan', 'Kasir', 'Gudang', 'Metode', 'Status pembayaran', 'Subtotal', 'Diskon', 'Pajak', 'Total', 'Dibayar']);
-            foreach ($rows as $transaction) {
-                fputcsv($stream, array_map(CsvCell::safe(...), [$transaction->number, $transaction->occurred_at?->format('Y-m-d H:i:s'), $transaction->customer?->name, $transaction->user?->name, $transaction->warehouse?->name, $transaction->tenders->pluck('method')->unique()->join('+'), $transaction->payment_status, $transaction->subtotal, $transaction->discount_total, $transaction->tax_total, $transaction->grand_total, $transaction->paid_total]));
-            }
-            fclose($stream);
-        }, 'sales-'.($this->outletId ?: 'all').'-'.$this->from.'-'.$this->to.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($transaction) => [$transaction->number, $transaction->occurred_at?->format('Y-m-d H:i:s'), $transaction->customer?->name, $transaction->user?->name, $transaction->warehouse?->name, $transaction->tenders->pluck('method')->unique()->join('+'), $transaction->payment_status, $transaction->subtotal, $transaction->discount_total, $transaction->tax_total, $transaction->grand_total, $transaction->paid_total])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Nomor', 'Waktu', 'Pelanggan', 'Kasir', 'Gudang', 'Metode', 'Status pembayaran', 'Subtotal', 'Diskon', 'Pajak', 'Total', 'Dibayar'], $data, 'Penjualan'), 'sales-'.($this->outletId ?: 'all').'-'.$this->from.'-'.$this->to.'.xlsx');
     }
 
     public function render(OutletAccess $access)

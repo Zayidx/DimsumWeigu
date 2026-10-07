@@ -1,7 +1,13 @@
 <div>
+    @if(session('status'))<div class="alert alert-light-success" role="status">{{ session('status') }}</div>@endif
+    @if($errors->has('file'))<div class="alert alert-light-danger" role="alert">{{ $errors->first('file') }}</div>@endif
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
             <p class="text-muted mb-0">Kelola katalog, harga, pajak, dan status penjualan produk.</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <a class="btn btn-outline-primary" href="{{ route('master-data.excel.export', ['dataset' => 'products']) }}">Export Excel</a>
+            @can('products-create')<a class="btn btn-outline-secondary" href="{{ route('master-data.excel.template', ['dataset' => 'products']) }}">Template</a><form method="POST" action="{{ route('master-data.excel.import', ['dataset' => 'products']) }}" enctype="multipart/form-data" class="d-flex gap-2">@csrf<input class="form-control" type="file" name="file" accept=".xlsx,.xls,.csv" required aria-label="File Excel produk"><button class="btn btn-outline-success" type="submit">Import</button></form>@endcan
         </div>
         @can('products-create')
             <button type="button" wire:click="openCreate" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Produk baru</button>
@@ -23,8 +29,8 @@
                         <tr>
                             <td><div class="fw-semibold">{{ $product->title }} @if($product->is_semi_finished)<span class="badge bg-light-primary text-primary">Setengah jadi</span>@endif</div><div class="small text-muted">{{ $product->sku }}@if($product->barcode) · {{ $product->barcode }}@endif</div></td>
                             <td>{{ $product->category?->name ?? 'Tanpa kategori' }}</td>
-                            <td>Rp {{ number_format((float) $product->sell_price, 0, ',', '.') }}<div class="small text-muted">per {{ $product->unit?->symbol }}</div></td>
-                            <td>@if($warehouseStock){{ number_format((float) $warehouseStock->stock, 3, ',', '.') }}@else<span class="text-muted">—</span>@endif</td>
+                            <td>Rp {{ \App\Support\DisplayNumber::format((float) $product->sell_price, 0, ',', '.') }}<div class="small text-muted">per {{ $product->unit?->symbol }}</div></td>
+                            <td>@if($warehouseStock){{ \App\Support\DisplayNumber::format((float) $warehouseStock->stock, 3, ',', '.') }}@else<span class="text-muted">—</span>@endif</td>
                             <td><span class="badge {{ $product->is_active ? 'bg-light-success text-success' : 'bg-light-secondary text-secondary' }}">{{ $product->is_active ? 'Aktif' : 'Nonaktif' }}</span></td>
                             <td class="text-end text-nowrap">
                                 @can('products-edit')<button type="button" wire:click="edit({{ $product->id }})" class="btn btn-sm btn-outline-primary" aria-label="Ubah {{ $product->title }}"><i class="bi bi-pencil"></i></button>@endcan

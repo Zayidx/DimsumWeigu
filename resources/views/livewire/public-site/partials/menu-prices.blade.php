@@ -33,7 +33,7 @@
                                         <span class="whitespace-nowrap rounded-full bg-[#a84127] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">Rekomendasi</span>
                                     @endif
                                 </div>
-                                <span class="mt-2 block whitespace-nowrap text-sm font-bold tabular-nums text-[#34251f]">Rp{{ "\u{00a0}" }}{{ number_format($variant['price'] ?? 0, 0, ',', '.') }}</span>
+                                <span class="mt-2 block whitespace-nowrap text-sm font-bold tabular-nums text-[#34251f]">Rp{{ "\u{00a0}" }}{{ \App\Support\DisplayNumber::format($variant['price'] ?? 0, 0, ',', '.') }}</span>
                             </div>
                         @endforeach
                     </div>

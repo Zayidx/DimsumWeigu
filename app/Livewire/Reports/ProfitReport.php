@@ -2,13 +2,14 @@
 
 namespace App\Livewire\Reports;
 
+use App\Exports\MasterDataExcelExport;
 use App\Models\Profit;
 use App\Models\Warehouse;
-use App\Support\CsvCell;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProfitReport extends Component
@@ -48,14 +49,9 @@ class ProfitReport extends Component
         $rows = (clone $query)->with(['transaction:id,number,warehouse_id', 'transaction.warehouse:id,name,outlet_id', 'detail:id,transaction_id,product_name,product_sku,quantity'])->orderBy('occurred_at')->get();
         $outletNames = $access->outletsFor(auth()->user())->pluck('name', 'id');
 
-        return response()->streamDownload(function () use ($rows, $outletNames): void {
-            $stream = fopen('php://output', 'w');
-            fputcsv($stream, ['Waktu', 'Transaksi', 'Outlet', 'Gudang', 'Produk', 'SKU', 'Qty', 'Penjualan', 'HPP', 'Laba']);
-            foreach ($rows as $row) {
-                fputcsv($stream, array_map(CsvCell::safe(...), [$row->occurred_at?->format('Y-m-d H:i:s'), $row->transaction?->number, $outletNames[$row->outlet_id] ?? '', $row->transaction?->warehouse?->name, $row->detail?->product_name, $row->detail?->product_sku, $row->detail?->quantity, $row->revenue, $row->cost, $row->profit]));
-            }
-            fclose($stream);
-        }, 'profit-'.($this->outletId ?: 'all').'-'.$this->from.'-'.$this->to.'.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(fn ($row) => [$row->occurred_at?->format('Y-m-d H:i:s'), $row->transaction?->number, $outletNames[$row->outlet_id] ?? '', $row->transaction?->warehouse?->name, $row->detail?->product_name, $row->detail?->product_sku, $row->detail?->quantity, $row->revenue, $row->cost, $row->profit])->all();
+
+        return Excel::download(new MasterDataExcelExport(['Waktu', 'Transaksi', 'Outlet', 'Gudang', 'Produk', 'SKU', 'Qty', 'Penjualan', 'HPP', 'Laba'], $data, 'Laba'), 'profit-'.($this->outletId ?: 'all').'-'.$this->from.'-'.$this->to.'.xlsx');
     }
 
     public function render(OutletAccess $access)
