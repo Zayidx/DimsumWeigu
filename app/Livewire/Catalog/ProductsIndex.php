@@ -4,6 +4,7 @@ namespace App\Livewire\Catalog;
 
 use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\Ingredient;
 use App\Models\InventoryBalance;
 use App\Models\InventoryLedger;
 use App\Models\Product;
@@ -14,6 +15,7 @@ use App\Models\TransactionDetail;
 use App\Models\Unit;
 use App\Models\UnitConversion;
 use App\Models\Warehouse;
+use App\Services\Production\RecipeCostService;
 use App\Support\AuditLogger;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
@@ -73,6 +75,8 @@ class ProductsIndex extends Component
 
     public array $alternateUnits = [];
 
+    public array $recipeLines = [];
+
     public $image;
 
     public function updatingSearch(): void
@@ -93,7 +97,23 @@ class ProductsIndex extends Component
     {
         $this->authorizeAction('products-create');
         $this->resetForm();
+        $this->isSemiFinished = true;
+        $this->isSellable = false;
+        $this->recipeLines = [['ingredient_id' => '', 'quantity' => '']];
         $this->showForm = true;
+    }
+
+    public function addRecipeLine(): void
+    {
+        $this->recipeLines[] = ['ingredient_id' => '', 'quantity' => ''];
+    }
+
+    public function removeRecipeLine(int $index): void
+    {
+        if (count($this->recipeLines) > 1 && array_key_exists($index, $this->recipeLines)) {
+            unset($this->recipeLines[$index]);
+            $this->recipeLines = array_values($this->recipeLines);
+        }
     }
 
     public function edit(int $id): void
@@ -159,6 +179,11 @@ class ProductsIndex extends Component
     public function save(AuditLogger $audit): void
     {
         $this->authorizeAction($this->productId ? 'products-edit' : 'products-create');
+        if (! $this->productId) {
+            $this->createSemiFinished($audit);
+
+            return;
+        }
         $this->sku = strtoupper(trim($this->sku));
         $this->barcode = trim($this->barcode);
         $validated = $this->validate([
@@ -264,6 +289,64 @@ class ProductsIndex extends Component
         $this->dispatch('toast', type: 'success', message: __('Produk berhasil disimpan.'));
     }
 
+    private function createSemiFinished(AuditLogger $audit): void
+    {
+        $this->sku = strtoupper(trim($this->sku));
+        $data = $this->validate([
+            'categoryId' => ['required', 'integer', 'exists:categories,id'],
+            'sku' => ['required', 'string', 'max:64', Rule::unique('products', 'sku')],
+            'title' => ['required', 'string', 'max:160'], 'description' => ['nullable', 'string', 'max:5000'],
+            'minStock' => ['required', 'numeric', 'min:0', 'max:999999999999.999'],
+            'isActive' => ['boolean'], 'trackBatches' => ['boolean'],
+            'image' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'recipeLines' => ['required', 'array', 'min:1', 'max:100'],
+            'recipeLines.*.ingredient_id' => ['required', 'integer', 'exists:ingredients,id'],
+            'recipeLines.*.quantity' => ['required', 'numeric', 'gt:0', 'max:999999999999.999'],
+        ]);
+        $ingredientIds = collect($data['recipeLines'])->pluck('ingredient_id');
+        if ($ingredientIds->unique()->count() !== $ingredientIds->count()) {
+            throw ValidationException::withMessages(['recipeLines' => __('Bahan yang sama tidak boleh ditambahkan dua kali; gabungkan takarannya.')]);
+        }
+        $ingredients = Ingredient::query()->whereIn('id', $ingredientIds)->where('is_active', true)->get()->keyBy('id');
+        if ($ingredients->count() !== $ingredientIds->unique()->count()) {
+            throw ValidationException::withMessages(['recipeLines' => __('Resep hanya dapat memakai bahan mentah aktif.')]);
+        }
+        $parentId = Category::query()->where('slug', 'setengah-jadi')->value('id');
+        if (! $parentId || ! Category::query()->whereKey($data['categoryId'])->where('parent_id', $parentId)->exists()) {
+            throw ValidationException::withMessages(['categoryId' => __('Pilih kategori produk setengah jadi.')]);
+        }
+        $unit = Unit::query()->where('code', 'PCS')->firstOrFail();
+        $imagePath = $this->image?->storePublicly('product-images', 'public');
+
+        DB::transaction(function () use ($data, $unit, $imagePath, $audit): void {
+            $product = Product::query()->create([
+                'category_id' => $data['categoryId'], 'unit_id' => $unit->id, 'sku' => $this->sku,
+                'title' => trim($data['title']), 'description' => $data['description'] ?: null,
+                'image_path' => $imagePath, 'buy_price' => 0, 'sell_price' => 0, 'tax_rate' => null,
+                'tax_inclusive' => false, 'stock' => 0, 'min_stock' => $data['minStock'], 'reorder_point' => 0,
+                'is_active' => $data['isActive'], 'is_sellable' => false, 'is_semi_finished' => true,
+                'allow_single_unit_sale' => false, 'track_stock' => true, 'track_batches' => $data['trackBatches'],
+            ]);
+            foreach (Warehouse::query()->where('is_active', true)->get(['id']) as $warehouse) {
+                ProductWarehouse::query()->create(['product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'stock' => 0, 'reserved_stock' => 0, 'min_stock' => $data['minStock'], 'reorder_point' => 0]);
+                InventoryBalance::query()->create(['product_id' => $product->id, 'warehouse_id' => $warehouse->id, 'calculated_quantity' => 0]);
+            }
+            $recipe = RecipeVersion::query()->create([
+                'product_id' => $product->id, 'unit_id' => $unit->id, 'version' => 1,
+                'starts_at' => now(), 'is_active' => true, 'yield_quantity' => 1, 'created_by' => auth()->id(),
+            ]);
+            foreach ($data['recipeLines'] as $line) {
+                $ingredient = Ingredient::query()->findOrFail($line['ingredient_id']);
+                $recipe->items()->create(['ingredient_id' => $ingredient->id, 'unit_id' => $ingredient->unit_id, 'quantity' => $line['quantity'], 'base_quantity' => $line['quantity'], 'waste_percent' => 0]);
+            }
+            $product->forceFill(['buy_price' => app(RecipeCostService::class)->estimate($recipe)])->save();
+            $audit->record('product.created', $product, null, $product->only(['sku', 'title', 'buy_price', 'is_active', 'is_semi_finished']));
+        });
+
+        $this->resetForm();
+        $this->dispatch('toast', type: 'success', message: __('Produk setengah jadi dan resep berhasil disimpan.'));
+    }
+
     public function deactivate(int $id, AuditLogger $audit): void
     {
         $this->authorizeAction('products-delete');
@@ -280,13 +363,16 @@ class ProductsIndex extends Component
         $outlets = $outletAccess->outletsFor(auth()->user())->get(['id', 'name']);
         $warehouseId = (int) session('active_warehouse_id');
         $products = Product::query()->with('category:id,name', 'unit:id,name,symbol')
+            ->where('is_semi_finished', false)
             ->with(['warehouseStocks' => fn ($query) => $warehouseId ? $query->where('warehouse_id', $warehouseId) : $query])
             ->when($this->search !== '', fn (Builder $query) => $query->where(fn (Builder $q) => $q->where('title', 'like', '%'.$this->search.'%')->orWhere('sku', 'like', '%'.$this->search.'%')->orWhere('barcode', 'like', '%'.$this->search.'%')))
             ->orderBy('title')->paginate(20);
 
         return view('livewire.catalog.products-index', [
             'products' => $products, 'categories' => Category::query()->where('is_active', true)->orderBy('name')->get(),
+            'semiFinishedCategories' => Category::query()->where('is_active', true)->where('parent_id', Category::query()->where('slug', 'setengah-jadi')->value('id'))->orderBy('name')->get(),
             'units' => Unit::query()->where('is_active', true)->orderBy('name')->get(), 'outlets' => $outlets,
+            'ingredients' => Ingredient::query()->with('unit')->where('is_active', true)->orderBy('name')->get(),
             'warehouseId' => $warehouseId,
         ])->layout('layouts.dashboard', ['title' => __('Produk')]);
     }
@@ -298,7 +384,7 @@ class ProductsIndex extends Component
 
     private function resetForm(): void
     {
-        $this->reset(['showForm', 'productId', 'categoryId', 'unitId', 'sku', 'barcode', 'title', 'description', 'taxRate', 'image', 'alternateUnits']);
+        $this->reset(['showForm', 'productId', 'categoryId', 'unitId', 'sku', 'barcode', 'title', 'description', 'taxRate', 'image', 'alternateUnits', 'recipeLines']);
         $this->buyPrice = '0';
         $this->sellPrice = '0';
         $this->minStock = '0';

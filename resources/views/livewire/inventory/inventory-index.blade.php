@@ -1,14 +1,14 @@
 <div>
     @unless($isSharedWarehouse)<div class="alert alert-light-primary">Gudang outlet hanya menerima stok produk setengah jadi dari transfer Gudang Bersama. Stok masuk, stok awal, dan impor hanya tersedia di Gudang Bersama.</div>@endunless
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-        <p class="text-muted mb-0">Saldo gudang berasal dari mutasi yang tercatat pada ledger inventori.</p>
+        <p class="text-muted mb-0">Kelola saldo produk setengah jadi yang diproduksi Gudang Bersama dan dikirim ke outlet.</p>
         <div class="d-flex gap-2 align-items-center"><label class="form-label mb-0" for="inventory-warehouse">Gudang</label><select id="inventory-warehouse" wire:change="selectWarehouse($event.target.value)" class="form-select form-select-sm" style="min-width:220px">@foreach($warehouses as $warehouse)<option value="{{ $warehouse->id }}" @selected((int)$warehouseId === $warehouse->id)>{{ $warehouse->name }}</option>@endforeach</select></div>
     </div>
     @error('warehouseId')<div class="alert alert-warning">{{ $message }}</div>@enderror
     @if(session('status'))<div class="alert alert-success">{{ session('status') }}</div>@endif
     @if($errors->has('file'))<div class="alert alert-danger">{{ $errors->first('file') }}</div>@endif
     <div class="card mb-4"><div class="card-body"><div class="d-flex flex-column flex-xl-row justify-content-between gap-3 align-items-xl-center">
-        <div><h6 class="mb-1">Excel stok gudang</h6><small class="text-muted">Export saldo gudang atau impor stok awal untuk produk yang belum memiliki histori stok.</small></div>
+        <div><h6 class="mb-1">Data stok setengah jadi</h6><small class="text-muted">Export saldo atau impor stok awal untuk produk setengah jadi yang belum memiliki histori stok.</small></div>
         <div class="d-flex flex-wrap gap-2">
             @if($warehouseId)<a class="btn btn-outline-primary" href="{{ route('inventory.export', ['warehouse_id' => $warehouseId]) }}"><i class="bi bi-download me-1"></i>Export stok</a>@endif
             @can('inventory-opening') @if($isSharedWarehouse)
@@ -22,7 +22,7 @@
         </div>
     </div></div></div>
     <div class="card">
-        <div class="card-header"><div class="row align-items-center g-2"><div class="col"><h5 class="card-title mb-0">Stok per gudang</h5></div><div class="col-12 col-md-5"><input type="search" wire:model.live.debounce.300ms="search" class="form-control" placeholder="Cari nama, SKU, barcode" aria-label="Cari stok"></div></div></div>
+        <div class="card-header"><div class="row align-items-center g-2"><div class="col"><h5 class="card-title mb-0">Stok menu setengah jadi per gudang</h5></div><div class="col-12 col-md-5"><input type="search" wire:model.live.debounce.300ms="search" class="form-control" placeholder="Cari nama, SKU, barcode" aria-label="Cari stok setengah jadi"></div></div></div>
         <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Produk</th><th>Gudang</th><th>Stok tersedia</th><th>Reorder point</th><th>Status</th><th class="text-end">Aksi</th></tr></thead><tbody>
             @forelse($stocks as $row)
                 <tr><td><strong>{{ $row->product->title }}</strong><div class="small text-muted">{{ $row->product->sku }} · {{ $row->product->category?->name ?? 'Tanpa kategori' }}</div></td><td>{{ $row->warehouse->name }}</td><td>{{ \App\Support\DisplayNumber::format((float)$row->stock - (float)$row->reserved_stock, 3, ',', '.') }} {{ $row->product->unit?->symbol }}</td><td>{{ \App\Support\DisplayNumber::format((float)$row->reorder_point, 3, ',', '.') }}</td><td>@if((float)$row->stock <= (float)$row->reorder_point)<span class="badge bg-light-warning text-warning">Perlu pemesanan</span>@else<span class="badge bg-light-success text-success">Tersedia</span>@endif</td><td class="text-end">@canany(['inventory-opening','inventory-adjust'])<button type="button" wire:click="openAdjustment({{ $row->product_id }})" class="btn btn-sm btn-outline-primary"><i class="bi bi-sliders me-1"></i>Mutasi</button>@endcanany</td></tr>

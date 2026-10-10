@@ -153,31 +153,61 @@ class HppWorkbookSeeder extends Seeder
             }
 
             $sourceRecipes = collect($source['resep'])->filter(fn ($row) => filled($row['nama'] ?? null))->keyBy(fn ($row) => mb_strtolower(trim($row['nama'])));
+            $chiquroCheeseRecipe = $this->chiquroCheeseRecipe($sourceRecipes->get('chikuro chesee sauce'));
+            if ($chiquroCheeseRecipe) {
+                $sourceRecipes->put('chiquro cheese mentah', $chiquroCheeseRecipe);
+            }
             $ingredientByName = Ingredient::query()->where('code', 'like', 'HPP-%')->orderBy('code')->get()->keyBy(fn (Ingredient $item) => mb_strtolower(trim($item->name)));
             $packagingByName = $ingredientByName;
             $componentCategory = Category::firstOrCreate(['slug' => 'hpp-semi-finished'], ['name' => 'Produk Setengah Jadi HPP', 'is_active' => true]);
             $componentProducts = [];
-            $componentNames = collect($source['menu'])->flatMap(fn (array $menu) => collect($menu['rincian'] ?? [])->pluck('nama'))
+            $componentMenus = collect($source['menu'])->map(function (array $menu) {
+                if (mb_strtolower(trim((string) ($menu['nama'] ?? ''))) !== 'chikuro cheese') {
+                    return $menu;
+                }
+
+                $basic = collect($menu['rincian'] ?? [])->first(fn (array $row) => mb_strtolower(trim((string) ($row['nama'] ?? ''))) === 'chikuro basic');
+                $menu['rincian'] = $basic ? [array_merge($basic, ['nama' => 'Chiquro Cheese mentah'])] : [];
+
+                return $menu;
+            });
+            $componentNames = $componentMenus->flatMap(fn (array $menu) => collect($menu['rincian'] ?? [])->pluck('nama'))
                 ->merge(['Dimsum ori topping wortel', 'Lumpia keju ori', 'Lumpia keju mentai'])->filter()->unique();
             foreach ($componentNames as $componentName) {
                 $key = mb_strtolower(trim((string) $componentName));
                 $recipeName = $this->sourceRecipeKey($key);
                 $sourceRecipe = $sourceRecipes->get($recipeName);
-                if (! $sourceRecipe || empty($sourceRecipe['bahan'])) {
+                if ((! $sourceRecipe || empty($sourceRecipe['bahan'])) && $key !== 'chiquro cheese mentah') {
                     continue;
                 }
                 $sku = 'HPP-SF-'.strtoupper(substr(hash('sha256', $key), 0, 10));
+                $componentTitle = match ($key) {
+                    'chikuro basic' => 'Chiquro Basic mentah',
+                    'chiquro cheese mentah' => 'Chiquro Cheese mentah',
+                    default => trim((string) ($sourceRecipe['nama'] ?? $componentName)),
+                };
+                $categoryGroup = str_contains($key, 'dimsum') ? 'Dimsum' : (str_contains($key, 'lumpia') ? 'Lumpia' : 'Chiquro');
+                $semiCategory = Category::query()->where('slug', 'setengah-jadi-'.strtolower($categoryGroup))->first() ?? $componentCategory;
                 $product = Product::withTrashed()->firstOrCreate(['sku' => $sku], [
-                    'category_id' => $componentCategory->id, 'unit_id' => $unit->id, 'title' => trim((string) ($sourceRecipe['nama'] ?? $componentName)),
+                    'category_id' => $semiCategory->id, 'unit_id' => $unit->id, 'title' => $componentTitle,
                     'buy_price' => 0, 'sell_price' => 0, 'stock' => 0, 'is_active' => true,
                     'is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true,
-                    'description' => 'Produk setengah jadi dari resep komponen hpp.json; stok bertambah melalui hasil produksi.',
+                    'description' => $key === 'chiquro cheese mentah'
+                        ? 'Produk setengah jadi untuk Chiquro Cheese goreng; resep menunggu takaran keju yang belum tersedia pada sumber HPP.'
+                        : 'Produk setengah jadi dari resep komponen hpp.json; stok bertambah melalui hasil produksi.',
                 ]);
                 if ($product->trashed()) {
                     $product->restore();
                 }
-                $product->forceFill(['is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true, 'is_active' => true])->save();
+                $product->forceFill(['category_id' => $semiCategory->id, 'title' => $componentTitle, 'is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true, 'is_active' => true])->save();
                 $componentProducts[$key] = $product;
+                if (! $sourceRecipe || empty($sourceRecipe['bahan'])) {
+                    if ($key === 'chiquro cheese mentah') {
+                        $this->command?->warn('Chiquro Cheese mentah dibuat sebagai stok setengah jadi, tetapi resep produksinya menunggu takaran keju yang belum tersedia pada hpp.json.');
+                    }
+
+                    continue;
+                }
                 if (RecipeVersion::query()->where('product_id', $product->id)->exists()) {
                     continue;
                 }
@@ -228,19 +258,38 @@ class HppWorkbookSeeder extends Seeder
                 if ($existingActive && ! str_starts_with((string) $existingActive->notes, 'Impor hpp.json')) {
                     continue;
                 }
-                if ($existingActive?->productItems()->exists()) {
+                $isChiquroCheeseMenu = mb_strtolower(trim((string) ($menuRow['nama'] ?? ''))) === 'chikuro cheese';
+                if ($existingActive?->productItems()->exists() && ! $isChiquroCheeseMenu) {
                     continue;
                 }
                 $bom = [];
                 $bomProducts = [];
                 $complete = true;
                 $incompleteReason = '';
-                foreach ($menuRow['rincian'] ?? [] as $component) {
+                $menuComponents = $componentMenus[$index]['rincian'] ?? [];
+                foreach ($menuComponents as $component) {
                     $componentName = mb_strtolower(trim((string) ($component['nama'] ?? '')));
                     $recipeName = $this->sourceRecipeKey($componentName);
                     $sourceRecipe = $sourceRecipes->get($recipeName);
                     $componentCount = $component['pcs'] ?? null;
                     $componentProduct = $componentProducts[$componentName] ?? null;
+                    if ($componentName === 'chiquro cheese mentah' && $componentProduct && is_numeric($componentCount) && (float) $componentCount > 0) {
+                        $bomProducts[$componentProduct->id] = ($bomProducts[$componentProduct->id] ?? 0) + (float) $componentCount;
+                        $packCost = (float) ($component['hpp_pack'] ?? 0);
+                        if ($packCost > 0) {
+                            $packParts = $this->packagingParts($packCost, $packagingByName);
+                            if ($packParts === null) {
+                                $complete = false;
+                                $incompleteReason = "Rincian packaging Rp {$packCost} belum dapat direkonsiliasi ke bahan kemasan.";
+                                break;
+                            }
+                            foreach ($packParts as $ingredientId => $quantity) {
+                                $bom[$ingredientId] = ($bom[$ingredientId] ?? 0) + $quantity;
+                            }
+                        }
+
+                        continue;
+                    }
                     if (! $sourceRecipe || ! $componentProduct || ! is_numeric($componentCount) || (float) $componentCount <= 0 || empty($sourceRecipe['bahan'])) {
                         $complete = false;
                         $incompleteReason = "Komponen {$componentName} belum memiliki resep setengah jadi yang lengkap atau jumlah menu valid.";
@@ -346,8 +395,32 @@ class HppWorkbookSeeder extends Seeder
         return match (mb_strtolower(trim($componentName))) {
             'bolognese sauce' => 'saus bolognese',
             'lumpia' => 'lumpia keju ori',
+            'garlic sauce' => 'chikuro garlic sauce',
+            'lava sauce' => 'chikuro lava sauce',
+            'chesee sauce' => 'chikuro chesee sauce',
             default => mb_strtolower(trim($componentName)),
         };
+    }
+
+    private function chiquroCheeseRecipe(?array $recipe): ?array
+    {
+        if (! $recipe || empty($recipe['bahan'])) {
+            return null;
+        }
+
+        $items = [];
+        $yield = $this->sourceYield($recipe['keterangan'] ?? []);
+        foreach ($recipe['bahan'] as $line) {
+            if (! filled($line['nama'] ?? null) || ! is_numeric($line['qty'] ?? null) || ! filled($line['uom'] ?? null)) {
+                return null;
+            }
+            $name = trim((string) $line['nama']);
+            $key = mb_strtolower($name).'|'.$this->normalizeUnit((string) $line['uom']);
+            $items[$key] ??= ['nama' => $name, 'qty' => 0, 'uom' => $line['uom']];
+            $items[$key]['qty'] += (float) $line['qty'] / $yield;
+        }
+
+        return ['nama' => 'Chiquro Cheese mentah', 'keterangan' => [], 'bahan' => array_values($items)];
     }
 
     /** Source packaging rows are included only when their detailed rates reconcile to the stated component cost. */

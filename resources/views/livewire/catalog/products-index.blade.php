@@ -3,14 +3,14 @@
     @if($errors->has('file'))<div class="alert alert-light-danger" role="alert">{{ $errors->first('file') }}</div>@endif
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
-            <p class="text-muted mb-0">Kelola katalog, harga, pajak, dan status penjualan produk.</p>
+            <p class="text-muted mb-0">Produk baru di sini digunakan untuk stok dan produksi setengah jadi.</p>
         </div>
         <div class="d-flex flex-wrap align-items-center gap-2">
             <a class="btn btn-outline-primary" href="{{ route('master-data.excel.export', ['dataset' => 'products']) }}">Export Excel</a>
             @can('products-create')<a class="btn btn-outline-secondary" href="{{ route('master-data.excel.template', ['dataset' => 'products']) }}">Template</a><form method="POST" action="{{ route('master-data.excel.import', ['dataset' => 'products']) }}" enctype="multipart/form-data" class="d-flex gap-2">@csrf<input class="form-control" type="file" name="file" accept=".xlsx,.xls,.csv" required aria-label="File Excel produk"><button class="btn btn-outline-success" type="submit">Import</button></form>@endcan
         </div>
         @can('products-create')
-            <button type="button" wire:click="openCreate" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Produk baru</button>
+            <button type="button" wire:click="openCreate" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Produk setengah jadi</button>
         @endcan
     </div>
 
@@ -53,6 +53,22 @@
                 <form wire:submit="save">
                     <div class="modal-header"><h5 class="modal-title" id="product-form-title">{{ $productId ? 'Ubah produk' : 'Tambah produk' }}</h5><button type="button" class="btn-close" wire:click="closeForm" aria-label="Tutup"></button></div>
                     <div class="modal-body"><div class="row g-3">
+                        @if(!$productId)
+                            <div class="col-md-6"><label class="form-label" for="product-title">Nama produk setengah jadi</label><input id="product-title" wire:model="title" class="form-control" required>@error('title')<div class="text-danger small">{{ $message }}</div>@enderror</div>
+                            <div class="col-md-3"><label class="form-label" for="product-sku">SKU</label><input id="product-sku" wire:model="sku" class="form-control" required>@error('sku')<div class="text-danger small">{{ $message }}</div>@enderror</div>
+                            <div class="col-md-3"><label class="form-label">Satuan hasil</label><div class="form-control bg-light">pcs</div></div>
+                            <div class="col-md-6"><label class="form-label" for="product-category">Kategori setengah jadi</label><select id="product-category" wire:model="categoryId" class="form-select" required><option value="">Pilih kategori</option>@foreach($semiFinishedCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select>@error('categoryId')<div class="text-danger small">{{ $message }}</div>@enderror</div>
+                            <div class="col-md-6"><label class="form-label" for="product-min-stock">Stok minimum</label><input id="product-min-stock" type="number" min="0" step="0.001" wire:model="minStock" class="form-control"></div>
+                            <div class="col-12"><div class="d-flex justify-content-between align-items-center"><div><strong>Resep bahan mentah</strong><div class="small text-muted">Takaran untuk menghasilkan 1 pcs. HPP dihitung otomatis dari harga bahan.</div></div><button type="button" wire:click="addRecipeLine" class="btn btn-sm btn-outline-primary">Tambah bahan</button></div></div>
+                            @foreach($recipeLines as $index => $line)
+                                <div class="col-12"><div class="row g-2 align-items-end"><div class="col-7"><label class="form-label" for="recipe-ingredient-{{ $index }}">Bahan mentah</label><select id="recipe-ingredient-{{ $index }}" wire:model="recipeLines.{{ $index }}.ingredient_id" class="form-select" required><option value="">Pilih bahan</option>@foreach($ingredients as $ingredient)<option value="{{ $ingredient->id }}">{{ $ingredient->name }} ({{ $ingredient->unit?->symbol }})</option>@endforeach</select></div><div class="col-4"><label class="form-label" for="recipe-quantity-{{ $index }}">Takaran</label><input id="recipe-quantity-{{ $index }}" type="number" min="0.0001" step="0.0001" wire:model="recipeLines.{{ $index }}.quantity" class="form-control" required></div><div class="col-1"><button type="button" wire:click="removeRecipeLine({{ $index }})" class="btn btn-outline-danger" aria-label="Hapus bahan" @disabled(count($recipeLines) < 2)><i class="bi bi-trash"></i></button></div></div></div>
+                            @endforeach
+                            @error('recipeLines')<div class="col-12 text-danger small">{{ $message }}</div>@enderror
+                            @error('recipeLines.*.ingredient_id')<div class="col-12 text-danger small">{{ $message }}</div>@enderror
+                            @error('recipeLines.*.quantity')<div class="col-12 text-danger small">{{ $message }}</div>@enderror
+                            <div class="col-12"><label class="form-label" for="product-description">Deskripsi</label><textarea id="product-description" wire:model="description" rows="2" class="form-control"></textarea></div>
+                            <div class="col-12"><label class="form-check"><input type="checkbox" wire:model="isActive" class="form-check-input"><span class="form-check-label">Produk aktif</span></label></div>
+                        @else
                         <div class="col-md-6"><label class="form-label" for="product-title">Nama produk</label><input id="product-title" wire:model="title" class="form-control" required>@error('title')<div class="text-danger small">{{ $message }}</div>@enderror</div>
                         <div class="col-md-3"><label class="form-label" for="product-sku">SKU</label><input id="product-sku" wire:model="sku" class="form-control" required>@error('sku')<div class="text-danger small">{{ $message }}</div>@enderror</div>
                         <div class="col-md-3"><label class="form-label" for="product-barcode">Barcode</label><input id="product-barcode" wire:model="barcode" class="form-control" inputmode="numeric"></div>
@@ -79,6 +95,7 @@
                             <label class="form-check"><input type="checkbox" wire:model="trackStock" class="form-check-input"><span class="form-check-label">Lacak stok</span></label>
                             <label class="form-check"><input type="checkbox" wire:model="trackBatches" class="form-check-input"><span class="form-check-label">Lacak batch/kedaluwarsa</span></label>
                         </div>
+                        @endif
                     </div></div>
                     <div class="modal-footer"><button type="button" wire:click="closeForm" class="btn btn-light-secondary">Batal</button><button type="submit" class="btn btn-primary" wire:loading.attr="disabled" wire:target="save">Simpan</button></div>
                 </form>

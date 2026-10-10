@@ -157,7 +157,7 @@ class InventoryIndex extends Component
 
         return view('livewire.inventory.inventory-index', compact('warehouses', 'warehouseId', 'stocks', 'ledger'))
             ->with('isSharedWarehouse', $warehouses->firstWhere('id', $warehouseId)?->type === 'central')
-            ->layout('layouts.dashboard', ['title' => __('Inventori')]);
+            ->layout('layouts.dashboard', ['title' => __('Stok setengah jadi')]);
     }
 
     private function warehouseForUser(int $warehouseId): Warehouse

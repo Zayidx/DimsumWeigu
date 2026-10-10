@@ -212,8 +212,8 @@ class TestDataSeeder extends Seeder
             ['DWO', 'Dimsum Wortel · Setengah Jadi', 'Dimsum', 'PCS', 0, 0, []],
             ['DBE', 'Dimsum Beef · Setengah Jadi', 'Dimsum', 'PCS', 0, 0, []],
             ['LPS', 'Lumpia · Setengah Jadi', 'Lumpia', 'PCS', 0, 0, []],
-            ['CHB', 'Chiquro Basic bolong · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
-            ['CHS', 'Chiquro Cheese · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
+            ['CHB', 'Chiquro Basic mentah · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
+            ['CHS', 'Chiquro Cheese mentah · Setengah Jadi', 'Chiquro', 'PCS', 0, 0, []],
         ];
 
         $categoryIds = Category::whereIn('name', ['Dimsum', 'Lumpia', 'Chiquro', 'Paket Besar'])->pluck('id', 'name');
@@ -308,7 +308,6 @@ class TestDataSeeder extends Seeder
             'DBE' => ['yield' => 1, 'notes' => 'Satu buah dimsum topping beef dari resep HPP.', 'items' => ['AYAM-FILLET' => [20, 'GRAM'], 'TELUR' => [1.1, 'GRAM'], 'DAUN-BAWANG' => [1, 'GRAM'], 'BAWANG-PUTIH' => [0.5, 'GRAM'], 'MINYAK-WIJEN' => [0.4, 'GRAM'], 'KECAP-ASIN' => [0.1, 'ML'], 'SAORI' => [0.6, 'GRAM'], 'CHICKEN-POWDER' => [0.4, 'GRAM'], 'SASA' => [0.3, 'GRAM'], 'GARAM' => [0.14, 'GRAM'], 'GULA' => [0.5, 'GRAM'], 'KULIT-DIMSUM' => [1, 'PCS'], 'TAPIOKA' => [3.6, 'GRAM'], 'BEEF-PATTY' => [1, 'GRAM']]],
             'LPS' => ['yield' => 1, 'notes' => 'Resep Lumpia keju ori per satu hasil resep dari workbook; komposisi cheese ikut produk setengah jadi.', 'items' => ['AYAM-FILLET' => [25, 'GRAM'], 'TELUR' => [1.375, 'GRAM'], 'KULIT-LUMPIA' => [2, 'PCS'], 'BAWANG-PUTIH' => [0.625, 'GRAM'], 'MINYAK-WIJEN' => [0.5, 'GRAM'], 'KECAP-ASIN' => [0.125, 'ML'], 'SAORI' => [0.75, 'GRAM'], 'CHICKEN-POWDER' => [0.5, 'GRAM'], 'SASA' => [0.375, 'GRAM'], 'GARAM' => [0.175, 'GRAM'], 'GULA' => [0.625, 'GRAM'], 'QUICKMELT' => [8, 'GRAM'], 'TAPIOKA' => [4.5, 'GRAM']]],
             'CHB' => ['yield' => 1, 'notes' => 'Resep Chiquro Basic dari workbook; yield produk per batch perlu dikonfirmasi.', 'items' => ['AYAM-FILLET' => [100, 'GRAM'], 'TELUR' => [5.5, 'GRAM'], 'LADA' => [0.2, 'GRAM'], 'BAWANG-PUTIH' => [2, 'GRAM'], 'SAORI' => [1.5, 'GRAM'], 'CHICKEN-POWDER' => [2, 'GRAM'], 'SASA' => [1, 'GRAM'], 'GARAM' => [0.5, 'GRAM'], 'MINYAK-GORENG' => [50, 'ML'], 'TAPIOKA' => [10, 'GRAM'], 'RUMPUT-LAUT' => [2, 'GRAM'], 'TEPUNG-PANIR' => [13, 'GRAM']]],
-            'CHS' => ['yield' => 1, 'notes' => 'Keju disiapkan saat produksi gudang; jumlah keju per Chiquro menunggu konfirmasi pengguna.', 'items' => ['AYAM-FILLET' => [100, 'GRAM'], 'TELUR' => [5.5, 'GRAM'], 'LADA' => [0.2, 'GRAM'], 'BAWANG-PUTIH' => [2, 'GRAM'], 'SAORI' => [1.5, 'GRAM'], 'CHICKEN-POWDER' => [2, 'GRAM'], 'SASA' => [1, 'GRAM'], 'GARAM' => [0.5, 'GRAM'], 'MINYAK-GORENG' => [50, 'ML'], 'TAPIOKA' => [10, 'GRAM'], 'RUMPUT-LAUT' => [2, 'GRAM'], 'TEPUNG-PANIR' => [13, 'GRAM']]],
         ];
 
         foreach ($recipes as $code => $recipeData) {
@@ -324,6 +323,9 @@ class TestDataSeeder extends Seeder
                 ]);
             }
         }
+
+        RecipeVersion::query()->where('product_id', $this->products['CHS']->id)->where('is_active', true)
+            ->update(['is_active' => false, 'ends_at' => now()]);
     }
 
     private function seedPortionRecipes(): void

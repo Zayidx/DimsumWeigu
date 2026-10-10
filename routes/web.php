@@ -111,6 +111,7 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::get('/receivables', ReceivablesIndex::class)->middleware([EnsureOutletContext::class, 'permission:receivables-access'])->name('receivables.index');
     Route::get('/pos', Checkout::class)->middleware([EnsureOutletContext::class, 'permission:pos-access'])->name('pos.index');
     Route::get('/inventory', InventoryIndex::class)->middleware([EnsureOutletContext::class, 'permission:inventory-access'])->name('inventory.index');
+    Route::get('/semi-finished-stock', InventoryIndex::class)->middleware([EnsureOutletContext::class, 'permission:inventory-access'])->name('semi-finished-stock.index');
     Route::get('/replenishment-suggestions', ReplenishmentSuggestionsIndex::class)->middleware([EnsureOutletContext::class, 'permission:replenishment-access'])->name('replenishment-suggestions.index');
     Route::get('/inventory/export', [WarehouseInventoryExcelController::class, 'export'])->middleware([EnsureOutletContext::class, 'permission:inventory-access'])->name('inventory.export');
     Route::get('/inventory/opening-stock-template', [WarehouseInventoryExcelController::class, 'template'])->middleware([EnsureOutletContext::class, 'permission:inventory-opening'])->name('inventory.opening-stock.template');

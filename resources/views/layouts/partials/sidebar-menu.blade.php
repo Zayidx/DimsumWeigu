@@ -1,7 +1,7 @@
 @php
     $user = auth()->user();
     $salesActive = request()->routeIs('pos.*', 'shifts.*', 'transactions.*', 'customers.*', 'cashier-sales-report');
-    $inventoryActive = request()->routeIs('products.*', 'categories.*', 'units.*', 'inventory.*', 'replenishment-suggestions.*', 'ingredients.*', 'recipes.*', 'production-requests.*', 'production-orders.*', 'transfers.*', 'stock-opnames.*', 'waste.*');
+    $inventoryActive = request()->routeIs('products.*', 'categories.*', 'units.*', 'inventory.*', 'semi-finished-stock.*', 'replenishment-suggestions.*', 'ingredients.*', 'recipes.*', 'production-requests.*', 'production-orders.*', 'transfers.*', 'stock-opnames.*', 'waste.*');
     $financeActive = request()->routeIs('suppliers.*', 'purchase-orders.*', 'goods-receivings.*', 'supplier-returns.*', 'expenses.*', 'cash-management.*', 'qris-reconciliations.*', 'payables.*', 'receivables.*', 'transaction-correction-requests.*');
     $reportsActive = request()->routeIs('reports.*');
 @endphp
@@ -32,7 +32,7 @@
                 @if (Route::has('products.index') && $user->can('products-access'))<li class="submenu-item {{ request()->routeIs('products.*') ? 'active' : '' }}"><a href="{{ route('products.index') }}" class="submenu-link">Produk</a></li>@endif
                 @if (Route::has('categories.index') && $user->can('categories-access'))<li class="submenu-item {{ request()->routeIs('categories.*') ? 'active' : '' }}"><a href="{{ route('categories.index') }}" class="submenu-link">Kategori</a></li>@endif
                 @if (Route::has('units.index') && $user->can('units-access'))<li class="submenu-item {{ request()->routeIs('units.*') ? 'active' : '' }}"><a href="{{ route('units.index') }}" class="submenu-link">Satuan</a></li>@endif
-                @if (Route::has('inventory.index') && $user->can('inventory-access'))<li class="submenu-item {{ request()->routeIs('inventory.*') ? 'active' : '' }}"><a href="{{ route('inventory.index') }}" class="submenu-link">Inventori</a></li>@endif
+                @if (Route::has('semi-finished-stock.index') && $user->can('inventory-access'))<li class="submenu-item {{ request()->routeIs('semi-finished-stock.*', 'inventory.index') ? 'active' : '' }}"><a href="{{ route('semi-finished-stock.index') }}" class="submenu-link">Stok setengah jadi</a></li>@endif
                 @can('replenishment-access')<li class="submenu-item {{ request()->routeIs('replenishment-suggestions.*') ? 'active' : '' }}"><a href="{{ route('replenishment-suggestions.index') }}" class="submenu-link">Saran stok &amp; produksi</a></li>@endcan
                 @if (Route::has('ingredients.index') && $user->can('ingredients-access'))<li class="submenu-item {{ request()->routeIs('ingredients.*') ? 'active' : '' }}"><a href="{{ route('ingredients.index') }}" class="submenu-link">Master bahan</a></li>@endif
                 @if (Route::has('recipes.index') && $user->can('recipes-access'))<li class="submenu-item {{ request()->routeIs('recipes.*') ? 'active' : '' }}"><a href="{{ route('recipes.index') }}" class="submenu-link">Resep &amp; HPP</a></li>@endif

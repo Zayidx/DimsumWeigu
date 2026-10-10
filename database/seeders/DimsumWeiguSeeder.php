@@ -30,6 +30,16 @@ class DimsumWeiguSeeder extends Seeder
             Category::firstOrCreate(['name' => $name], ['slug' => Str::slug($name)]);
         }
 
+        foreach ([['bahan-mentah', 'Bahan Mentah'], ['setengah-jadi', 'Setengah Jadi'], ['jadi', 'Jadi']] as [$slug, $name]) {
+            Category::firstOrCreate(['slug' => $slug], ['name' => $name, 'is_active' => true]);
+        }
+        $semiFinished = Category::query()->where('slug', 'setengah-jadi')->firstOrFail();
+        foreach (['Dimsum', 'Lumpia', 'Chiquro', 'Saus'] as $name) {
+            Category::firstOrCreate(['slug' => 'setengah-jadi-'.Str::slug($name)], [
+                'parent_id' => $semiFinished->id, 'name' => $name, 'is_active' => true,
+            ]);
+        }
+
         foreach ([
             ['code' => 'PCS', 'name' => 'Buah', 'symbol' => 'pcs'],
             ['code' => 'BOX', 'name' => 'Kotak', 'symbol' => 'kotak'],
