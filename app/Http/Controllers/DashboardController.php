@@ -16,7 +16,10 @@ use App\Models\StockTransfer;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\Warehouse;
+use App\Models\WarehouseCashLedger;
+use App\Services\Cashier\CashierShiftService;
 use App\Support\DisplayNumber;
+use App\Support\FixedDecimal;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -216,12 +219,29 @@ class DashboardController extends Controller
 
         if ($role === 'cashier') {
             $shift = CashierShift::query()->with('warehouse:id,name')->whereIn('outlet_id', $outletIds)->where('open_user_id', $user->id)->where('status', 'open')->latest('opened_at')->first();
+            $requestedPettyCashWarehouseId = $shift?->warehouse_id
+                ?? $selectedWarehouse?->id
+                ?? (int) session('active_warehouse_id');
+            $pettyCashWarehouseId = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->where('is_sales_enabled', true)
+                ->whereKey($requestedPettyCashWarehouseId ?: 0)->value('id');
+            $pettyCashWarehouseId ??= Warehouse::query()->where('outlet_id', $outlet->id)->where('is_active', true)->where('is_sales_enabled', true)->orderBy('id')->value('id');
+            $lastPettyCashEntry = $pettyCashWarehouseId
+                ? WarehouseCashLedger::query()->where('warehouse_id', $pettyCashWarehouseId)->latest('id')->first()
+                : null;
+            $pettyCashPosition = $lastPettyCashEntry
+                ? FixedDecimal::money((string) $lastPettyCashEntry->balance_after)
+                : CashierShiftService::INITIAL_PETTY_CASH_CENTS;
+            $pettyCashAvailable = max(0, $pettyCashPosition);
+            $pettyCashDebt = max(0, -$pettyCashPosition);
             $sales = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);
             $metrics->push(['label' => 'Shift saya', 'value' => $shift ? 'Terbuka' : 'Belum dibuka', 'detail' => $shift?->warehouse?->name ?? 'Buka shift sebelum melayani penjualan.']);
             $metrics->push(['label' => 'Transaksi saya hari ini', 'value' => DisplayNumber::format((clone $sales)->count()), 'detail' => 'Transaksi selesai milik Anda.']);
             $metrics->push(['label' => 'Penjualan saya hari ini', 'value' => 'Rp'.DisplayNumber::format((clone $sales)->sum('grand_total'), 0, ',', '.'), 'detail' => 'Nilai transaksi selesai, termasuk yang belum lunas.']);
-            if ($shift && $user->can('cash-management-access')) {
-                $metrics->push(['label' => 'Kas shift saat ini', 'value' => 'Rp'.DisplayNumber::format((float) $shift->expected_cash, 0, ',', '.'), 'detail' => 'Kas fisik yang diharapkan pada shift aktif.']);
+            $metrics->push(['label' => 'Petty cash tersedia', 'value' => 'Rp'.DisplayNumber::format($pettyCashAvailable / 100, 0, ',', '.'), 'detail' => $pettyCashDebt > 0
+                ? 'Saldo sedang minus Rp'.DisplayNumber::format($pettyCashDebt / 100, 0, ',', '.').'; penjualan tunai berikutnya membayar utang ini terlebih dahulu.'
+                : 'Saldo kas tunai berjalan di gudang aktif.']);
+            if ($pettyCashDebt > 0) {
+                $metrics->push(['label' => 'Utang petty cash', 'value' => 'Rp'.DisplayNumber::format($pettyCashDebt / 100, 0, ',', '.'), 'detail' => 'Akan tertutup otomatis dari penerimaan penjualan tunai berikutnya.']);
             }
             if ($user->can('transactions-access')) {
                 $recentTransactions = Transaction::query()->where('outlet_id', $outlet->id)->where('user_id', $user->id)->latest('occurred_at')->limit(5)->get();
@@ -233,7 +253,7 @@ class DashboardController extends Controller
             }
             $addAction('pos-access', 'Buka kasir', 'pos.index', 'bi-cart3');
             $addAction('transactions-access', 'Daftar transaksi', 'transactions.index', 'bi-receipt');
-            $addAction('cash-management-access', 'Serah terima kas', 'cash-management.index', 'bi-bank');
+            $addAction('cash-management-access', 'Serah terima kas', 'cashier-cash-management.index', 'bi-bank');
         } elseif ($role === 'manager') {
             $sales = Transaction::query()->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)
                 ->whereDate('occurred_at', today())->whereIn('status', ['completed', 'paid']);

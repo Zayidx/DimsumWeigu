@@ -20,7 +20,7 @@
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                     <div>
                         <h2 id="active-shift-title" class="h5 mb-1">Shift aktif · {{ $openShift->opened_at->format('d M Y H:i') }}</h2>
-                        <p class="text-muted mb-0">Kas awal Rp {{ \App\Support\DisplayNumber::format($openShift->opening_cash, 2, ',', '.') }} · Gudang {{ $openShift->warehouse->name ?? 'aktif' }}</p>
+                        <p class="text-muted mb-0">Posisi petty cash saat shift dibuka: Rp {{ \App\Support\DisplayNumber::format($openShift->opening_cash, 2, ',', '.') }} · Gudang {{ $openShift->warehouse->name ?? 'aktif' }}</p>
                     </div>
                     <button type="button" class="btn btn-outline-success" data-bs-toggle="collapse" data-bs-target="#closeShift" aria-expanded="false" aria-controls="closeShift">Tutup shift</button>
                 </div>

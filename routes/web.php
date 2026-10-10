@@ -20,6 +20,7 @@ use App\Livewire\Admin\NotificationsIndex;
 use App\Livewire\Admin\RolesIndex;
 use App\Livewire\Admin\StoreSettingsIndex;
 use App\Livewire\Admin\UsersIndex;
+use App\Livewire\Cashier\CashManagementIndex as CashierCashManagementIndex;
 use App\Livewire\Catalog\CategoriesIndex;
 use App\Livewire\Catalog\ProductsIndex;
 use App\Livewire\Catalog\UnitsIndex;
@@ -101,6 +102,7 @@ Route::middleware(['auth', 'account.active'])->group(function () {
     Route::get('/expenses', ExpensesIndex::class)->middleware([EnsureOutletContext::class, 'permission:expenses-access'])->name('expenses.index');
     Route::get('/waste', WasteIndex::class)->middleware([EnsureOutletContext::class, 'permission:waste-access'])->name('waste.index');
     Route::get('/cash-management', CashManagementIndex::class)->middleware([EnsureOutletContext::class, 'password.confirm', 'permission:cash-management-access'])->name('cash-management.index');
+    Route::get('/cashier/cash-management', CashierCashManagementIndex::class)->middleware([EnsureOutletContext::class, 'password.confirm', 'permission:cash-management-access'])->name('cashier-cash-management.index');
     Route::get('/qris-reconciliations', QrisReconciliationsIndex::class)->middleware([EnsureOutletContext::class, 'permission:qris-reconciliations-access'])->name('qris-reconciliations.index');
     Route::get('/transaction-correction-requests', TransactionCorrectionRequestsIndex::class)->middleware([EnsureOutletContext::class, 'permission:transaction-corrections-access'])->name('transaction-correction-requests.index');
     Route::get('/purchase-orders', PurchaseOrdersIndex::class)->middleware([EnsureOutletContext::class, 'permission:purchase-orders-access'])->name('purchase-orders.index');

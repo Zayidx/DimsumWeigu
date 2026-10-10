@@ -63,7 +63,7 @@ class OperatingCostService
         $data = Validator::make($input, [
             'warehouse_id' => ['required', 'integer'], 'expense_category_id' => ['required', 'integer'],
             'amount' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:999999999999.99'],
-            'method' => ['required', 'in:cash,bank-transfer'], 'reference' => ['nullable', 'string', 'max:160', 'required_if:method,bank-transfer'],
+            'method' => ['required', auth()->user()?->hasRole('cashier') ? 'in:cash' : 'in:cash,bank-transfer'], 'reference' => ['nullable', 'string', 'max:160', 'required_if:method,bank-transfer'],
             'description' => ['required', 'string', 'max:2000'], 'occurred_on' => ['required', 'date_format:Y-m-d', 'before_or_equal:today'],
             'idempotency_key' => ['required', 'string', 'max:96'],
         ])->validate();
@@ -97,9 +97,6 @@ class OperatingCostService
             ]);
             if ($shift) {
                 $cents = FixedDecimal::money($expense->amount);
-                if (app(CashierShiftService::class)->expectedCashCents($shift) < $cents) {
-                    throw ValidationException::withMessages(['amount' => __('Kas shift tidak mencukupi.')]);
-                }
                 ShiftCashMovement::create(['cashier_shift_id' => $shift->id, 'user_id' => auth()->id(), 'type' => 'out', 'amount' => $expense->amount, 'reference' => OutletExpense::class.':'.$expense->id, 'note' => $expense->description]);
                 $this->cash->append($warehouse->id, $shift->id, 'expense', $cents, OutletExpense::class, $expense->id, $expense->description);
                 $shift->update(['expected_cash' => FixedDecimal::moneyText(app(CashierShiftService::class)->expectedCashCents($shift))]);
@@ -193,6 +190,7 @@ class OperatingCostService
 
     private function permit(string $permission): void
     {
-        abort_unless(auth()->user()?->can($permission), 403);
+        $user = auth()->user();
+        abort_unless($user && ($user->hasRole('super-admin') || ! $user->hasRole('cashier')) && $user->can($permission), 403);
     }
 }

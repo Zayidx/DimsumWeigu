@@ -28,10 +28,10 @@ class PosController extends Controller
 
     public function openShift(Request $request, CashierShiftService $service)
     {
-        $data = $request->validate(['warehouse_id' => ['required', 'integer'], 'opening_cash' => ['required', 'numeric', 'min:0', 'decimal:0,2', 'max:999999999999.99']]);
+        $data = $request->validate(['warehouse_id' => ['required', 'integer']]);
         $outletId = $this->outlet($request);
         $warehouse = Warehouse::where('outlet_id', $outletId)->where('is_active', true)->findOrFail($data['warehouse_id']);
-        $shift = $service->open($outletId, $warehouse->id, (string) $data['opening_cash']);
+        $shift = $service->open($outletId, $warehouse->id);
 
         return response()->json(['data' => $shift->only(['id', 'outlet_id', 'warehouse_id', 'status', 'opening_cash', 'expected_cash', 'opened_at'])], 201);
     }

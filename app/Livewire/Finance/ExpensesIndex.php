@@ -49,7 +49,7 @@ class ExpensesIndex extends Component
     public function create(): void
     {
         $this->permit('expenses-create');
-        $this->form = ['warehouse_id' => '', 'expense_category_id' => '', 'amount' => '', 'method' => 'bank-transfer', 'reference' => '', 'description' => '', 'occurred_on' => today()->toDateString(), 'idempotency_key' => (string) Str::uuid()];
+        $this->form = ['warehouse_id' => '', 'expense_category_id' => '', 'amount' => '', 'method' => auth()->user()->hasRole('cashier') ? 'cash' : 'bank-transfer', 'reference' => '', 'description' => '', 'occurred_on' => today()->toDateString(), 'idempotency_key' => (string) Str::uuid()];
         $this->resetValidation();
         $this->showForm = true;
     }
@@ -128,6 +128,7 @@ class ExpensesIndex extends Component
 
     private function permit(string $permission): void
     {
-        abort_unless(auth()->user()?->can($permission), 403);
+        $user = auth()->user();
+        abort_unless($user && ($user->hasRole('super-admin') || ! $user->hasRole('cashier')) && $user->can($permission), 403);
     }
 }

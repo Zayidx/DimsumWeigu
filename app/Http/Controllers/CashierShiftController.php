@@ -71,9 +71,9 @@ class CashierShiftController extends Controller
 
     public function store(Request $request, OutletAccess $access, CashierShiftService $service): RedirectResponse
     {
-        $data = $request->validate(['outlet_id' => ['nullable', 'integer'], 'warehouse_id' => ['required', 'integer'], 'opening_cash' => ['required', 'numeric', 'min:0', 'max:9999999999999.99']]);
+        $data = $request->validate(['outlet_id' => ['nullable', 'integer'], 'warehouse_id' => ['required', 'integer']]);
         $outlet = isset($data['outlet_id']) ? $access->require($request->user(), (int) $data['outlet_id']) : $access->current($request);
-        $shift = $service->open($outlet->id, (int) $data['warehouse_id'], (string) $data['opening_cash']);
+        $shift = $service->open($outlet->id, (int) $data['warehouse_id']);
         $request->session()->put('active_outlet_id', $outlet->id);
         $request->session()->put('active_warehouse_id', $shift->warehouse_id);
 

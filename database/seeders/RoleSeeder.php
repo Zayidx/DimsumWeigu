@@ -90,6 +90,7 @@ class RoleSeeder extends Seeder
             'customers-create',
         ])->get();
         $this->grant($cashierRole, $cashierPermissions);
+        $cashierRole->revokePermissionTo(Permission::whereIn('name', ['expenses-access', 'expenses-create'])->get());
         // Existing cashier roles receive only the new read-only report permission.
         $cashierRole->givePermissionTo(Permission::where('name', 'cashier-sales-report-access')->get());
         $cashierRole->givePermissionTo(Permission::where('name', 'transaction-corrections-create')->get());
@@ -138,11 +139,12 @@ class RoleSeeder extends Seeder
             'recipes-export',
             'replenishment-access',
         ])->get());
-        // Homepage editing is a newly introduced capability; grant it additively
-        // so an existing customized manager role keeps its other permissions.
+        // Add review and settings capabilities without replacing a customized role.
         $managerRole->givePermissionTo(Permission::whereIn('name', [
             'homepage-settings-access',
             'homepage-settings-update',
+            'cash-management-access',
+            'cash-management-approve',
         ])->get());
     }
 
@@ -185,6 +187,12 @@ class RoleSeeder extends Seeder
             'qris-reconciliations-create',
         ])->get());
         $role->givePermissionTo(Permission::whereIn('name', ['transaction-corrections-access', 'transaction-corrections-update'])->get());
+        $role->givePermissionTo(Permission::whereIn('name', [
+            'bank-accounts-access',
+            'cash-management-access',
+            'cash-management-approve',
+            'cash-handovers-confirm',
+        ])->get());
     }
 
     private function createWarehouseRole(): void
