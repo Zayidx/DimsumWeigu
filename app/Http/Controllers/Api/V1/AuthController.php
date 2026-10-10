@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
@@ -47,7 +46,7 @@ class AuthController extends Controller
         abort_if(RateLimiter::tooManyAttempts('api-register:'.$key, 4), 429);
         RateLimiter::hit('api-register:'.$key, 3600);
 
-        $user = User::query()->create(['name' => $data['name'], 'email' => $data['email'], 'password' => Hash::make($data['password']), 'locale' => 'id', 'is_active' => true, 'password_changed_at' => now()]);
+        $user = User::query()->create(['name' => $data['name'], 'email' => $data['email'], 'password' => Hash::make($data['password']), 'locale' => 'id', 'is_active' => true]);
         $user->assignRole('customer');
         $token = $user->createToken($data['device_name'], ['user:read']);
 

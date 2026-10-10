@@ -13,6 +13,7 @@ use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -73,8 +74,10 @@ class SourceSeederTest extends TestCase
         $this->assertTrue(Role::findByName('cashier')->hasPermissionTo('pos-checkout'));
         $cashier = User::where('email', 'cashier2@gmail.com')->firstOrFail();
         $this->assertSame(['GAL-HER'], $cashier->outlets()->pluck('code')->all());
-        $this->assertTrue($cashier->must_change_password);
+        $this->assertTrue(Hash::check('indrawan123', $cashier->password));
         $this->assertDatabaseHas('payment_settings', ['provider' => 'midtrans', 'is_enabled' => false]);
+        $this->assertFalse(Schema::hasColumn('users', 'must_change_password'));
+        $this->assertFalse(Schema::hasColumn('users', 'password_changed_at'));
     }
 
     public function test_reseed_preserves_custom_prices_recipes_roles_credentials_and_stock(): void
@@ -137,17 +140,33 @@ class SourceSeederTest extends TestCase
         (new TestDataSeeder)->run();
     }
 
-    public function test_seeded_staff_receive_initial_password_without_overwriting_changed_credentials(): void
+    public function test_seeded_staff_keep_configured_password_without_forcing_a_first_login_change(): void
     {
         $this->seed(DatabaseSeeder::class);
         $manager = User::where('email', 'manager@gmail.com')->firstOrFail();
+        $this->assertTrue(Hash::check('indrawan123', $manager->password));
 
-        $manager->forceFill(['password' => 'UnknownOldSeederPassword456!', 'must_change_password' => true, 'password_changed_at' => null])->save();
-        $this->seed(UserSeeder::class);
-        $this->assertTrue(Hash::check('indrawan123', $manager->fresh()->password));
-
-        $manager->forceFill(['password' => 'PersonalManagerPassword789!', 'password_changed_at' => now(), 'must_change_password' => false])->save();
+        $manager->forceFill(['password' => 'PersonalManagerPassword789!'])->save();
         $this->seed(UserSeeder::class);
         $this->assertTrue(Hash::check('PersonalManagerPassword789!', $manager->fresh()->password));
+    }
+
+    public function test_staff_can_log_in_without_a_forced_password_change_redirect(): void
+    {
+        $user = User::create([
+            'name' => 'Staff Login', 'email' => 'staff-login@example.test',
+            'password' => 'Starter-password-123!', 'is_active' => true,
+        ]);
+        $nonce = str_repeat('a', 48);
+        $this->withSession([
+            'auth.login.started_at' => now()->subSeconds(3)->timestamp,
+            'auth.login.nonce' => $nonce,
+        ])->post(route('login.store'), [
+            'email' => $user->email,
+            'password' => 'Starter-password-123!',
+            'form_nonce' => $nonce,
+        ])->assertRedirect(route('dashboard'));
+
+        $this->get('/profile/password/force')->assertNotFound();
     }
 }

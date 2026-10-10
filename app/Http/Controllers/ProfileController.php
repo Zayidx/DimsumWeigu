@@ -15,11 +15,6 @@ use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function forcePassword(): View
-    {
-        return view('profile.force-password');
-    }
-
     public function edit(Request $request): View
     {
         $sessions = collect();
@@ -53,7 +48,7 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
-        $user->forceFill(['password' => Hash::make($request->string('password')->toString()), 'password_changed_at' => now(), 'must_change_password' => false, 'remember_token' => Str::random(60)])->save();
+        $user->forceFill(['password' => Hash::make($request->string('password')->toString()), 'remember_token' => Str::random(60)])->save();
         $user->tokens()->delete();
         if (config('session.driver') === 'database') {
             \DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->where('id', '!=', $request->session()->getId())->delete();
@@ -95,7 +90,7 @@ class ProfileController extends Controller
         $user->forceFill([
             'name' => 'Akun dinonaktifkan', 'email' => 'deleted+'.Str::uuid().'@invalid.local',
             'phone' => null, 'avatar_path' => null, 'is_active' => false,
-            'password' => Hash::make(Str::random(64)), 'must_change_password' => false,
+            'password' => Hash::make(Str::random(64)),
         ])->save();
         Auth::logout();
         $request->session()->invalidate();

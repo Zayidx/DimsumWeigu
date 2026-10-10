@@ -462,7 +462,7 @@ class OperationalActivitySeeder extends Seeder
         $email = 'simulasi.'.strtolower($role).($code ? '.'.strtolower($code) : '').'@example.invalid';
         $user = User::query()->firstOrCreate(['email' => $email], [
             'name' => 'Simulasi '.ucfirst($role).($code ? ' '.$code : ''),
-            'password' => Hash::make(Str::random(64)), 'is_active' => true, 'must_change_password' => true,
+            'password' => Hash::make(Str::random(64)), 'is_active' => true,
         ]);
         if ($user->wasRecentlyCreated) {
             $user->assignRole($role);

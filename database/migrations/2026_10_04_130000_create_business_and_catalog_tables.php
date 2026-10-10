@@ -2,14 +2,13 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        $this->createIfMissing('outlets', function (Blueprint $table) {
+        Schema::create('outlets', function (Blueprint $table) {
             $table->id();
             $table->string('code', 32)->unique();
             $table->string('slug')->unique();
@@ -28,7 +27,7 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $this->createIfMissing('warehouses', function (Blueprint $table) {
+        Schema::create('warehouses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('outlet_id')->nullable()->constrained()->restrictOnDelete();
             $table->string('code', 32)->unique();
@@ -41,7 +40,7 @@ return new class extends Migration
             $table->index(['outlet_id', 'is_active']);
         });
 
-        $this->createIfMissing('user_outlets', function (Blueprint $table) {
+        Schema::create('user_outlets', function (Blueprint $table) {
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('outlet_id')->constrained()->cascadeOnDelete();
             $table->boolean('is_default')->default(false);
@@ -49,7 +48,7 @@ return new class extends Migration
             $table->primary(['user_id', 'outlet_id']);
         });
 
-        $this->createIfMissing('settings', function (Blueprint $table) {
+        Schema::create('settings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('outlet_id')->nullable()->constrained()->restrictOnDelete();
             $table->string('scope_key', 48)->default('global');
@@ -63,7 +62,7 @@ return new class extends Migration
             $table->index(['group', 'outlet_id']);
         });
 
-        $this->createIfMissing('categories', function (Blueprint $table) {
+        Schema::create('categories', function (Blueprint $table) {
             $table->id();
             $table->foreignId('parent_id')->nullable()->constrained('categories')->restrictOnDelete();
             $table->string('name');
@@ -76,17 +75,18 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $this->createIfMissing('units', function (Blueprint $table) {
+        Schema::create('units', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('symbol', 16)->unique();
+            $table->string('symbol', 16)->index();
+            $table->string('code', 32)->nullable()->unique();
             $table->string('dimension', 24)->default('quantity');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
         });
 
-        $this->createIfMissing('unit_conversions', function (Blueprint $table) {
+        Schema::create('unit_conversions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('from_unit_id')->constrained('units')->restrictOnDelete();
             $table->foreignId('to_unit_id')->constrained('units')->restrictOnDelete();
@@ -95,7 +95,7 @@ return new class extends Migration
             $table->unique(['from_unit_id', 'to_unit_id']);
         });
 
-        $this->createIfMissing('products', function (Blueprint $table) {
+        Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('unit_id')->constrained()->restrictOnDelete();
@@ -114,6 +114,8 @@ return new class extends Migration
             $table->decimal('reorder_point', 15, 3)->default(0);
             $table->boolean('is_active')->default(true)->index();
             $table->boolean('is_sellable')->default(true)->index();
+            $table->boolean('is_semi_finished')->default(false)->index();
+            $table->boolean('allow_single_unit_sale')->default(false)->index();
             $table->boolean('track_stock')->default(true);
             $table->boolean('track_batches')->default(false);
             $table->timestamps();
@@ -121,19 +123,22 @@ return new class extends Migration
             $table->index(['category_id', 'is_active']);
         });
 
-        $this->createIfMissing('product_units', function (Blueprint $table) {
+        Schema::create('product_units', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->foreignId('unit_id')->constrained()->restrictOnDelete();
             $table->decimal('conversion_factor', 20, 8);
             $table->decimal('sell_price', 15, 2)->nullable();
+            $table->decimal('buy_price', 15, 2)->nullable();
             $table->string('barcode', 96)->nullable()->unique();
             $table->boolean('is_default')->default(false);
+            $table->boolean('is_base')->default(false);
+            $table->string('sku_suffix', 32)->nullable();
             $table->timestamps();
             $table->unique(['product_id', 'unit_id']);
         });
 
-        $this->createIfMissing('product_warehouses', function (Blueprint $table) {
+        Schema::create('product_warehouses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
@@ -146,7 +151,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'stock']);
         });
 
-        $this->createIfMissing('product_batches', function (Blueprint $table) {
+        Schema::create('product_batches', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
@@ -161,7 +166,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'product_id', 'expires_at']);
         });
 
-        $this->createIfMissing('inventory_ledgers', function (Blueprint $table) {
+        Schema::create('inventory_ledgers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
@@ -179,7 +184,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'product_id', 'created_at']);
         });
 
-        $this->createIfMissing('stock_mutations', function (Blueprint $table) {
+        Schema::create('stock_mutations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('product_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
@@ -195,7 +200,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        $this->createIfMissing('customers', function (Blueprint $table) {
+        Schema::create('customers', function (Blueprint $table) {
             $table->id();
             $table->string('code', 40)->unique();
             $table->string('name');
@@ -212,7 +217,7 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $this->createIfMissing('suppliers', function (Blueprint $table) {
+        Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
             $table->string('code', 40)->unique();
             $table->string('name');
@@ -227,13 +232,14 @@ return new class extends Migration
             $table->softDeletes();
         });
 
-        $this->createIfMissing('cashier_shifts', function (Blueprint $table) {
+        Schema::create('cashier_shifts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->foreignId('open_user_id')->nullable()->unique()->constrained('users')->restrictOnDelete();
             $table->foreignId('outlet_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
             $table->string('status', 20)->default('open')->index();
+            $table->boolean('is_force_closed')->default(false);
             $table->decimal('opening_cash', 15, 2)->default(0);
             $table->decimal('expected_cash', 15, 2)->default(0);
             $table->decimal('actual_cash', 15, 2)->nullable();
@@ -247,7 +253,7 @@ return new class extends Migration
             $table->index(['user_id', 'status']);
         });
 
-        $this->createIfMissing('shift_cash_movements', function (Blueprint $table) {
+        Schema::create('shift_cash_movements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cashier_shift_id')->constrained()->restrictOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
@@ -255,10 +261,11 @@ return new class extends Migration
             $table->decimal('amount', 15, 2);
             $table->string('reference')->nullable();
             $table->text('note')->nullable();
+            $table->string('idempotency_key', 96)->nullable()->unique();
             $table->timestamps();
         });
 
-        $this->createIfMissing('warehouse_cash_ledgers', function (Blueprint $table) {
+        Schema::create('warehouse_cash_ledgers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
             $table->foreignId('cashier_shift_id')->nullable()->constrained()->restrictOnDelete();
@@ -274,7 +281,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'created_at']);
         });
 
-        $this->createIfMissing('transactions', function (Blueprint $table) {
+        Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->string('number', 48)->unique();
             $table->foreignId('outlet_id')->constrained()->restrictOnDelete();
@@ -304,7 +311,7 @@ return new class extends Migration
             $table->index(['warehouse_id', 'occurred_at']);
         });
 
-        $this->createIfMissing('transaction_details', function (Blueprint $table) {
+        Schema::create('transaction_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained()->restrictOnDelete();
             $table->foreignId('product_id')->nullable()->constrained()->restrictOnDelete();
@@ -323,9 +330,21 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        $this->createIfMissing('transaction_tenders', function (Blueprint $table) {
+        Schema::create('bank_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->string('bank_name');
+            $table->string('account_name');
+            $table->string('account_number', 80);
+            $table->unsignedInteger('sort_order')->default(0);
+            $table->boolean('is_active')->default(true)->index();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('transaction_tenders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained()->restrictOnDelete();
+            $table->foreignId('bank_account_id')->nullable()->constrained()->restrictOnDelete();
             $table->string('method', 32);
             $table->decimal('amount', 15, 2);
             $table->string('status', 24)->default('pending');
@@ -337,7 +356,7 @@ return new class extends Migration
             $table->index(['method', 'status']);
         });
 
-        $this->createIfMissing('transaction_detail_batch_allocations', function (Blueprint $table) {
+        Schema::create('transaction_detail_batch_allocations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_detail_id')->constrained(indexName: 'detail_batch_detail_fk')->restrictOnDelete();
             $table->foreignId('product_batch_id')->constrained(indexName: 'detail_batch_batch_fk')->restrictOnDelete();
@@ -346,7 +365,7 @@ return new class extends Migration
             $table->unique(['transaction_detail_id', 'product_batch_id'], 'detail_batch_unique');
         });
 
-        $this->createIfMissing('profits', function (Blueprint $table) {
+        Schema::create('profits', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained()->restrictOnDelete();
             $table->foreignId('transaction_detail_id')->nullable()->constrained()->restrictOnDelete();
@@ -357,38 +376,6 @@ return new class extends Migration
             $table->timestamp('occurred_at')->useCurrent()->index();
             $table->timestamps();
         });
-    }
-
-    // MySQL DDL is not transactional: resume an interrupted initial migration safely.
-    private function createIfMissing(string $name, Closure $definition): void
-    {
-        if (Schema::hasTable($name)) {
-            if (DB::table($name)->exists()) {
-                throw new RuntimeException("Cannot resume initial migration over populated table: {$name}");
-            }
-            $blueprint = new Blueprint(Schema::getConnection(), $name, $definition);
-            $blueprint->toSql();
-            $indexes = array_column(Schema::getIndexes($name), 'name');
-            $foreignKeys = array_column(Schema::getForeignKeys($name), 'name');
-            foreach ($blueprint->getCommands() as $command) {
-                if ($command->name === 'foreign' && ! in_array($command->index, $foreignKeys, true)) {
-                    Schema::table($name, function (Blueprint $table) use ($command) {
-                        $foreign = $table->foreign($command->columns, $command->index)->references($command->references)->on($command->on);
-                        if ($command->onDelete) {
-                            $foreign->onDelete($command->onDelete);
-                        }
-                        if ($command->onUpdate) {
-                            $foreign->onUpdate($command->onUpdate);
-                        }
-                    });
-                } elseif (in_array($command->name, ['unique', 'index'], true) && ! in_array($command->index, $indexes, true)) {
-                    Schema::table($name, fn (Blueprint $table) => $table->{$command->name}($command->columns, $command->index));
-                }
-            }
-
-            return;
-        }
-        Schema::create($name, $definition);
     }
 
     public function down(): void

@@ -6,7 +6,6 @@ use App\Http\Middleware\EnforceAbsoluteSessionLifetime;
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\RegistrationEnabled;
 use App\Http\Middleware\RequireActiveShift;
-use App\Http\Middleware\RequirePasswordChange;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -32,7 +31,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [AddSecurityHeaders::class]);
         $middleware->alias([
             'account.active' => EnsureActiveAccount::class,
-            'password.change' => RequirePasswordChange::class,
             'password.confirm' => RequirePassword::class,
             'registration.enabled' => RegistrationEnabled::class,
             'shift.active' => RequireActiveShift::class,

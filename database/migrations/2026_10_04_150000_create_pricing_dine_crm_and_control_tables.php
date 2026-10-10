@@ -211,17 +211,6 @@ return new class extends Migration
             $table->boolean('requires_confirmation')->default(false);
             $table->timestamps();
         });
-        Schema::create('bank_accounts', function (Blueprint $table) {
-            $table->id();
-            $table->string('bank_name');
-            $table->string('account_name');
-            $table->string('account_number', 80);
-            $table->unsignedInteger('sort_order')->default(0);
-            $table->boolean('is_active')->default(true)->index();
-            $table->timestamps();
-            $table->softDeletes();
-        });
-
         Schema::create('operational_notifications', function (Blueprint $table) {
             $table->id();
             $table->foreignId('outlet_id')->nullable()->constrained()->restrictOnDelete();

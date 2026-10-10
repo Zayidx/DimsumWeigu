@@ -38,6 +38,7 @@ class AuthenticatedSessionController extends Controller
 
         if (! $loginFormValid) {
             RateLimiter::hit('login:'.$key, 60);
+
             return $this->failedLogin($request);
         }
 
@@ -47,6 +48,7 @@ class AuthenticatedSessionController extends Controller
 
         if (! Auth::attempt(['email' => $data['email'], 'password' => $data['password'], 'is_active' => true], $request->boolean('remember'))) {
             RateLimiter::hit('login:'.$key, 60);
+
             return $this->failedLogin($request);
         }
 
@@ -64,7 +66,7 @@ class AuthenticatedSessionController extends Controller
             $request->session()->put('active_outlet_id', $defaultOutletId);
         }
 
-        return redirect()->intended($user->must_change_password ? route('profile.password.force') : route('dashboard'));
+        return redirect()->intended(route('dashboard'));
     }
 
     private function failedLogin(Request $request): RedirectResponse

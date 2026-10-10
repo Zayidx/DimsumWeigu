@@ -21,6 +21,7 @@ return new class extends Migration
             $table->timestamp('received_at')->nullable();
             $table->text('notes')->nullable();
             $table->string('idempotency_key', 96)->nullable()->unique();
+            $table->string('receive_idempotency_key', 96)->nullable()->unique();
             $table->timestamps();
         });
         Schema::create('stock_transfer_items', function (Blueprint $table) {
@@ -31,6 +32,15 @@ return new class extends Migration
             $table->decimal('quantity_received', 15, 3)->default(0);
             $table->timestamps();
             $table->unique(['stock_transfer_id', 'product_id']);
+        });
+        Schema::create('stock_transfer_batch_items', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('stock_transfer_item_id')->constrained()->restrictOnDelete();
+            $table->foreignId('product_batch_id')->constrained()->restrictOnDelete();
+            $table->decimal('quantity_sent', 15, 3);
+            $table->decimal('quantity_received', 15, 3)->default(0);
+            $table->timestamps();
+            $table->unique(['stock_transfer_item_id', 'product_batch_id'], 'transfer_batch_item_unique');
         });
 
         Schema::create('stock_opnames', function (Blueprint $table) {
@@ -120,6 +130,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
             $table->foreignId('goods_receiving_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('ingredient_goods_receiving_id')->nullable()->unique()->constrained()->restrictOnDelete();
             $table->string('reference', 48)->unique();
             $table->decimal('amount', 15, 2);
             $table->decimal('paid_amount', 15, 2)->default(0);
@@ -191,12 +202,26 @@ return new class extends Migration
             $table->timestamps();
         });
 
+        Schema::create('expense_categories', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('outlet_id')->constrained()->restrictOnDelete();
+            $table->string('name', 80);
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+            $table->unique(['outlet_id', 'name']);
+        });
+
         Schema::create('outlet_expenses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('outlet_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->foreignId('expense_category_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignId('cashier_shift_id')->nullable()->constrained()->restrictOnDelete();
             $table->string('category', 80);
+            $table->string('method', 32)->default('bank-transfer');
+            $table->string('idempotency_key', 96)->nullable()->unique();
+            $table->string('request_fingerprint', 64)->nullable();
             $table->decimal('amount', 15, 2);
             $table->string('reference')->nullable();
             $table->text('description')->nullable();
@@ -212,6 +237,10 @@ return new class extends Migration
             $table->foreignId('product_batch_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('user_id')->constrained()->restrictOnDelete();
             $table->decimal('quantity', 15, 3);
+            $table->decimal('unit_cost', 15, 2)->default(0);
+            $table->decimal('cost_total', 15, 2)->default(0);
+            $table->string('idempotency_key', 96)->nullable()->unique();
+            $table->string('request_fingerprint', 64)->nullable();
             $table->string('reason', 48);
             $table->text('notes')->nullable();
             $table->timestamps();

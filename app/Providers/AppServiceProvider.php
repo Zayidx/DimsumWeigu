@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Http\Middleware\EnsureActiveAccount;
 use App\Http\Middleware\EnsureOutletContext;
-use App\Http\Middleware\RequirePasswordChange;
 use Illuminate\Auth\Middleware\RequirePassword;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Session\Middleware\AuthenticateSession;
@@ -32,7 +31,6 @@ class AppServiceProvider extends ServiceProvider
         config(['livewire.pagination_theme' => 'bootstrap']);
         Livewire::addPersistentMiddleware([
             EnsureActiveAccount::class,
-            RequirePasswordChange::class,
             EnsureOutletContext::class,
             AuthenticateSession::class,
             RequirePassword::class,

@@ -87,7 +87,7 @@
   },
   "initial_seed_data": {
     "business_profile": "Dimsum Weigu sebagai data usaha contoh yang bisa diganti, bukan konstanta aplikasi.",
-    "setup_chain": ["permission catalog dan reset permission cache", "roles and role permissions", "payment settings", "dine-in settings", "PUSAT central warehouse, outlet awal dan pivot stok yang dibutuhkan", "profil bisnis Dimsum Weigu yang bisa dikonfigurasi, empat outlet penjualan contoh dan branch warehouses", "initial users menggunakan SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD dari environment serta akun awal ber-password konfigurasi yang wajib diganti"],
+    "setup_chain": ["permission catalog dan reset permission cache", "roles and role permissions", "payment settings", "dine-in settings", "PUSAT central warehouse, outlet awal dan pivot stok yang dibutuhkan", "profil bisnis Dimsum Weigu yang bisa dikonfigurasi, empat outlet penjualan contoh dan branch warehouses", "initial users menggunakan SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD dari environment serta password konfigurasi untuk akun staff"],
     "sensitive_defaults": "Dokumentasikan seluruh akun contoh secara lokal saja. Di shared/production environment wajib menetapkan SUPER_ADMIN_EMAIL dan SUPER_ADMIN_PASSWORD yang unik; jangan gunakan password contoh.",
     "demo_dataset": "Opt-in saja; boleh mencakup outlet MAL, TKB, PUT, produk, transaksi, purchasing, CRM, dan dine-in untuk demonstrasi. Tidak pernah dijalankan di production."
   },

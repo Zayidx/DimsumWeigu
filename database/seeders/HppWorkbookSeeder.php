@@ -161,7 +161,7 @@ class HppWorkbookSeeder extends Seeder
                 ->merge(['Dimsum ori topping wortel', 'Lumpia keju ori', 'Lumpia keju mentai'])->filter()->unique();
             foreach ($componentNames as $componentName) {
                 $key = mb_strtolower(trim((string) $componentName));
-                $recipeName = $key === 'bolognese sauce' ? 'saus bolognese' : $key;
+                $recipeName = $this->sourceRecipeKey($key);
                 $sourceRecipe = $sourceRecipes->get($recipeName);
                 if (! $sourceRecipe || empty($sourceRecipe['bahan'])) {
                     continue;
@@ -237,7 +237,7 @@ class HppWorkbookSeeder extends Seeder
                 $incompleteReason = '';
                 foreach ($menuRow['rincian'] ?? [] as $component) {
                     $componentName = mb_strtolower(trim((string) ($component['nama'] ?? '')));
-                    $recipeName = $componentName === 'bolognese sauce' ? 'saus bolognese' : $componentName;
+                    $recipeName = $this->sourceRecipeKey($componentName);
                     $sourceRecipe = $sourceRecipes->get($recipeName);
                     $componentCount = $component['pcs'] ?? null;
                     $componentProduct = $componentProducts[$componentName] ?? null;
@@ -338,6 +338,15 @@ class HppWorkbookSeeder extends Seeder
             'lt', 'liter' => 'l',
             'pc' => 'pcs',
             default => mb_strtolower(trim($unit)),
+        };
+    }
+
+    private function sourceRecipeKey(string $componentName): string
+    {
+        return match (mb_strtolower(trim($componentName))) {
+            'bolognese sauce' => 'saus bolognese',
+            'lumpia' => 'lumpia keju ori',
+            default => mb_strtolower(trim($componentName)),
         };
     }
 

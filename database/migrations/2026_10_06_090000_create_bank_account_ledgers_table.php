@@ -8,10 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('transaction_tenders', function (Blueprint $table) {
-            $table->foreignId('bank_account_id')->nullable()->after('transaction_id')->constrained()->restrictOnDelete();
-        });
-
         Schema::create('bank_account_ledgers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('bank_account_id')->constrained()->restrictOnDelete();
@@ -32,8 +28,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('bank_account_ledgers');
-        Schema::table('transaction_tenders', function (Blueprint $table) {
-            $table->dropConstrainedForeignId('bank_account_id');
-        });
     }
 };

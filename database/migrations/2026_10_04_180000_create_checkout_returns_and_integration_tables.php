@@ -48,6 +48,8 @@ return new class extends Migration
             $table->string('resolution', 20)->default('credit');
             $table->text('reason');
             $table->decimal('total', 15, 2)->default(0);
+            $table->string('idempotency_key', 96)->nullable()->unique();
+            $table->string('request_fingerprint', 64)->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
         });
@@ -71,11 +73,34 @@ return new class extends Migration
             $table->foreignId('cashier_shift_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignId('requested_by')->constrained('users')->restrictOnDelete();
             $table->foreignId('confirmed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('receiving_shift_id')->nullable()->constrained('cashier_shifts')->restrictOnDelete();
             $table->decimal('amount', 15, 2);
             $table->string('status', 20)->default('pending')->index();
             $table->string('idempotency_key', 96)->unique();
             $table->text('notes')->nullable();
             $table->timestamp('confirmed_at')->nullable();
+            $table->timestamp('approved_at')->nullable();
+            $table->string('request_fingerprint', 64)->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('supplier_credit_notes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('supplier_id')->constrained()->restrictOnDelete();
+            $table->foreignId('supplier_return_id')->unique()->constrained()->restrictOnDelete();
+            $table->decimal('amount', 15, 2);
+            $table->decimal('available_amount', 15, 2);
+            $table->timestamps();
+        });
+        Schema::create('supplier_refunds', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('supplier_return_id')->unique()->constrained()->restrictOnDelete();
+            $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
+            $table->foreignId('user_id')->constrained()->restrictOnDelete();
+            $table->string('method', 32);
+            $table->decimal('amount', 15, 2);
+            $table->string('reference', 160)->nullable();
             $table->timestamps();
         });
 
@@ -125,6 +150,7 @@ return new class extends Migration
             $table->foreignId('ingredient_id')->constrained()->restrictOnDelete();
             $table->foreignId('warehouse_id')->constrained()->restrictOnDelete();
             $table->decimal('stock', 15, 3)->default(0);
+            $table->decimal('reserved_stock', 15, 3)->default(0);
             $table->timestamps();
             $table->unique(['ingredient_id', 'warehouse_id']);
         });

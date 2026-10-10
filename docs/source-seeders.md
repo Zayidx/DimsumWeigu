@@ -2,7 +2,7 @@
 
 ## Seeder
 
-`DatabaseSeeder` hanya menyiapkan permission, role, data outlet/gudang, dan konfigurasi aplikasi. Data HPP serta aktivitas simulasi tidak otomatis dijalankan saat `migrate:fresh --seed` atau `db:seed`.
+`DatabaseSeeder` menyiapkan permission, role, data outlet/gudang, konfigurasi aplikasi, akun awal, serta master HPP/menu/resep dari `hpp.json` yang bersumber dari workbook. Seeder aktivitas tetap opt-in dan tidak ikut `migrate:fresh --seed` atau `db:seed`.
 
 Jalankan data katalog dan BOM uji secara eksplisit pada database lokal yang disiapkan untuk pengujian:
 
@@ -13,11 +13,13 @@ php artisan db:seed --class=OperationalActivitySeeder
 
 `OperationalActivitySeeder` mensimulasikan permintaan bahan, produksi setengah jadi, transfer ke outlet, POS, QC, piutang, utang, dan setoran kas. Keduanya menolak lingkungan production. Seeder aktivitas menggunakan kunci idempotensi; jangan gunakan untuk mencampur data simulasi ke transaksi bisnis aktif.
 
-`TestDataSeeder` menyiapkan saldo simulasi kemasan di setiap gudang outlet yang aktif untuk penjualan, termasuk 100 pcs kotak dimsum kecil per outlet. Saldo dicatat pada ledger stok bahan dan tidak ditambahkan ulang jika outlet sudah memiliki stok atau ledger.
+`TestDataSeeder` menyiapkan fixture lokal untuk pengujian workflow, bukan sumber master HPP yang dipakai seeder utama. Ia menyiapkan saldo simulasi kemasan di setiap gudang outlet yang aktif untuk penjualan, termasuk 100 pcs kotak dimsum kecil per outlet. Saldo dicatat pada ledger stok bahan dan tidak ditambahkan ulang jika outlet sudah memiliki stok atau ledger.
 
 Untuk membantu uji produksi, `TestDataSeeder` juga mengisi saldo simulasi bahan resep di gudang PUSAT, seperti ayam fillet, kulit dimsum/lumpia, bumbu, dan saus. Gudang outlet mendapat kemasan serta saus untuk menu yang BOM-nya sudah tersedia. Saldo awal hanya dimasukkan pada bahan yang belum memiliki saldo/mutasi; saldo operasional yang sudah ada dilewati. Nilainya adalah fixture lokal, bukan stok atau HPP yang boleh dipakai untuk pembukuan.
 
 `OperationalActivitySeeder` memproduksi dan mentransfer produk setengah jadi melalui service stok ke setiap outlet: masing-masing 30 pcs DPL, DWO, DBE, LPS, CHB, dan CHS. Dengan begitu BOM POS dimsum, lumpia, dan Chiquro punya komponen outlet. Seeder ini juga membuat transaksi penjualan, shift, serta aktivitas simulasi keuangan; jalankan hanya untuk database lokal yang memang boleh berisi aktivitas contoh.
+
+Akun baru memakai password yang disediakan konfigurasi seeder. Login pertama tidak memaksa penggantian password; pengguna tetap dapat menggantinya dari profil atau melalui alur reset email.
 
 ## Data HPP yang diterapkan
 

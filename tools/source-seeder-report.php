@@ -62,7 +62,7 @@ try {
     foreach ($db->table('ingredients')->join('units', 'units.id', '=', 'ingredients.unit_id')->select('ingredients.code', 'ingredients.name', 'units.code as unit_code', 'buy_price', 'stock')->orderBy('ingredients.id')->get() as $item) {
         $lines[] = '| '.$item->code.' | '.$item->name.' | '.$item->unit_code.' | '.$item->buy_price.' | '.$item->stock.' |';
     }
-    $lines = array_merge($lines, ['', '## Akun dan akses', '', 'Password sumber tidak dipakai. Akun baru memakai password acak yang tidak ditampilkan; administrator dapat memakai SUPER_ADMIN_PASSWORD dari konfigurasi proyek baru. Semua akun baru wajib mengganti password. Gunakan /forgot-password dengan pengiriman email yang telah dikonfigurasi. Seeder tidak mengirim email otomatis dan tidak menulis password ke dokumentasi/log.', '', '| Nama | Login | Role | Outlet (default bertanda *) |', '|---|---|---|---|']);
+    $lines = array_merge($lines, ['', '## Akun dan akses', '', 'Akun awal memakai password dari konfigurasi seeder; super-admin memakai SUPER_ADMIN_PASSWORD. Login pertama tidak memaksa penggantian password. Pengguna dapat mengganti password dari profil atau memakai tautan reset email. Seeder tidak menulis password ke dokumentasi/log.', '', '| Nama | Login | Role | Outlet (default bertanda *) |', '|---|---|---|---|']);
     foreach (User::select('id', 'name', 'email')->orderBy('id')->get() as $user) {
         $roles = $user->roles()->pluck('name')->implode(', ');
         $outlets = $user->outlets()->get()->map(fn ($outlet) => $outlet->code.($outlet->pivot->is_default ? '*' : ''))->implode(', ');

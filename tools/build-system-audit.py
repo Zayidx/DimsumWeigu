@@ -25,8 +25,8 @@ finding('SEC-01', 'akses', 'tinggi', 'diperbaiki', 'Pengelola user dapat menarge
         'protectTarget menolak target super-admin dan permission target di luar permission pelaku, termasuk saat ID diubah melalui payload Livewire.',
         'app/Livewire/Admin/UsersIndex.php', 'private function protectTarget')
 finding('SEC-02', 'akses', 'tinggi', 'diperbaiki', 'Middleware custom tidak otomatis persisten pada pembaruan Livewire',
-        'Daftar persistent middleware bawaan Livewire tidak mencakup EnsureActiveAccount, RequirePasswordChange, EnsureOutletContext, Spatie permission/role, atau konfirmasi password aplikasi.',
-        'Sesi komponen lama berpotensi tetap mengirim action setelah akun nonaktif, outlet dicabut, atau password wajib diganti.',
+        'Daftar persistent middleware bawaan Livewire tidak mencakup EnsureActiveAccount, EnsureOutletContext, Spatie permission/role, atau konfirmasi password aplikasi.',
+        'Sesi komponen lama berpotensi tetap mengirim action setelah akun nonaktif, outlet dicabut, atau konfirmasi password kedaluwarsa.',
         'Daftarkan middleware tersebut secara persisten berdasarkan route asal; homepage publik tetap dapat dirender tanpa auth.',
         'app/Providers/AppServiceProvider.php', 'addPersistentMiddleware', 'Review kode dan pembukaan formulir Livewire pada database preview terpisah.')
 finding('SEC-03', 'sesi', 'tinggi', 'diperbaiki', 'Reset/ganti password belum mencabut akses lama',

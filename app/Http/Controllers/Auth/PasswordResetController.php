@@ -47,7 +47,7 @@ class PasswordResetController extends Controller
         ]);
 
         $status = Password::reset($request->only('email', 'password', 'password_confirmation', 'token'), function (User $user, string $password) {
-            $user->forceFill(['password' => Hash::make($password), 'password_changed_at' => now(), 'must_change_password' => false, 'remember_token' => Str::random(60)])->save();
+            $user->forceFill(['password' => Hash::make($password), 'remember_token' => Str::random(60)])->save();
             $user->tokens()->delete();
             if (config('session.driver') === 'database') {
                 DB::table(config('session.table', 'sessions'))->where('user_id', $user->id)->delete();

@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\Outlet;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use RuntimeException;
 
 class UserSeeder extends Seeder
@@ -33,15 +32,9 @@ class UserSeeder extends Seeder
             $configured = (string) config('seed_accounts.passwords.'.$passwordKey, '');
             $user = User::firstOrCreate(['email' => $email], [
                 'name' => $name, 'password' => $configured,
-                'locale' => 'id', 'is_active' => true, 'must_change_password' => true,
+                'locale' => 'id', 'is_active' => true,
             ]);
             if (! $user->wasRecentlyCreated) {
-                // A seeded account that has never changed its password can receive a usable
-                // temporary password later, without touching established user credentials.
-                if ($user->must_change_password && $user->password_changed_at === null && ! Hash::check($configured, $user->password)) {
-                    $user->forceFill(['password' => $configured])->save();
-                }
-
                 continue;
             }
             $user->assignRole($role);
@@ -50,6 +43,6 @@ class UserSeeder extends Seeder
                 $user->outlets()->attach($outlet->id, ['is_default' => $index === 0]);
             }
         }
-        $this->command?->info('Akun staff disiapkan dengan password awal indrawan123. Semua akun baru wajib mengganti password setelah login.');
+        $this->command?->info('Akun staff disiapkan. Kata sandi akun yang sudah ada tidak diubah.');
     }
 }

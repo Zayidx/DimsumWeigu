@@ -36,7 +36,7 @@ class MobilePosApiTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolePermissionSeeder::class);
-        $this->user = User::create(['name' => 'API cashier', 'email' => 'api-cashier@example.test', 'password' => 'Test-password-123!', 'is_active' => true, 'must_change_password' => false]);
+        $this->user = User::create(['name' => 'API cashier', 'email' => 'api-cashier@example.test', 'password' => 'Test-password-123!', 'is_active' => true]);
         $this->user->assignRole('cashier');
         $this->outlet = Outlet::create(['code' => 'MOBILE', 'slug' => 'mobile', 'name' => 'Mobile outlet', 'is_active' => true, 'is_sales_enabled' => true]);
         $this->user->outlets()->attach($this->outlet->id, ['is_default' => true]);
@@ -125,7 +125,7 @@ class MobilePosApiTest extends TestCase
         $this->assertSame('10.000', $this->product->fresh()->stock);
     }
 
-    public function test_token_ability_live_permission_inactive_and_password_change_are_enforced(): void
+    public function test_token_ability_live_permission_and_inactive_account_are_enforced(): void
     {
         $this->bearer($this->user, ['user:read']);
         $this->getJson($this->url('shift'))->assertForbidden();
@@ -137,9 +137,9 @@ class MobilePosApiTest extends TestCase
         $this->user->update(['is_active' => false]);
         Auth::forgetGuards();
         $this->getJson($this->url('shift'))->assertForbidden();
-        $this->user->update(['is_active' => true, 'must_change_password' => true]);
+        $this->user->update(['is_active' => true]);
         Auth::forgetGuards();
-        $this->getJson($this->url('shift'))->assertForbidden();
+        $this->getJson($this->url('shift'))->assertOk();
     }
 
     public function test_cross_outlet_and_other_cashiers_cart_and_history_are_hidden(): void

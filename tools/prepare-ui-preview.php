@@ -40,7 +40,7 @@ Artisan::call('db:seed', ['--force' => true]);
 $outlet = Outlet::where('code', 'GAL-BP')->firstOrFail();
 $warehouse = Warehouse::where('code', 'WH-GAL-BP')->firstOrFail();
 foreach (User::all() as $user) {
-    $user->forceFill(['password' => Hash::make($previewPassword), 'must_change_password' => false])->save();
+    $user->forceFill(['password' => Hash::make($previewPassword)])->save();
 }
 $cashier = User::where('email', 'cashier@gmail.com')->firstOrFail();
 $shift = CashierShift::firstOrCreate(['open_user_id' => $cashier->id, 'status' => 'open'], [

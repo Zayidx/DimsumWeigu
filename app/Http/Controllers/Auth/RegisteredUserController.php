@@ -42,7 +42,7 @@ class RegisteredUserController extends Controller
         abort_if(RateLimiter::tooManyAttempts('register:'.$key, 4), 429);
         RateLimiter::hit('register:'.$key, 3600);
 
-        $user = User::query()->create(['name' => $data['name'], 'email' => $data['email'], 'password' => Hash::make($data['password']), 'locale' => 'id', 'is_active' => true, 'password_changed_at' => now()]);
+        $user = User::query()->create(['name' => $data['name'], 'email' => $data['email'], 'password' => Hash::make($data['password']), 'locale' => 'id', 'is_active' => true]);
         Role::query()->where('name', 'customer')->where('guard_name', 'web')->firstOrCreate(['name' => 'customer', 'guard_name' => 'web']);
         $user->assignRole('customer');
         Auth::login($user);

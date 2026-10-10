@@ -125,8 +125,6 @@ class UsersIndex extends Component
             $user->fill(['name' => trim($data['name']), 'email' => strtolower(trim($data['email'])), 'phone' => $data['phone'] ?: null, 'is_active' => $data['isActive']]);
             if (! $user->exists) {
                 $user->password = Hash::make(Str::password(64));
-                $user->must_change_password = true;
-                $user->password_changed_at = null;
             }
             $user->save();
             $user->syncRoles($roles);

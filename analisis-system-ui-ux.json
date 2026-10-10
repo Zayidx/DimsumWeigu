@@ -53,8 +53,8 @@
       "tingkat": "tinggi",
       "status": "diperbaiki",
       "judul": "Middleware custom tidak otomatis persisten pada pembaruan Livewire",
-      "bukti": "Daftar persistent middleware bawaan Livewire tidak mencakup EnsureActiveAccount, RequirePasswordChange, EnsureOutletContext, Spatie permission/role, atau konfirmasi password aplikasi.",
-      "dampak": "Sesi komponen lama berpotensi tetap mengirim action setelah akun nonaktif, outlet dicabut, atau password wajib diganti.",
+      "bukti": "Daftar persistent middleware bawaan Livewire tidak mencakup EnsureActiveAccount, EnsureOutletContext, Spatie permission/role, atau konfirmasi password aplikasi.",
+      "dampak": "Sesi komponen lama berpotensi tetap mengirim action setelah akun nonaktif, outlet dicabut, atau konfirmasi password kedaluwarsa.",
       "tindakan": "Daftarkan middleware tersebut secara persisten berdasarkan route asal; homepage publik tetap dapat dirender tanpa auth.",
       "referensi": {
         "file": "app/Providers/AppServiceProvider.php",

@@ -6,7 +6,7 @@ Dokumen ini merangkum fitur yang sudah tersedia di repository, batasan yang masi
 
 | Area | Yang sudah tersedia | Status / catatan |
 |---|---|---|
-| Akun dan akses | Login, reset/konfirmasi password, perubahan password wajib, role-permission, pembatasan akun aktif, pilihan outlet, audit log | Fondasi tersedia. Sejumlah skenario otorisasi dan redirect masih perlu dirapikan. |
+| Akun dan akses | Login, reset/konfirmasi password, perubahan password dari profil, role-permission, pembatasan akun aktif, pilihan outlet, audit log | Fondasi tersedia. Login pertama tidak memaksa penggantian password. |
 | Master data | Produk/menu, kategori, satuan dan konversi, supplier, outlet/gudang, bahan baku, kategori bahan | Master Bahan bisa ditambah dan diedit. Kode bahan tidak berubah setelah dibuat; satuan dikunci jika sudah dipakai resep. |
 | Resep dan HPP | Resep per satuan produk, komposisi berversi, bahan aktif, persentase waste, perkiraan HPP | Perkiraan biaya mengambil harga terkini dari Master Bahan; produksi menyimpan konsumsi dan biaya aktual sebagai histori. |
 | Stok dan pembelian | Ledger stok produk, transfer, opname, PO produk existing; permintaan dan pembelian bahan untuk produksi; penerimaan/QC bahan | Penerimaan menambah stok hanya untuk kuantitas lolos QC. Alur bahan baku memakai tabel dan ledger khusus. |
