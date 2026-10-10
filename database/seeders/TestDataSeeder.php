@@ -50,6 +50,7 @@ class TestDataSeeder extends Seeder
             $this->seedPortionRecipes();
             $this->seedMenuAssemblyRecipes();
             $this->seedIngredientOpeningStock($central);
+            $this->seedOutletPackagingStock();
         });
 
         $this->command?->info('Data uji bahan, produk setengah jadi, resep menu, harga, dan stok berhasil dibuat.');
@@ -217,12 +218,13 @@ class TestDataSeeder extends Seeder
 
         $categoryIds = Category::whereIn('name', ['Dimsum', 'Lumpia', 'Chiquro', 'Paket Besar'])->pluck('id', 'name');
         foreach ($products as $index => [$code, $name, $category, $baseUnitCode, $price, $cost, $sellUnits]) {
+            $sku = 'TEST-'.$code;
             $product = Product::firstOrCreate(
-                ['sku' => 'TEST-'.$code],
+                ['sku' => $sku],
                 [
                     'title' => $name,
                     'category_id' => $categoryIds[$category],
-                    'barcode' => 'TESTDW'.str_pad((string) ($index + 1), 6, '0', STR_PAD_LEFT),
+                    'barcode' => $this->availableProductBarcode($sku, $index + 1),
                     'description' => 'Menu data uji Dimsum Weigu. Bukan data harga atau stok operasional.',
                     'image_path' => null,
                     'unit_id' => $this->units[$baseUnitCode]->id,
@@ -263,6 +265,21 @@ class TestDataSeeder extends Seeder
         }
         Product::query()->whereIn('sku', ['TEST-BMX', 'TEST-BME', 'TEST-BCH'])
             ->update(['is_active' => false, 'is_sellable' => false]);
+    }
+
+    private function availableProductBarcode(string $sku, int $sequence): string
+    {
+        $barcode = 'TESTDW'.str_pad((string) $sequence, 6, '0', STR_PAD_LEFT);
+        if (! Product::withTrashed()->where('barcode', $barcode)->where('sku', '!=', $sku)->exists()) {
+            return $barcode;
+        }
+
+        for ($attempt = 1; ; $attempt++) {
+            $barcode = $sku.'-'.str_pad((string) $attempt, 3, '0', STR_PAD_LEFT);
+            if (! Product::withTrashed()->where('barcode', $barcode)->where('sku', '!=', $sku)->exists()) {
+                return $barcode;
+            }
+        }
     }
 
     private function setProductUnit(Product $product, Unit $unit, bool $isBase, int $factor, float $buyPrice, int $sellPrice, string $suffix): void
@@ -422,20 +439,20 @@ class TestDataSeeder extends Seeder
     private function seedIngredientOpeningStock(Warehouse $central): void
     {
         $stocks = [
-            'DAGING-GILING-SAPI' => 0, 'AYAM-FILLET' => 0, 'TELUR' => 0,
-            'DAUN-BAWANG' => 0, 'BAWANG-BOMBAY' => 0, 'BAWANG-PUTIH' => 0,
-            'MINYAK-WIJEN' => 0, 'KECAP-ASIN' => 0, 'SAORI' => 0,
-            'CHICKEN-POWDER' => 0, 'SASA' => 0, 'GARAM' => 0, 'GULA' => 0,
-            'TEPUNG-PANIR' => 0, 'TAPIOKA' => 0, 'LADA' => 0, 'MAYO' => 0,
+            'DAGING-GILING-SAPI' => 10000, 'AYAM-FILLET' => 50000, 'TELUR' => 5000,
+            'DAUN-BAWANG' => 5000, 'BAWANG-BOMBAY' => 5000, 'BAWANG-PUTIH' => 5000,
+            'MINYAK-WIJEN' => 3000, 'KECAP-ASIN' => 3000, 'SAORI' => 5000,
+            'CHICKEN-POWDER' => 3000, 'SASA' => 3000, 'GARAM' => 2000, 'GULA' => 5000,
+            'TEPUNG-PANIR' => 2000, 'TAPIOKA' => 10000, 'LADA' => 1000, 'MAYO' => 2000,
             'SAUS-TOMAT' => 0, 'SAMBAL' => 0, 'KIKOMAN' => 0, 'OREGANO' => 0,
-            'MINYAK-GORENG' => 0, 'CABE-KERING' => 0, 'KAPULAGA' => 0,
-            'KAYU-MANIS' => 0, 'CENGKEH' => 0, 'PARSLEY' => 0, 'QUICKMELT' => 0,
-            'AIR' => 0, 'MAIZENA' => 0, 'CHEESE-POWDER' => 0, 'CREAMER' => 0,
-            'KULIT-DIMSUM' => 0, 'KULIT-LUMPIA' => 0, 'BEEF-PATTY' => 0,
-            'SAUS-DIMSUM' => 0, 'SAUS-BOLOGNESE' => 0, 'SAUS-LAVA' => 0,
+            'MINYAK-GORENG' => 5000, 'CABE-KERING' => 1000, 'KAPULAGA' => 500,
+            'KAYU-MANIS' => 500, 'CENGKEH' => 500, 'PARSLEY' => 500, 'QUICKMELT' => 2000,
+            'AIR' => 10000, 'MAIZENA' => 1000, 'CHEESE-POWDER' => 1000, 'CREAMER' => 1000,
+            'KULIT-DIMSUM' => 5000, 'KULIT-LUMPIA' => 5000, 'BEEF-PATTY' => 5000,
+            'SAUS-DIMSUM' => 2000, 'SAUS-BOLOGNESE' => 5000, 'SAUS-LAVA' => 0,
             'SAUS-CHIQ-MENTAI' => 0, 'SAUS-GARLIC' => 0, 'GOURMET-BBQ' => 0,
-            'RUMPUT-LAUT' => 0, 'WORTEL' => 0, 'SAUS-MENTAI' => 0,
-            'SAUS-GARLIC' => 0, 'SAUS-CHEESE' => 0, 'CHILI-OIL' => 0,
+            'RUMPUT-LAUT' => 1000, 'WORTEL' => 3000, 'SAUS-MENTAI' => 10000,
+            'SAUS-GARLIC' => 5000, 'SAUS-CHEESE' => 5000, 'CHILI-OIL' => 5000,
             'CHILI-OIL-CUP' => 100, 'CUP-SAUS-PCS' => 100, 'BOX-KECIL' => 500, 'BOX-BESAR' => 250,
             'PLASTIK-DIMSUM' => 500, 'KERTAS-CHIQURO' => 500,
             'PLASTIK-CHIQURO' => 500, 'SUMPIT' => 1000,
@@ -446,12 +463,13 @@ class TestDataSeeder extends Seeder
             $quantity = $stocks[$code] ?? 0;
             DB::transaction(function () use ($ingredient, $central, $quantity, $actorId) {
                 $locked = Ingredient::whereKey($ingredient->id)->lockForUpdate()->firstOrFail();
-                $key = 'testdata:opening:ingredient:'.$ingredient->id.':warehouse:'.$central->id;
+                $key = 'testdata:opening-v2:ingredient:'.$ingredient->id.':warehouse:'.$central->id;
                 if (DB::table('ingredient_inventory_ledgers')->where('idempotency_key', $key)->exists()) {
                     return;
                 }
                 // Only initialize an unused ingredient; preserve inventory already in operation.
-                if ((float) $locked->stock !== 0.0 || DB::table('ingredient_inventory_ledgers')->where('ingredient_id', $ingredient->id)->exists()
+                if ((float) $locked->stock !== 0.0
+                    || DB::table('ingredient_inventory_ledgers')->where('ingredient_id', $ingredient->id)->where('quantity_delta', '<>', 0)->exists()
                     || DB::table('ingredient_warehouses')->where('ingredient_id', $ingredient->id)->where('stock', '<>', 0)->exists()) {
                     $this->command?->warn('Saldo awal dilewati untuk '.$ingredient->code.': sudah memiliki stok/ledger.');
 
@@ -466,6 +484,58 @@ class TestDataSeeder extends Seeder
                     'reference_type' => 'TestDataSeeder', 'idempotency_key' => $key, 'created_at' => now(),
                 ]);
             });
+        }
+    }
+
+    private function seedOutletPackagingStock(): void
+    {
+        $outletStocks = [
+            'SAUS-MENTAI' => 5000,
+            'SAUS-BOLOGNESE' => 5000,
+            'SAUS-GARLIC' => 5000,
+            'SAUS-LAVA' => 5000,
+            'SAUS-CHIQ-MENTAI' => 5000,
+            'SAUS-CHEESE' => 5000,
+            'BOX-KECIL' => 100,
+            'BOX-BESAR' => 100,
+            'PLASTIK-DIMSUM' => 100,
+            'SUMPIT' => 100,
+            'CHILI-OIL-CUP' => 100,
+            'KERTAS-CHIQURO' => 100,
+            'PLASTIK-CHIQURO' => 100,
+        ];
+        $actorId = User::where('email', 'warehouse@gmail.com')->value('id');
+
+        foreach (Warehouse::query()->where('type', 'branch')->where('is_sales_enabled', true)->where('is_active', true)->get() as $outlet) {
+            foreach ($outletStocks as $code => $quantity) {
+                $ingredient = $this->ingredients[$code];
+                DB::transaction(function () use ($ingredient, $outlet, $quantity, $actorId): void {
+                    $locked = Ingredient::query()->whereKey($ingredient->id)->lockForUpdate()->firstOrFail();
+                    $key = 'testdata:outlet-opening:ingredient:'.$ingredient->id.':warehouse:'.$outlet->id;
+                    if (DB::table('ingredient_inventory_ledgers')->where('idempotency_key', $key)->exists()) {
+                        return;
+                    }
+
+                    $balance = DB::table('ingredient_warehouses')->where('ingredient_id', $ingredient->id)->where('warehouse_id', $outlet->id)->lockForUpdate()->first();
+                    if (($balance && (float) $balance->stock !== 0.0)
+                        || DB::table('ingredient_inventory_ledgers')->where('ingredient_id', $ingredient->id)->where('warehouse_id', $outlet->id)->exists()) {
+                        $this->command?->warn('Saldo outlet dilewati untuk '.$ingredient->code.' di '.$outlet->code.': sudah memiliki stok/ledger.');
+
+                        return;
+                    }
+
+                    DB::table('ingredient_warehouses')->updateOrInsert(
+                        ['ingredient_id' => $ingredient->id, 'warehouse_id' => $outlet->id],
+                        ['stock' => $quantity, 'reserved_stock' => 0, 'created_at' => $balance?->created_at ?? now(), 'updated_at' => now()],
+                    );
+                    $locked->update(['stock' => number_format((float) $locked->stock + $quantity, 3, '.', '')]);
+                    DB::table('ingredient_inventory_ledgers')->insert([
+                        'ingredient_id' => $ingredient->id, 'warehouse_id' => $outlet->id, 'user_id' => $actorId,
+                        'type' => 'opening_stock', 'quantity_delta' => $quantity, 'quantity_before' => 0, 'quantity_after' => $quantity,
+                        'reference_type' => self::class, 'idempotency_key' => $key, 'created_at' => now(),
+                    ]);
+                });
+            }
         }
     }
 }

@@ -4,24 +4,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#805945">
+    <meta name="theme-color" content="#ffffff">
     <title>@yield('page-title', $title ?? 'Dashboard') · {{ config('app.name') }}</title>
-    <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app-dark.css') }}">
-    <link rel="stylesheet" href="{{ asset('mazer/extensions/bootstrap-icons/font/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/dashboard-mobile.css') }}?v={{ filemtime(public_path('assets/dashboard-mobile.css')) }}">
     @livewireStyles
-    <script src="{{ asset('mazer/static/js/initTheme.js') }}"></script>
+    <script>
+        try {
+            const savedTheme = localStorage.getItem('workspace-theme');
+            if (savedTheme === 'dark') document.documentElement.dataset.workspaceTheme = 'dark';
+        } catch (_) {}
+    </script>
 </head>
 <body class="workspace-shell {{ request()->routeIs('pos.index') ? 'workspace-pos' : '' }}">
     <a class="skip-link" href="#workspace-content">Langsung ke isi halaman</a>
     <div id="app">
         @include('layouts.partials.sidebar')
-        <div id="main" class="layout-navbar navbar-fixed">
-            <main id="workspace-content" class="content-wrapper container-fluid {{ request()->routeIs('dashboard') ? 'dashboard-page' : '' }}" tabindex="-1">
+        <button type="button" class="workspace-sidebar-backdrop" data-sidebar-close tabindex="-1" aria-label="Tutup menu"></button>
+        <div id="main" class="workspace-main">
+            <main id="workspace-content" class="content-wrapper container-fluid {{ request()->routeIs('dashboard') ? 'dashboard-page '.trim($__env->yieldContent('page-class')) : '' }}" tabindex="-1">
                 <div class="page-heading">
                     <div class="workspace-page-heading-row">
-                        <button type="button" class="burger-btn workspace-menu-toggle" aria-label="Buka menu" aria-controls="sidebar" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
+                        <button type="button" class="workspace-menu-toggle" aria-label="Buka menu" aria-controls="sidebar" aria-expanded="false" data-sidebar-toggle><i class="bi bi-list" aria-hidden="true"></i></button>
                         <h1 class="workspace-page-title">@yield('page-title', $title ?? 'Dashboard')</h1>
                     </div>
                     @hasSection('subtitle')<p class="text-subtitle text-muted">@yield('subtitle')</p>@endif
@@ -34,7 +39,6 @@
     </div>
     @include('layouts.partials.mobile-navigation')
     <div class="workspace-toast-region" aria-live="polite" aria-atomic="true" data-toast-region></div>
-    <script src="{{ asset('mazer/compiled/js/app.js') }}"></script>
     <script src="{{ asset('assets/dashboard-mobile.js') }}?v={{ filemtime(public_path('assets/dashboard-mobile.js')) }}" defer></script>
     @livewireScripts
     @stack('scripts')

@@ -161,3 +161,10 @@ body.pos-shell { min-width: 320px; min-height: 100vh; background: var(--pos-crea
     .pos-main { width: 100%; padding: 0; }
     .pos-cart-panel { position: static !important; display: block !important; max-height: none !important; }
 }
+
+.pos-shell .bg-light-success { background: #e8f3ec; }
+.pos-shell .form-control, .pos-shell .form-select { font-size: 16px; }
+.pos-shell .btn-block { width: 100%; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body.pos-cart-open { overflow: hidden; }

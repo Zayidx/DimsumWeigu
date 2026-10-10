@@ -4,6 +4,7 @@ namespace App\Livewire\PublicSite;
 
 use App\Queries\PublicSite\HomepageData;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Str;
 use Livewire\Component;
 
 class Home extends Component
@@ -191,6 +192,11 @@ class Home extends Component
         ],
     ];
 
+    public static function menuCategories(): array
+    {
+        return self::MENU_CATEGORIES;
+    }
+
     private const FALLBACK_BRANCHES = [
         [
             'name' => 'Cabang 1 · Galaxy',
@@ -246,12 +252,28 @@ class Home extends Component
     {
         $data = app(HomepageData::class)->get();
 
+        $content = $data['homepage'];
+        $whatsappNumber = preg_replace('/\D/', '', $data['phone']);
+        if (str_starts_with($whatsappNumber, '0')) {
+            $whatsappNumber = '62'.substr($whatsappNumber, 1);
+        }
+        $whatsappNumber = $whatsappNumber ?: '62895343256336';
+        $menuCategories = self::MENU_CATEGORIES;
+        foreach ($menuCategories as &$category) {
+            foreach ($category['items'] as &$item) {
+                $item['image'] = $content['menu_images'][Str::slug($item['name'])] ?? null;
+            }
+        }
+        unset($category, $item);
+
         return view('livewire.public-site.home', [
             ...$data,
-            'menuCategories' => self::MENU_CATEGORIES,
+            'homepage' => $content,
+            'menuCategories' => $menuCategories,
             'displayBranches' => $data['outlets']->isNotEmpty() ? $data['outlets'] : self::FALLBACK_BRANCHES,
-            'whatsappNumber' => '62895343256336',
-            'gofoodUrl' => 'https://gofood.co.id/',
+            'whatsappNumber' => $whatsappNumber,
+            'orderUrl' => $content['order_url'] ?: 'https://wa.me/'.$whatsappNumber,
+            'orderLabel' => $content['order_url'] ? $content['order_label'] : 'Hubungi via WhatsApp',
         ])->layout('layouts.application', [
             'title' => ($data['business']['name'] ?: 'Dimsum').' — Dimsum Hangat, Dibuat dengan Hati',
             'description' => ($data['business']['name'] ?: 'Dimsum').' menyajikan dimsum hangat dan lezat untuk menemani waktu makan Anda.',

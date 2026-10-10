@@ -46,5 +46,39 @@
     document.addEventListener('keydown', event => {
         if (event.key === 'Escape') document.querySelectorAll('.pos-account-menu[open]').forEach(menu => menu.removeAttribute('open'));
     });
+    const mobile = window.matchMedia('(max-width: 1199.98px)');
+    const panel = document.getElementById('pos-cart-panel');
+    let previousFocus = null;
+    let wasOpen = false;
+    const syncCart = () => {
+        const open = mobile.matches && panel?.classList.contains('is-open');
+        if (!panel) return;
+        panel.setAttribute('role', open ? 'dialog' : 'region');
+        if (open) panel.setAttribute('aria-modal', 'true');
+        else panel.removeAttribute('aria-modal');
+        document.body.classList.toggle('pos-cart-open', !!open);
+        if (open && !wasOpen) {
+            previousFocus = document.activeElement;
+            panel.querySelector('button')?.focus({ preventScroll: true });
+        } else if (!open && wasOpen && previousFocus?.isConnected) {
+            previousFocus.focus({ preventScroll: true });
+        }
+        wasOpen = !!open;
+    };
+    if (panel) new MutationObserver(syncCart).observe(panel, { attributes: true, attributeFilter: ['class'] });
+    mobile.addEventListener('change', syncCart);
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Tab' || !wasOpen || !panel) return;
+        const controls = [...panel.querySelectorAll('a[href], button, input, select, textarea, [tabindex="0"]')]
+            .filter(element => !element.disabled && element.getClientRects().length);
+        const first = controls[0], last = controls[controls.length - 1];
+        if (!first) { event.preventDefault(); panel.focus(); return; }
+        if (event.shiftKey && (document.activeElement === first || !panel.contains(document.activeElement))) {
+            event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !panel.contains(document.activeElement))) {
+            event.preventDefault(); first.focus();
+        }
+    });
+    syncCart();
     if (!navigator.onLine) showOfflineStatus();
 })();

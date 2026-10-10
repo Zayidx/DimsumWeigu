@@ -89,10 +89,6 @@ class SalesReport extends Component
         $paidTenders = TransactionTender::query()->whereIn('transaction_id', (clone $query)->select('transactions.id'))->where('status', 'paid');
         $cashSales = (clone $paidTenders)->where('method', 'cash')->sum('amount');
         $qrisSales = (clone $paidTenders)->where('method', 'qris')->sum('amount');
-        $qrisByAccount = TransactionTender::query()->join('bank_accounts', 'bank_accounts.id', '=', 'transaction_tenders.bank_account_id')
-            ->whereIn('transaction_id', (clone $query)->select('transactions.id'))->where('status', 'paid')->where('method', 'qris')
-            ->selectRaw('bank_accounts.bank_name, bank_accounts.account_name, bank_accounts.account_number, SUM(transaction_tenders.amount) as total')
-            ->groupBy('bank_accounts.id', 'bank_accounts.bank_name', 'bank_accounts.account_name', 'bank_accounts.account_number')->get();
         $products = TransactionDetail::query()->whereIn('transaction_id', (clone $query)->select('transactions.id'))
             ->selectRaw('product_name, SUM(line_total) as total')->groupBy('product_name')->orderByDesc('total')->limit(8)->pluck('total', 'product_name');
         $chartData = [
@@ -112,7 +108,6 @@ class SalesReport extends Component
             'paidSales' => (clone $query)->where('payment_status', 'paid')->sum('grand_total'),
             'cashSales' => $cashSales,
             'qrisSales' => $qrisSales,
-            'qrisByAccount' => $qrisByAccount,
             'warehouses' => Warehouse::query()->whereIn('outlet_id', $visibleOutletIds)->where('is_active', true)->orderBy('name')->get(['id', 'name']),
             'cashiers' => CashierShift::query()->whereIn('outlet_id', $visibleOutletIds)->with('user:id,name')->get()->pluck('user')->filter()->unique('id')->sortBy('name'),
         ])->layout('layouts.dashboard', ['title' => __('Laporan penjualan')]);

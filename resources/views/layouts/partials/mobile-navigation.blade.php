@@ -14,4 +14,5 @@
     @elsecan('purchase-orders-access')
         <a href="{{ route('purchase-orders.index') }}" @if(request()->routeIs('purchase-orders.*')) aria-current="page" @endif><i class="bi bi-bag-check" aria-hidden="true"></i><span>Pembelian</span></a>
     @endcan
+<button type="button" data-sidebar-toggle aria-controls="sidebar" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i><span>Menu</span></button>
 </nav>

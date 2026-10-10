@@ -61,9 +61,12 @@ class DimsumWeiguSeeder extends Seeder
             ], ['factor' => $conversion['factor']]);
         }
 
-        foreach ([['cash', 'Tunai', null, false], ['qris', 'QRIS', 'qris', true], ['gofood', 'GoFood / Online', 'gofood', true]] as [$code, $name, $provider, $confirm]) {
+        foreach ([['cash', 'Tunai', null, false], ['gofood', 'GoFood / Online', 'gofood', true]] as [$code, $name, $provider, $confirm]) {
             PaymentMethod::firstOrCreate(['code' => $code], ['name' => $name, 'provider' => $provider, 'is_enabled' => true, 'requires_confirmation' => $confirm]);
         }
+        PaymentMethod::query()->updateOrCreate(['code' => 'qris'], [
+            'name' => 'QRIS', 'provider' => null, 'is_enabled' => true, 'requires_confirmation' => true,
+        ]);
         foreach (['dine_in_enabled' => true, 'dine_in_self_order_enabled' => true, 'dine_in_pay_online_enabled' => false, 'dine_in_online_payment' => false, 'default_gateway' => 'cash', 'midtrans_enabled' => false, 'xendit_enabled' => false, 'allow_public_registration' => false, 'default_tax_rate' => 0, 'tax_mode' => 'exclusive'] as $key => $value) {
             $this->setting($key, $value);
         }

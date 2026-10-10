@@ -16,7 +16,7 @@ The project intentionally serves static frontend assets and has no Node, npm, Vi
 
 ## Coding Style and Naming
 
-Follow `.editorconfig`: UTF-8, LF endings, four spaces, and a final newline. Use Laravel conventions: StudlyCase classes, camelCase methods and variables, descriptive singular model names, and `*Test.php` test files. Group Livewire by feature; keep business rules in services. Use the homepage-themed `layouts.pos` for cashier screens, not the dashboard shell. Run Pint on changed PHP files before submitting.
+Follow `.editorconfig`: UTF-8, LF endings, four spaces, and a final newline. Use Laravel conventions: StudlyCase classes, camelCase methods and variables, descriptive singular model names, and `*Test.php` test files. Group Livewire by feature; keep business rules in services. Use the homepage-themed `layouts.pos` for cashier screens, not the dashboard shell. Follow `DESIGN.md` for the workspace dashboard and do not reintroduce the Mazer Admin shell, styles, or scripts. Run Pint on changed PHP files before submitting.
 
 ## Testing
 
@@ -41,5 +41,5 @@ For UI work, use the installed `antislop` plugin. Read its core guidance, then t
 - Responsive layouts: `antislop-layoutmobile`
 - UI copy: `antislop-copywriting`
 
-Resolve the Anti Slop usage mode before UI review or edits: explicit session choice first, then the saved global preference, otherwise ask. Resolve design direction from `DESIGN.md` or the user's brief; do not invent brand direction without labeling the work as a draft without direction. Preserve existing Mazer design and POS workflow unless the user asks to change them.
+Resolve the Anti Slop usage mode before UI review or edits: explicit session choice first, then the saved global preference, otherwise ask. Resolve design direction from `DESIGN.md` or the user's brief; do not invent brand direction without labeling the work as a draft without direction. Preserve POS workflows and permission-based navigation while following the custom workspace direction in `DESIGN.md`.
 <!-- antislop:end -->

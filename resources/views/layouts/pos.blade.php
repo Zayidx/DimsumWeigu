@@ -6,8 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="theme-color" content="#a84127">
     <title>{{ $title ?? 'Kasir' }} · {{ config('app.name') }}</title>
-    <link rel="stylesheet" href="{{ asset('mazer/compiled/css/app.css') }}">
-    <link rel="stylesheet" href="{{ asset('mazer/extensions/bootstrap-icons/font/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/vendor/bootstrap-icons/bootstrap-icons.min.css') }}">
     <link rel="stylesheet" href="{{ \App\Support\StaticAssets::url('pos.css') }}">
     @livewireStyles
 </head>

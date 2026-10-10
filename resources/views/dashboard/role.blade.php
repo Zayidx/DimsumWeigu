@@ -2,6 +2,7 @@
 
 @section('page-title', $roleTitle)
 @section('subtitle', $roleDescription.' · '.($role === 'cashier' ? $outlet->name : $scopeLabel))
+@section('page-class', 'dashboard-role-page')
 
 @section('content')
     @if (in_array($role, ['manager', 'warehouse', 'finance'], true) && ($outlets->count() > 1 || $availableWarehouses->count() > 1))
@@ -38,6 +39,19 @@
                 </div>
             @endforeach
         </div>
+    @endif
+
+    @if ($role === 'manager')
+        <section class="card mb-3" aria-labelledby="manager-alerts-title">
+            <div class="card-header"><h2 id="manager-alerts-title" class="card-title mb-0">Peringatan operasional</h2><small class="text-muted">Stok rendah, proses tertunda, dan selisih shift yang perlu ditinjau.</small></div>
+            <div class="card-body dashboard-role-list">
+                @forelse ($managerAlerts as $alert)
+                    <a href="{{ $alert['url'] }}"><span>{{ $alert['label'] }}<small class="d-block text-muted">{{ $alert['detail'] }}</small></span><span class="small text-muted">{{ $alert['date']?->diffForHumans() ?? 'Perlu dicek' }}</span></a>
+                @empty
+                    <p class="text-muted mb-0">Tidak ada peringatan operasional untuk lokasi terpilih.</p>
+                @endforelse
+            </div>
+        </section>
     @endif
 
     @if ($actions->isNotEmpty() || $workItems->isNotEmpty())

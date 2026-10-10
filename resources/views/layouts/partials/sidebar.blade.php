@@ -1,9 +1,9 @@
-<aside id="sidebar" aria-label="Menu ruang kerja">
+<aside id="sidebar" class="workspace-sidebar" aria-label="Menu ruang kerja" role="complementary" tabindex="-1" inert>
     <div class="sidebar-wrapper">
         <div class="sidebar-menu">
             <div class="workspace-sidebar-brand">
                 <a href="{{ route('home') }}" class="workspace-brand"><img src="{{ asset('assets/logo/logo-no-background.png') }}" alt="Weigu"><span>{{ config('app.name') }}<small>Ruang kerja</small></span></a>
-                <button type="button" class="sidebar-hide btn btn-light d-xl-none" aria-label="Tutup menu"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                <button type="button" class="sidebar-hide" aria-label="Tutup menu" data-sidebar-close><i class="bi bi-x-lg" aria-hidden="true"></i></button>
             </div>
             @hasSection('sidebar') @yield('sidebar') @else @include('layouts.partials.sidebar-menu') @endif
             <nav class="workspace-sidebar-account" aria-label="Menu akun">
@@ -14,7 +14,7 @@
                     <a class="workspace-sidebar-account-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}" href="{{ route('notifications.index') }}" aria-label="Notifikasi, {{ $unreadNotifications }} belum dibaca"><i class="bi bi-bell" aria-hidden="true"></i><span>Notifikasi</span>@if($unreadNotifications)<span class="workspace-notification-count">{{ $unreadNotifications > 99 ? '99+' : $unreadNotifications }}</span>@endif</a>
                 @endcan
                 <a class="workspace-sidebar-account-link {{ request()->routeIs('profile.*') ? 'active' : '' }}" href="{{ route('profile.edit') }}"><i class="bi bi-person" aria-hidden="true"></i><span>Profil saya</span></a>
-                <button type="button" class="workspace-sidebar-account-link" data-theme-toggle><i class="bi bi-moon-stars" aria-hidden="true"></i><span>Ganti tema</span></button>
+                <button type="button" class="workspace-sidebar-account-link" data-theme-toggle aria-pressed="false"><i class="bi bi-moon-stars" aria-hidden="true"></i><span>Ganti tema gelap</span></button>
                 <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="workspace-sidebar-account-link text-danger"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Keluar</span></button></form>
             </nav>
         </div>

@@ -55,6 +55,9 @@ class CartService
             if ($product->track_stock && ! $assembledAtSale && (! $stock || $stockQuantity > (float) $stock->stock - (float) $stock->reserved_stock)) {
                 throw ValidationException::withMessages(['product' => __('Produk tidak tersedia di gudang aktif.')]);
             }
+            if ($assembledAtSale || $product->track_stock) {
+                $this->assertRecipeStock($product, $unitId, $cart->warehouse_id, FixedDecimal::quantity(number_format($nextQty, 3, '.', '')));
+            }
             $item->quantity = number_format($nextQty, 3, '.', '');
             $item->save();
 
@@ -88,6 +91,9 @@ class CartService
             $stock = ProductWarehouse::query()->where('product_id', $product->id)->where('warehouse_id', $cart->warehouse_id)->first();
             if ($product->track_stock && ! $assembledAtSale && (! $stock || $stockQty > (float) $stock->stock - (float) $stock->reserved_stock)) {
                 throw ValidationException::withMessages(['quantity' => __('Jumlah melebihi stok tersedia.')]);
+            }
+            if ($assembledAtSale || $product->track_stock) {
+                $this->assertRecipeStock($product, (int) $item->unit_id, $cart->warehouse_id, FixedDecimal::quantity(number_format($qty, 3, '.', '')));
             }
             $item->quantity = number_format($qty, 3, '.', '');
             $item->save();
@@ -164,6 +170,9 @@ class CartService
                         throw ValidationException::withMessages(['cart' => __('Stok :product berubah. Keranjang hold tidak dapat dilanjutkan.', ['product' => $product->title])]);
                     }
                 }
+                if ($assembledAtSale || $product->track_stock) {
+                    $this->assertRecipeStock($product, (int) $item->unit_id, $held->warehouse_id, FixedDecimal::quantity((string) $item->quantity));
+                }
             }
             $active = Cart::query()->where('user_id', auth()->id())->where('cashier_shift_id', $held->cashier_shift_id)->where('status', 'active')->lockForUpdate()->first();
             if ($active) {
@@ -217,6 +226,18 @@ class CartService
         $hasUnitRecipe = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $unitId)->where('is_active', true)->whereHas('productItems')->exists();
         if ($hasAssemblyRecipes && ! $hasUnitRecipe) {
             throw ValidationException::withMessages(['product' => __('Komposisi menu ini belum disiapkan untuk satuan yang dipilih.')]);
+        }
+    }
+
+    private function assertRecipeStock(Product $product, int $unitId, int $warehouseId, int $requestedMilli): void
+    {
+        $availability = app(CashierStockAvailability::class)->forSale($product, $unitId, $warehouseId);
+        if ($availability['quantity_milli'] !== null && $requestedMilli > $availability['quantity_milli']) {
+            $maximum = FixedDecimal::quantityText($availability['quantity_milli']);
+            throw ValidationException::withMessages(['product' => __('Stok komponen :name tidak mencukupi. Maksimal :quantity menu tersedia.', [
+                'name' => $availability['limiting_name'] ?? $product->title,
+                'quantity' => $maximum,
+            ])]);
         }
     }
 }

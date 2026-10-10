@@ -12,6 +12,7 @@ use App\Models\ProductionRequest;
 use App\Models\ProductWarehouse;
 use App\Models\PurchaseOrder;
 use App\Models\Receivable;
+use App\Models\StockTransfer;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\Warehouse;
@@ -191,6 +192,7 @@ class DashboardController extends Controller
         $warehouseIds = $warehouseId ? [$warehouseId] : $warehouses->pluck('id')->all();
         $metrics = collect();
         $workItems = collect();
+        $managerAlerts = collect();
         $actions = collect();
         $recentTransactions = collect();
         $titles = ['cashier' => 'Ruang kerja kasir', 'warehouse' => 'Ruang kerja gudang', 'finance' => 'Ruang kerja keuangan', 'manager' => 'Ruang kerja manajer', 'custom' => 'Ruang kerja saya'];
@@ -198,7 +200,7 @@ class DashboardController extends Controller
             'cashier' => 'Shift dan transaksi Anda pada outlet aktif.',
             'warehouse' => 'Stok, penerimaan, dan produksi pada lokasi terpilih.',
             'finance' => 'Tagihan dan penagihan pada lokasi terpilih.',
-            'manager' => 'Penjualan, shift, stok, dan serah terima pada lokasi terpilih.',
+            'manager' => 'Penjualan dan hal operasional yang perlu ditinjau pada lokasi terpilih.',
             'custom' => 'Akses cepat ke fitur yang tersedia untuk akun Anda.',
         ];
         $addAction = function (string $permission, string $label, string $route, string $icon) use ($user, $actions): void {
@@ -245,10 +247,77 @@ class DashboardController extends Controller
             $metrics->push(['label' => 'Serah terima kas aktif', 'value' => DisplayNumber::format((clone $handovers)->count()), 'detail' => 'Menunggu persetujuan atau penerimaan.']);
             $addWorkItem('inventory-access', 'Periksa stok rendah', (clone $lowStock)->count(), 'inventory.index');
             $addWorkItem('cash-management-access', 'Tinjau serah terima kas', (clone $handovers)->count(), 'cash-management.index');
+
+            if ($user->can('inventory-access')) {
+                $lowStock->with(['product:id,title,unit_id', 'product.unit:id,symbol', 'warehouse:id,name,outlet_id', 'warehouse.outlet:id,name'])
+                    ->orderByRaw('(reorder_point - stock) DESC')->limit(5)->get()
+                    ->each(fn (ProductWarehouse $row) => $managerAlerts->push([
+                        'label' => 'Stok rendah · '.($row->product?->title ?? 'Produk'),
+                        'detail' => ($row->warehouse?->outlet?->name ?? $row->warehouse?->name).' · tersedia '.DisplayNumber::format(max(0, (float) $row->stock - (float) $row->reserved_stock), 3, ',', '.').' '.($row->product?->unit?->symbol ?? '').' dari batas pesan ulang '.DisplayNumber::format((float) $row->reorder_point, 3, ',', '.'),
+                        'url' => route('reports.inventory', ['outlet' => $row->warehouse?->outlet_id]),
+                        'date' => null,
+                        'priority' => 0,
+                    ]));
+            }
+
+            if ($user->can('production-requests-access')) {
+                ProductionRequest::query()->with(['warehouse:id,name,outlet_id', 'warehouse.outlet:id,name'])
+                    ->whereIn('outlet_id', $outletIds)
+                    ->whereIn('status', ['requested', 'purchasing', 'approved', 'received'])
+                    ->oldest()->limit(4)->get()
+                    ->each(fn (ProductionRequest $request) => $managerAlerts->push([
+                        'label' => 'Permintaan produksi · '.$request->number,
+                        'detail' => ($request->warehouse?->outlet?->name ?? $request->warehouse?->name).' · status '.str($request->status)->headline(),
+                        'url' => route('production-requests.index'),
+                        'date' => $request->created_at,
+                        'priority' => 1,
+                    ]));
+            }
+
+            if ($user->can('transfers-access')) {
+                StockTransfer::query()->with(['destinationWarehouse:id,name,outlet_id', 'destinationWarehouse.outlet:id,name'])
+                    ->whereIn('destination_warehouse_id', $warehouseIds)->where('status', 'sent')
+                    ->oldest('sent_at')->limit(4)->get()
+                    ->each(fn (StockTransfer $transfer) => $managerAlerts->push([
+                        'label' => 'Transfer menunggu diterima · '.$transfer->number,
+                        'detail' => ($transfer->destinationWarehouse?->outlet?->name ?? $transfer->destinationWarehouse?->name).' · dikirim '.($transfer->sent_at?->diffForHumans() ?? 'tanpa tanggal'),
+                        'url' => route('transfers.index'),
+                        'date' => $transfer->sent_at,
+                        'priority' => 1,
+                    ]));
+            }
+
+            if ($user->can('cashier-shifts-access')) {
+                CashierShift::query()->with(['user:id,name', 'warehouse:id,name,outlet_id', 'warehouse.outlet:id,name'])
+                    ->whereIn('outlet_id', $outletIds)->whereIn('warehouse_id', $warehouseIds)
+                    ->where('status', 'closed')->where('cash_difference', '<>', 0)
+                    ->where('closed_at', '>=', now()->subDays(7))->latest('closed_at')->limit(4)->get()
+                    ->each(fn (CashierShift $shift) => $managerAlerts->push([
+                        'label' => 'Selisih tutup shift · '.($shift->user?->name ?? 'Kasir'),
+                        'detail' => ($shift->warehouse?->outlet?->name ?? $shift->warehouse?->name).' · '.((float) $shift->cash_difference < 0 ? 'kurang ' : 'lebih ').'Rp'.DisplayNumber::format(abs((float) $shift->cash_difference), 0, ',', '.'),
+                        'url' => route('shifts.index'),
+                        'date' => $shift->closed_at,
+                        'priority' => 1,
+                    ]));
+            }
+
+            if ($user->can('cash-management-access')) {
+                (clone $handovers)->with(['source:id,name,outlet_id', 'destination:id,name'])->oldest()->limit(3)->get()
+                    ->each(fn (CashHandover $handover) => $managerAlerts->push([
+                        'label' => 'Serah terima kas · '.str($handover->status)->headline(),
+                        'detail' => ($handover->source?->name ?? 'Lokasi asal').' → '.($handover->destination?->name ?? 'Lokasi tujuan').' · Rp'.DisplayNumber::format($handover->amount, 0, ',', '.'),
+                        'url' => route('cash-management.index'),
+                        'date' => $handover->created_at,
+                        'priority' => 1,
+                    ]));
+            }
+
+            $managerAlerts = $managerAlerts->sortBy(fn (array $alert) => ($alert['priority'] * 3000000000) + ($alert['date']?->timestamp ?? 0))->take(12)->values();
             $addAction('transactions-access', 'Pantau transaksi', 'transactions.index', 'bi-receipt');
             $addAction('cashier-shifts-access', 'Pantau shift', 'shifts.index', 'bi-clock-history');
             $addAction('inventory-access', 'Periksa stok', 'inventory.index', 'bi-box-seam');
             $addAction('cash-management-access', 'Serah terima kas', 'cash-management.index', 'bi-bank');
+            $addAction('replenishment-access', 'Saran stok & produksi', 'replenishment-suggestions.index', 'bi-boxes');
         } elseif ($role === 'warehouse') {
             $lowStock = ProductWarehouse::query()->whereIn('warehouse_id', $warehouseIds)->whereColumn('stock', '<=', 'reorder_point')->whereHas('product', fn (Builder $q) => $q->where('is_active', true));
             $orders = PurchaseOrder::query()->whereIn('warehouse_id', $warehouseIds)->whereIn('status', ['ordered', 'partial']);
@@ -279,6 +348,7 @@ class DashboardController extends Controller
             $addAction('goods-receivings-access', 'Penerimaan barang', 'goods-receivings.index', 'bi-box-arrow-in-down');
             $addAction('production-orders-access', 'Produksi', 'production-orders.index', 'bi-gear');
             $addAction('cash-management-access', 'Penerimaan kas', 'cash-management.index', 'bi-bank');
+            $addAction('replenishment-access', 'Saran stok & produksi', 'replenishment-suggestions.index', 'bi-boxes');
         } elseif ($role === 'finance') {
             $payables = Payable::query()->whereIn('status', ['unpaid', 'partial'])->where(function (Builder $q) use ($warehouseIds): void {
                 $q->whereHas('receiving', fn (Builder $r) => $r->whereIn('warehouse_id', $warehouseIds))
@@ -302,6 +372,7 @@ class DashboardController extends Controller
             $addAction('payables-access', 'Buka utang', 'payables.index', 'bi-wallet2');
             $addAction('receivables-access', 'Buka piutang', 'receivables.index', 'bi-cash-coin');
             $addAction('reports-access', 'Laporan penjualan', 'reports.sales', 'bi-bar-chart');
+            $addAction('qris-reconciliations-access', 'Rekonsiliasi QRIS', 'qris-reconciliations.index', 'bi-credit-card');
         } else {
             foreach ([
                 ['users-access', 'Pengguna', 'users.index', 'bi-people'],
@@ -350,6 +421,7 @@ class DashboardController extends Controller
             'scopeLabel' => $selectedOutlet?->name ?? 'semua outlet yang dapat diakses',
             'metrics' => $metrics,
             'workItems' => $workItems,
+            'managerAlerts' => $managerAlerts,
             'actions' => $actions->take(4),
             'recentTransactions' => $recentTransactions,
         ]);

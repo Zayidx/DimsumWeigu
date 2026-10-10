@@ -15,17 +15,43 @@ class Transaction extends Model
         return ['subtotal' => 'decimal:2', 'discount_total' => 'decimal:2', 'tax_total' => 'decimal:2', 'shipping_total' => 'decimal:2', 'grand_total' => 'decimal:2', 'paid_total' => 'decimal:2', 'change_total' => 'decimal:2', 'paid_at' => 'datetime', 'occurred_at' => 'datetime', 'metadata' => 'array'];
     }
 
-    public function outlet(): BelongsTo { return $this->belongsTo(Outlet::class); }
+    public function outlet(): BelongsTo
+    {
+        return $this->belongsTo(Outlet::class);
+    }
 
-    public function warehouse(): BelongsTo { return $this->belongsTo(Warehouse::class); }
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
 
-    public function shift(): BelongsTo { return $this->belongsTo(CashierShift::class, 'cashier_shift_id'); }
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(CashierShift::class, 'cashier_shift_id');
+    }
 
-    public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }
+    public function customer(): BelongsTo
+    {
+        return $this->belongsTo(Customer::class);
+    }
 
-    public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
-    public function details(): HasMany { return $this->hasMany(TransactionDetail::class); }
+    public function details(): HasMany
+    {
+        return $this->hasMany(TransactionDetail::class);
+    }
 
-    public function tenders(): HasMany { return $this->hasMany(TransactionTender::class); }
+    public function tenders(): HasMany
+    {
+        return $this->hasMany(TransactionTender::class);
+    }
+
+    public function correctionRequests(): HasMany
+    {
+        return $this->hasMany(TransactionCorrectionRequest::class);
+    }
 }

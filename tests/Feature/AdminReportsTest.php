@@ -68,7 +68,7 @@ class AdminReportsTest extends TestCase
             ->assertSee('Belum ada penjualan dalam 7 hari terakhir.')
             ->assertSee('Navigasi cepat')
             ->assertSee('aria-label="Notifikasi', false)
-            ->assertSee('class="burger-btn workspace-menu-toggle"', false)
+            ->assertSee('class="workspace-menu-toggle"', false)
             ->assertSee('aria-label="Buka menu"', false)
             ->assertSee('workspace-sidebar-brand', false)
             ->assertSee('aria-label="Menu akun"', false)

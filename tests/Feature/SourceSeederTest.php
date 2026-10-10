@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Category;
 use App\Models\Ingredient;
 use App\Models\Product;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\TestDataSeeder;
@@ -53,7 +55,19 @@ class SourceSeederTest extends TestCase
         $this->assertDatabaseHas('products', ['sku' => 'TEST-CGA', 'allow_single_unit_sale' => true]);
         $this->assertDatabaseHas('products', ['sku' => 'TEST-DPL', 'is_semi_finished' => true, 'is_sellable' => false]);
         $this->assertDatabaseMissing('ingredients', ['code' => 'TEST-FROZEN-DIMSUM']);
-        $this->assertSame($openingLedgerCount, DB::table('ingredient_warehouses')->join('ingredients', 'ingredients.id', '=', 'ingredient_warehouses.ingredient_id')->where('ingredients.code', 'like', 'TEST-%')->whereColumn('ingredient_warehouses.stock', 'ingredients.stock')->count());
+        $stockMismatchCount = DB::table('ingredients')
+            ->where('ingredients.code', 'like', 'TEST-%')
+            ->leftJoinSub(
+                DB::table('ingredient_warehouses')->selectRaw('ingredient_id, SUM(stock) as warehouse_stock')->groupBy('ingredient_id'),
+                'balances',
+                'balances.ingredient_id',
+                '=',
+                'ingredients.id',
+            )
+            ->whereRaw('ROUND(ingredients.stock, 3) != ROUND(COALESCE(balances.warehouse_stock, 0), 3)')
+            ->count();
+        $this->assertSame(0, $stockMismatchCount);
+        $this->assertSame(4, DB::table('ingredient_warehouses')->where('ingredient_id', DB::table('ingredients')->where('code', 'TEST-BOX-KECIL')->value('id'))->where('stock', 100)->count());
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('products-create'));
         $this->assertFalse(Role::findByName('manager')->hasPermissionTo('cash-management-create'));
         $this->assertTrue(Role::findByName('cashier')->hasPermissionTo('pos-checkout'));
@@ -81,7 +95,8 @@ class SourceSeederTest extends TestCase
         $this->seed(UserSeeder::class);
         $this->seed(TestDataSeeder::class);
         $ingredientCount = DB::table('ingredients')->where('code', 'like', 'TEST-%')->count();
-        $this->assertSame($ingredientCount, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
+        $outletOpeningCount = DB::table('warehouses')->where('type', 'branch')->where('is_sales_enabled', true)->count() * 5;
+        $this->assertSame($ingredientCount + $outletOpeningCount, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseCount('users', 8);
         $this->assertGreaterThan(100, DB::table('recipe_items')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseHas('products', ['sku' => 'TEST-DOR', 'sell_price' => 4700]);
@@ -89,6 +104,30 @@ class SourceSeederTest extends TestCase
         $this->assertSame(0, DB::table('recipe_items')->where('ingredient_id', $ingredient->id)->where('quantity', 2)->count());
         $this->assertTrue(Role::findByName('manager')->hasPermissionTo('products-create'));
         $this->assertTrue(hash_equals($beforeCredential, hash('sha256', $cashier->fresh()->password)));
+    }
+
+    public function test_test_data_seeder_avoids_legacy_barcode_collisions_and_can_be_repeated(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $category = Category::query()->where('name', 'Dimsum')->firstOrFail();
+        $unit = Unit::query()->where('code', 'PCS')->firstOrFail();
+        $legacy = Product::query()->create([
+            'sku' => 'TEST-BMX', 'title' => 'Paket Besar Dimsum Mix (arsip uji)',
+            'category_id' => $category->id, 'unit_id' => $unit->id,
+            'barcode' => 'TESTDW000011', 'buy_price' => 0, 'sell_price' => 0, 'stock' => 0,
+        ]);
+
+        $this->seed(TestDataSeeder::class);
+
+        $plain = Product::query()->where('sku', 'TEST-DPL')->firstOrFail();
+        $this->assertNotSame($legacy->barcode, $plain->barcode);
+        $this->assertDatabaseHas('products', ['id' => $legacy->id, 'sku' => 'TEST-BMX', 'barcode' => 'TESTDW000011']);
+        $this->assertDatabaseHas('products', ['sku' => 'TEST-DPL', 'barcode' => $plain->barcode]);
+
+        $this->seed(TestDataSeeder::class);
+
+        $this->assertSame($plain->barcode, $plain->fresh()->barcode);
+        $this->assertDatabaseHas('products', ['id' => $legacy->id, 'barcode' => 'TESTDW000011']);
     }
 
     public function test_simulated_data_cannot_run_in_production(): void

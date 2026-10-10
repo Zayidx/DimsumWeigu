@@ -26,7 +26,7 @@ class RolePermissionSeeder extends Seeder
             'transfers-access', 'transfers-create', 'transfers-send', 'transfers-receive', 'transfers-cancel',
             'stock-opnames-access', 'stock-opnames-create', 'stock-opnames-review', 'stock-opnames-finalize',
             'pos-access', 'pos-checkout', 'pos-hold', 'pos-discount', 'pos-returns',
-            'transactions-access', 'transactions-refund', 'cashier-shifts-access', 'cashier-shifts-open',
+            'transactions-access', 'transactions-refund', 'transaction-corrections-create', 'transaction-corrections-access', 'transaction-corrections-update', 'cashier-sales-report-access', 'cashier-shifts-access', 'cashier-shifts-open',
             'cashier-shifts-close', 'cashier-shifts-force-close', 'cash-management-access', 'cash-management-create', 'cash-management-approve',
             'customers-access', 'customers-create', 'customers-edit', 'customers-delete',
             'suppliers-access', 'suppliers-create', 'suppliers-update', 'suppliers-delete',
@@ -38,6 +38,7 @@ class RolePermissionSeeder extends Seeder
             'vouchers-access', 'vouchers-manage', 'loyalty-access', 'loyalty-adjust',
             'crm-access', 'crm-manage', 'crm-send', 'dine-in-access', 'dine-in-process', 'dine-in-manage',
             'store-settings-access', 'store-settings-update', 'payment-settings-access', 'payment-settings-update',
+            'homepage-settings-access', 'homepage-settings-update',
             'bank-accounts-access', 'bank-accounts-manage', 'printer-settings-access',
             'reports-access', 'reports-export', 'imports-access', 'imports-run', 'exports-run',
             'api-tokens-access', 'api-tokens-manage', 'audit-logs-access', 'notifications-access', 'notifications-manage',
@@ -54,15 +55,15 @@ class RolePermissionSeeder extends Seeder
         Role::query()->firstOrCreate(['name' => 'super-admin', 'guard_name' => 'web'])->syncPermissions($all);
 
         $roleMap = [
-            'manager' => fn (string $name) => ! str_starts_with($name, 'users-') && ! str_starts_with($name, 'roles-') && ! str_starts_with($name, 'payment-settings-') && ! str_starts_with($name, 'api-tokens-') && $name !== 'cashier-shifts-force-close',
-            'finance' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'reports-', 'payables-', 'receivables-', 'expenses-', 'cash-management-', 'payment-settings-', 'bank-accounts-', 'transactions-', 'customers-', 'audit-logs-', 'notifications-']) || in_array($name, ['supplier-returns-access', 'supplier-returns-approve', 'waste-access'], true),
+            'manager' => fn (string $name) => ! str_starts_with($name, 'users-') && ! str_starts_with($name, 'roles-') && ! str_starts_with($name, 'payment-settings-') && ! str_starts_with($name, 'api-tokens-') && ! str_starts_with($name, 'transaction-corrections-') && ! str_starts_with($name, 'qris-reconciliations-') && $name !== 'cashier-shifts-force-close',
+            'finance' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'reports-', 'payables-', 'receivables-', 'expenses-', 'cash-management-', 'payment-settings-', 'bank-accounts-', 'transactions-', 'customers-', 'audit-logs-', 'notifications-', 'qris-reconciliations-']) || in_array($name, ['transaction-corrections-access', 'transaction-corrections-update', 'supplier-returns-access', 'supplier-returns-approve', 'waste-access'], true),
             'cashier' => fn (string $name) => in_array($name, [
                 'dashboard-access', 'pos-access', 'pos-checkout', 'pos-hold', 'pos-discount',
                 'cashier-shifts-access', 'cashier-shifts-open', 'cashier-shifts-close',
-                'customers-access', 'customers-create', 'transactions-access',
+                'customers-access', 'customers-create', 'transactions-access', 'cashier-sales-report-access', 'transaction-corrections-create',
                 'cash-management-access', 'cash-management-create',
             ], true),
-            'warehouse' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'inventory-', 'batches-', 'transfers-', 'stock-opnames-', 'products-access', 'categories-access', 'units-access', 'suppliers-', 'purchase-orders-', 'goods-receivings-', 'supplier-returns-', 'ingredients-', 'recipes-', 'production-', 'waste-', 'reports-access', 'reports-export']),
+            'warehouse' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'inventory-', 'batches-', 'transfers-', 'stock-opnames-', 'products-access', 'categories-access', 'units-access', 'suppliers-', 'purchase-orders-', 'goods-receivings-', 'supplier-returns-', 'ingredients-', 'recipes-', 'production-', 'waste-', 'reports-access', 'reports-export', 'replenishment-']),
         ];
 
         foreach ($roleMap as $roleName => $allows) {

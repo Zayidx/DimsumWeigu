@@ -76,6 +76,13 @@ class PermissionSeeder extends Seeder
         // permission transactions
         $create('transactions-access');
         $create('transactions-confirm-payment');
+        $create('transaction-corrections-create');
+        $create('transaction-corrections-access');
+        $create('transaction-corrections-update');
+        $create('cashier-sales-report-access');
+        $create('qris-reconciliations-access');
+        $create('qris-reconciliations-create');
+        $create('replenishment-access');
 
         // mobile POS API access (Sanctum ability for /api/v1/pos/*)
         $create('pos-access');
@@ -212,6 +219,8 @@ class PermissionSeeder extends Seeder
         // store configuration
         $create('store-settings-access');
         $create('store-settings-update');
+        $create('homepage-settings-access');
+        $create('homepage-settings-update');
         $create('loyalty-settings-access');
         $create('loyalty-settings-update');
         $create('sales-targets-access');

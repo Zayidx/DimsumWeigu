@@ -76,6 +76,8 @@ class RoleSeeder extends Seeder
         $cashierPermissions = Permission::whereIn('name', [
             'dashboard-access',
             'transactions-access',
+            'cashier-sales-report-access',
+            'transaction-corrections-create',
             'pos-access',
             'cashier-shifts-access',
             'cashier-shifts-open',
@@ -88,6 +90,9 @@ class RoleSeeder extends Seeder
             'customers-create',
         ])->get();
         $this->grant($cashierRole, $cashierPermissions);
+        // Existing cashier roles receive only the new read-only report permission.
+        $cashierRole->givePermissionTo(Permission::where('name', 'cashier-sales-report-access')->get());
+        $cashierRole->givePermissionTo(Permission::where('name', 'transaction-corrections-create')->get());
 
         $this->createManagerRole();
         $this->createFinanceRole();
@@ -96,7 +101,7 @@ class RoleSeeder extends Seeder
         app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
-    /** Manager can monitor day-to-day activity without changing records. */
+    /** Manager monitors operations and may update the public homepage content. */
     private function createManagerRole(): void
     {
         $managerRole = Role::firstOrCreate(['name' => 'manager']);
@@ -131,6 +136,13 @@ class RoleSeeder extends Seeder
             'ingredients-access',
             'recipes-access',
             'recipes-export',
+            'replenishment-access',
+        ])->get());
+        // Homepage editing is a newly introduced capability; grant it additively
+        // so an existing customized manager role keeps its other permissions.
+        $managerRole->givePermissionTo(Permission::whereIn('name', [
+            'homepage-settings-access',
+            'homepage-settings-update',
         ])->get());
     }
 
@@ -167,7 +179,12 @@ class RoleSeeder extends Seeder
             'suppliers-export',
             'recipes-access',
             'recipes-export',
+            'transaction-corrections-access',
+            'transaction-corrections-update',
+            'qris-reconciliations-access',
+            'qris-reconciliations-create',
         ])->get());
+        $role->givePermissionTo(Permission::whereIn('name', ['transaction-corrections-access', 'transaction-corrections-update'])->get());
     }
 
     private function createWarehouseRole(): void
@@ -220,6 +237,7 @@ class RoleSeeder extends Seeder
             'recipes-export',
             'recipes-import',
             'inventory-opening-stock-import',
+            'replenishment-access',
         ])->get());
     }
 

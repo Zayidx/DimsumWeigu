@@ -11,7 +11,7 @@
         scheduled = false;
         const root = document.querySelector('[data-sales-report]');
         if (!root) return;
-        const dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const dark = document.documentElement.dataset.workspaceTheme === 'dark';
         const payload = `${root.dataset.salesCharts}|${dark ? 'dark' : 'light'}`;
         if (payload === lastPayload) return;
         lastPayload = payload;
@@ -35,8 +35,8 @@
             chart: { height: 300, background: 'transparent', toolbar: { show: false }, fontFamily: 'Nunito, sans-serif', animations: { enabled: false } },
             theme: { mode: dark ? 'dark' : 'light' },
             dataLabels: { enabled: false },
-            foreColor: dark ? '#c2b6a9' : '#746b63',
-            grid: { borderColor: dark ? '#4b4138' : '#e4ded7', strokeDashArray: 4 },
+            foreColor: dark ? '#c4c4c4' : '#666666',
+            grid: { borderColor: dark ? '#404040' : '#dededc', strokeDashArray: 4 },
             tooltip: { y: { formatter: value => rupiah.format(value) } },
             noData: { text: 'Belum ada data' },
         };
@@ -51,20 +51,24 @@
                 element.textContent = 'Belum ada rincian produk pada filter ini.';
                 return;
             }
+            if (id === 'sales-chart-hours' && !data.hours.values.some(value => value > 0)) {
+                element.textContent = 'Belum ada transaksi pada rentang tanggal ini.';
+                return;
+            }
             element.textContent = '';
             const chart = new ApexCharts(element, { ...base, ...options });
             charts.set(id, chart);
             chart.render();
         };
         add('sales-chart-daily', {
-            chart: { ...base.chart, type: 'area' }, colors: [dark ? '#c7987e' : '#805945'],
+            chart: { ...base.chart, type: 'area' }, colors: [dark ? '#f5f5f5' : '#171717'],
             series: [{ name: 'Penjualan', data: data.daily.values }],
             xaxis: { categories: data.daily.labels, labels: { rotate: -45, hideOverlappingLabels: true } },
             yaxis: { labels: { formatter: value => `Rp${compact.format(value)}` } },
             stroke: { width: 3, curve: 'smooth' }, fill: { type: 'solid', opacity: 0.18 },
         });
         add('sales-chart-outlets', {
-            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#c7987e' : '#805945'],
+            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#f5f5f5' : '#171717'],
             series: [{ name: 'Penjualan', data: data.outlets.values }],
             xaxis: { categories: data.outlets.labels, labels: { trim: true } },
             yaxis: { labels: { formatter: value => `Rp${compact.format(value)}` } },
@@ -73,16 +77,26 @@
         add('sales-chart-methods', {
             chart: { ...base.chart, type: 'donut' },
             labels: data.methods.labels.map(method => ({ cash: 'Tunai', qris: 'QRIS', 'pay-later': 'Piutang', 'bank-transfer': 'Transfer' })[method] || method),
-            series: data.methods.values, colors: dark ? ['#c7987e', '#b6a18f', '#82917a', '#c19a61', '#a77e78'] : ['#805945', '#746b63', '#71806d', '#a8844f', '#936d68'],
-            stroke: { colors: [dark ? '#292521' : '#ffffff'], width: 2 },
+            series: data.methods.values, colors: dark ? ['#f5f5f5', '#c4c4c4', '#999999', '#707070', '#4a4a4a'] : ['#171717', '#444444', '#666666', '#888888', '#b0b0b0'],
+            stroke: { colors: [dark ? '#202020' : '#ffffff'], width: 2 },
             legend: { position: 'bottom' },
             plotOptions: { pie: { donut: { size: '65%', labels: { show: true, total: { show: true, formatter: () => rupiah.format(data.methods.values.reduce((sum, value) => sum + value, 0)) } } } } },
         });
         add('sales-chart-products', {
-            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#b6a18f' : '#9b806e'],
-            series: [{ name: 'Penjualan', data: data.products.values }],
-            xaxis: { categories: data.products.labels, labels: { formatter: value => `Rp${compact.format(value)}` } },
+            chart: { ...base.chart, type: 'bar' }, colors: [dark ? '#c4c4c4' : '#555555'],
+            series: [{ name: data.products.quantity ? 'Terjual' : 'Penjualan', data: data.products.quantity || data.products.values }],
+            xaxis: { categories: data.products.labels, labels: { formatter: value => data.products.quantity ? compact.format(value) : `Rp${compact.format(value)}` } },
+            tooltip: { y: { formatter: value => data.products.quantity ? compact.format(value) : rupiah.format(value) } },
             plotOptions: { bar: { horizontal: true, borderRadius: 4 } },
+        });
+        add('sales-chart-hours', {
+            chart: { ...base.chart, type: 'bar', height: 340 },
+            colors: [dark ? '#c4c4c4' : '#555555'],
+            series: [{ name: 'Transaksi', data: data.hours.values }],
+            xaxis: { categories: data.hours.labels, title: { text: 'Jam transaksi' } },
+            yaxis: { min: 0, forceNiceScale: true, labels: { formatter: value => compact.format(value) }, title: { text: 'Jumlah transaksi' } },
+            tooltip: { y: { formatter: value => `${compact.format(value)} transaksi` } },
+            plotOptions: { bar: { borderRadius: 3, columnWidth: '58%' } },
         });
     }
 
@@ -94,6 +108,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         schedule();
-        new MutationObserver(schedule).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-sales-charts', 'data-bs-theme'] });
+        new MutationObserver(schedule).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['data-sales-charts', 'data-workspace-theme'] });
     });
 })();

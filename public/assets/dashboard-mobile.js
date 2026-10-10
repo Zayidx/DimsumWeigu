@@ -25,6 +25,14 @@
     }
 
     function syncOverlays() {
+        const darkTheme = document.documentElement.dataset.workspaceTheme === 'dark';
+        document.querySelectorAll('[data-theme-toggle]').forEach(button => {
+            button.setAttribute('aria-pressed', String(darkTheme));
+            const label = button.querySelector('span');
+            const text = darkTheme ? 'Ganti tema terang' : 'Ganti tema gelap';
+            if (label && label.textContent !== text) label.textContent = text;
+        });
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', darkTheme ? '#171717' : '#ffffff');
         const panel = document.querySelector('.pos-cart-panel.is-open');
         const cartOpen = !!panel && mobile.matches;
         document.body.classList.toggle('pos-cart-open', cartOpen);
@@ -33,8 +41,13 @@
             if (cartOpen) panel.setAttribute('aria-modal', 'true');
             else panel.removeAttribute('aria-modal');
         }
-        const sidebarOpen = mobile.matches && sidebar?.classList.contains('active');
-        document.querySelectorAll('.burger-btn').forEach(button => button.setAttribute('aria-expanded', String(!!sidebarOpen)));
+        const sidebarOpen = mobile.matches && sidebar?.classList.contains('is-open');
+        if (sidebar) {
+            sidebar.setAttribute('role', sidebarOpen ? 'dialog' : 'complementary');
+            if (sidebarOpen) sidebar.setAttribute('aria-modal', 'true');
+            else sidebar.removeAttribute('aria-modal');
+        }
+        document.querySelectorAll('[data-sidebar-toggle]').forEach(button => button.setAttribute('aria-expanded', String(!!sidebarOpen)));
         if (sidebar && mobile.matches) sidebar.inert = !sidebarOpen;
         else if (sidebar) sidebar.inert = false;
         const overlay = cartOpen ? panel : sidebarOpen ? sidebar : null;
@@ -42,8 +55,11 @@
         if (open && !dialogWasOpen) {
             lastFocus = document.activeElement;
             overlay.querySelector('button, a, input, select, [tabindex="0"]')?.focus({ preventScroll: true });
-        } else if (!open && dialogWasOpen && lastFocus?.isConnected) {
-            lastFocus.focus({ preventScroll: true });
+        } else if (!open && dialogWasOpen) {
+            const restoreTarget = lastFocus?.isConnected && lastFocus.getClientRects().length
+                ? lastFocus
+                : document.getElementById('workspace-content');
+            restoreTarget?.focus({ preventScroll: true });
         }
         dialogWasOpen = open;
     }
@@ -71,27 +87,60 @@
     }
 
     document.addEventListener('click', event => {
+        const dismiss = event.target.closest('[data-bs-dismiss="alert"]');
+        if (dismiss) { dismiss.closest('.alert')?.remove(); return; }
+        const collapse = event.target.closest('[data-bs-toggle="collapse"]');
+        if (collapse) {
+            const target = collapse.getAttribute('data-bs-target');
+            const panel = target?.startsWith('#') ? document.getElementById(target.slice(1)) : null;
+            if (panel) {
+                const expanded = panel.classList.toggle('show');
+                collapse.setAttribute('aria-expanded', String(expanded));
+                collapse.setAttribute('aria-controls', panel.id);
+            }
+            return;
+        }
+
         if (event.target.closest('[data-theme-toggle]')) {
-            const theme = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-            document.documentElement.setAttribute('data-bs-theme', theme);
-            try { localStorage.setItem('theme', theme); } catch (_) { /* Private mode can deny storage. */ }
+            const theme = document.documentElement.dataset.workspaceTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.dataset.workspaceTheme = theme;
+            try { localStorage.setItem('workspace-theme', theme); } catch (_) { /* Private mode can deny storage. */ }
+            syncOverlays();
+            return;
+        }
+        if (event.target.closest('[data-sidebar-toggle]')) {
+            sidebar?.classList.add('is-open');
+            syncOverlays();
+            return;
+        }
+        if (event.target.closest('[data-sidebar-close]') && mobile.matches) {
+            sidebar?.classList.remove('is-open');
+            syncOverlays();
+            return;
         }
         const submenuToggle = event.target.closest('#sidebar .sidebar-item.has-sub > .sidebar-link');
         if (submenuToggle) {
-            requestAnimationFrame(() => {
-                const submenu = submenuToggle.parentElement.querySelector(':scope > .submenu');
-                submenuToggle.setAttribute('aria-expanded', String(!!submenu?.classList.contains('submenu-open')));
-            });
+            event.preventDefault();
+            const submenu = submenuToggle.parentElement.querySelector(':scope > .submenu');
+            const expanded = submenuToggle.getAttribute('aria-expanded') === 'true';
+            submenuToggle.setAttribute('aria-expanded', String(!expanded));
+            submenu?.classList.toggle('submenu-open', !expanded);
             return;
         }
-        if (mobile.matches && event.target.closest('#sidebar .sidebar-link')) window.sidebar?.hide();
+        if (mobile.matches && event.target.closest('#sidebar a[href]')) {
+            sidebar?.classList.remove('is-open');
+            syncOverlays();
+        }
     });
 
     document.addEventListener('keydown', event => {
         const cart = mobile.matches && document.querySelector('.pos-cart-panel.is-open');
-        const overlay = cart || (mobile.matches && sidebar?.classList.contains('active') ? sidebar : null);
+        const overlay = cart || (mobile.matches && sidebar?.classList.contains('is-open') ? sidebar : null);
         if (event.key === 'Escape') {
-            if (mobile.matches) window.sidebar?.hide();
+            if (mobile.matches && sidebar?.classList.contains('is-open')) {
+                sidebar.classList.remove('is-open');
+                syncOverlays();
+            }
         }
         if (event.key !== 'Tab' || !overlay) return;
         const focusable = [...overlay.querySelectorAll('button, a[href], input, select, textarea, [tabindex="0"]')].filter(element => !element.disabled && element.getClientRects().length);
@@ -113,12 +162,18 @@
         const status = document.querySelector('[data-workspace-status]');
         if (status) status.hidden = true;
     });
-    mobile.addEventListener('change', syncOverlays);
+    mobile.addEventListener('change', () => {
+        if (!mobile.matches) sidebar?.classList.remove('is-open');
+        syncOverlays();
+    });
     let pending = false;
-    new MutationObserver(() => {
-        if (pending) return;
+    new MutationObserver(records => {
+        const tableChanged = records.some(record => record.target.closest?.('.table-responsive') ||
+            [...record.addedNodes].some(node => node.nodeType === 1 &&
+                (node.matches('table, .table-responsive') || node.querySelector('table'))));
+        if (!tableChanged || pending) return;
         pending = true;
-        requestAnimationFrame(() => { pending = false; prepareTables(); syncOverlays(); });
+        requestAnimationFrame(() => { pending = false; prepareTables(); });
     }).observe(document.getElementById('app'), { childList: true, subtree: true });
     if (sidebar) new MutationObserver(syncOverlays).observe(sidebar, { attributes: true, attributeFilter: ['class'] });
     document.querySelectorAll('.pos-workspace').forEach(root => {

@@ -1,26 +1,49 @@
 document.addEventListener('alpine:init', () => {
     Alpine.data('homepage', () => ({
-        observer: null,
+        navigationFrame: null,
+        onScroll: null,
         init() {
-            const elements = this.$root.querySelectorAll('.scroll-reveal');
-            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
-                elements.forEach((element) => element.classList.add('is-visible'));
-                return;
-            }
-
-            this.observer = new IntersectionObserver((entries) => {
-                entries.forEach((entry) => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('is-visible');
-                        this.observer.unobserve(entry.target);
-                    }
+            const links = [...this.$root.querySelectorAll('[data-homepage-nav-link]')];
+            const sections = links.map(link => document.querySelector(link.getAttribute('href')));
+            const update = () => {
+                this.navigationFrame = null;
+                let active = 0;
+                sections.forEach((section, index) => {
+                    if (section && section.getBoundingClientRect().top <= 120) active = index;
                 });
-            }, { threshold: 0.12, rootMargin: '0px 0px -48px 0px' });
-
-            elements.forEach((element) => this.observer.observe(element));
+                links.forEach((link, index) => {
+                    if (index === active) link.setAttribute('aria-current', 'location');
+                    else link.removeAttribute('aria-current');
+                });
+            };
+            this.onScroll = () => {
+                if (this.navigationFrame === null) this.navigationFrame = requestAnimationFrame(update);
+            };
+            window.addEventListener('scroll', this.onScroll, { passive: true });
+            window.addEventListener('resize', this.onScroll, { passive: true });
+            this.$nextTick(update);
         },
         destroy() {
-            this.observer?.disconnect();
+            window.removeEventListener('scroll', this.onScroll);
+            window.removeEventListener('resize', this.onScroll);
+            if (this.navigationFrame !== null) cancelAnimationFrame(this.navigationFrame);
+        },
+    }));
+
+    Alpine.data('homepageMenu', () => ({
+        activeCategory: 'dimsum-kukus',
+        moveTab(event) {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            const tabs = [...event.currentTarget.querySelectorAll('[role="tab"]')];
+            const current = tabs.indexOf(event.target);
+            if (current < 0) return;
+            event.preventDefault();
+            let next = (current + (event.key === 'ArrowLeft' ? -1 : 1) + tabs.length) % tabs.length;
+            if (event.key === 'Home') next = 0;
+            if (event.key === 'End') next = tabs.length - 1;
+            tabs[next].click();
+            tabs[next].focus({ preventScroll: true });
+            tabs[next].scrollIntoView({ block: 'nearest', inline: 'nearest' });
         },
     }));
 

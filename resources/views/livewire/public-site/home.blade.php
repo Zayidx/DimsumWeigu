@@ -1,8 +1,8 @@
-<div x-data="homepage" class="min-h-screen bg-[#fffaf4] text-[#34251f]">
-    <header class="absolute inset-x-0 top-0 z-20">
-        <nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
-            <a href="#beranda" class="flex items-center gap-3" aria-label="{{ ($business['name']) . ' — beranda' }}">
-                <img src="/assets/logo/logo-no-background.png" alt="Weigu Dimsum &amp; Gyoza" class="h-12 w-auto max-w-[170px] object-contain sm:h-14" />
+﻿<div x-data="homepage" class="homepage-page min-h-screen bg-[#fffaf4] text-[#34251f]">
+    <header class="homepage-header sticky top-0 z-20 border-b border-[#ead9c8] bg-[#fffaf4]/95 backdrop-blur">
+        <nav class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-y-3 px-5 py-5 sm:px-8">
+            <a href="#beranda" class="flex items-center gap-3" aria-label="{{ ($business['name']) . ' â€” beranda' }}">
+                <img src="/assets/logo/logo-no-background.png" alt="Weigu Dimsum &amp; Gyoza" class="h-10 w-auto max-w-[160px] object-contain sm:h-12" />
             </a>
             <div class="hidden items-center gap-8 text-sm font-medium text-[#695850] md:flex">
                 <a href="#cerita" class="transition hover:text-[#a84127]">Cerita Kami</a>
@@ -13,49 +13,40 @@
     </header>
 
     <main>
-        <section id="beranda" class="relative isolate overflow-hidden">
-            <div class="absolute inset-0 -z-10 bg-[#f7ecdf]"></div>
-            <div class="absolute inset-0 -z-10 bg-cover bg-center md:bg-[position:center_54%]" style="background-image: url(&#x27;/images/dimsum-hero.png&#x27;)"></div>
-            <div class="absolute inset-0 -z-10 bg-gradient-to-r from-[#fffaf4]/95 via-[#fffaf4]/80 to-[#fffaf4]/20 md:to-transparent"></div>
-            <div class="mx-auto flex min-h-[680px] max-w-7xl items-center px-5 pb-20 pt-32 sm:px-8 md:min-h-[760px]">
-                <div class="scroll-reveal max-w-2xl">
-                    <p class="mb-6 inline-flex items-center gap-2 rounded-full border border-[#d8bca8] bg-white/70 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-[#9b482d]">
-                        Dimsum hangat, setiap hari
-                    </p>
-                    <h1 class="font-serif text-5xl font-semibold leading-[1.08] tracking-tight text-[#34251f] sm:text-6xl md:text-7xl">
-                        Momen kecil,
-                        <span class="block text-[#a84127]">rasa yang istimewa.</span>
-                    </h1>
-                    <p class="mt-6 max-w-xl text-base leading-7 text-[#695850] sm:text-lg sm:leading-8">
-                        {{ ($business['description'] ?: "Dibuat hangat dengan bahan pilihan dan penuh perhatian. Temukan dimsum favorit untuk dinikmati bersama orang-orang tersayang.") }}
-                    </p>
-                    <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                        <a href="#menu" class="inline-flex items-center justify-center gap-2 rounded-full bg-[#a84127] px-7 py-3.5 font-semibold text-white shadow-lg shadow-[#a84127]/20 transition hover:-translate-y-0.5 hover:bg-[#87351f]">
-                            Lihat menu <x-icon name="arrow-down" size="{{ 18 }}" />
-                        </a>
-                        <a href="{{ $gofoodUrl }}" target="_blank" rel="noreferrer" class="inline-flex items-center justify-center gap-2 rounded-full border border-[#b99c8b] bg-white/80 px-7 py-3.5 font-semibold text-[#49372f] transition hover:bg-white">Pesan lewat GoFood <x-icon name="arrow-up-right" size="{{ 17 }}" /></a>
+        <section id="beranda" class="homepage-hero">
+            <div class="homepage-hero-shell">
+                <div class="homepage-hero-copy scroll-reveal">
+                    <p class="homepage-eyebrow">{{ $homepage['hero_eyebrow'] }}</p>
+                    <h1>{{ $homepage['hero_title'] }}</h1>
+                    <p class="homepage-hero-caption">{{ $homepage['hero_caption'] }}</p>
+                    <div class="homepage-hero-actions">
+                        <a href="#menu" class="homepage-button homepage-button-primary">Lihat menu <x-icon name="arrow-down" size="{{ 18 }}" /></a>
+                        <a href="{{ $orderUrl }}" target="_blank" rel="noreferrer" class="homepage-button homepage-button-secondary">{{ $orderLabel }} <x-icon name="arrow-up-right" size="{{ 17 }}" /></a>
                     </div>
-                    <div class="mt-12 flex items-center gap-3 text-sm text-[#695850]">
-                        <span class="flex -space-x-2" aria-hidden="true">
-                            <span class="h-8 w-8 rounded-full border-2 border-[#fffaf4] bg-[#d99765]"></span><span class="h-8 w-8 rounded-full border-2 border-[#fffaf4] bg-[#e9bd8a]"></span><span class="h-8 w-8 rounded-full border-2 border-[#fffaf4] bg-[#b97858]"></span>
-                        </span>
-                        <span>Diracik segar, disajikan dengan hangat</span>
-                    </div>
+                    <p class="homepage-hero-signature"><span aria-hidden="true"></span>{{ $business['name'] }}</p>
                 </div>
+                <figure class="homepage-hero-visual scroll-reveal" aria-label="Hidangan dimsum Weigu">
+                    @if (!empty($homepage['hero_image']))
+                        <img src="{{ asset('storage/'.$homepage['hero_image']) }}" alt="Hidangan Weigu" fetchpriority="high" decoding="async">
+                    @else
+                        <img src="{{ asset('images/dimsum-hero-960.webp') }}"
+                            srcset="{{ asset('images/dimsum-hero-640.webp') }} 640w, {{ asset('images/dimsum-hero-960.webp') }} 960w, {{ asset('images/dimsum-hero-1440.webp') }} 1440w"
+                            sizes="(max-width: 767px) calc(100vw - 40px), (max-width: 1280px) 50vw, 600px"
+                            width="1536" height="1024" alt="Dimsum dalam kukusan bambu disajikan hangat" fetchpriority="high" decoding="async">
+                    @endif
+                    <figcaption>Weigu Dimsum &amp; Gyoza</figcaption>
+                </figure>
             </div>
-            <a href="#cerita" aria-label="Lanjut ke cerita kami" class="absolute bottom-7 left-1/2 hidden -translate-x-1/2 items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[#695850] md:flex">
-                Jelajahi <x-icon name="arrow-down" size="{{ 15 }}" />
-            </a>
         </section>
 
         <section id="cerita" class="mx-auto grid max-w-7xl gap-12 px-5 py-24 sm:px-8 md:grid-cols-[0.8fr_1.2fr] md:items-center md:py-32">
             <div class="scroll-reveal">
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#a84127]">Dari dapur kami</p>
-                <h2 class="mt-4 font-serif text-4xl font-semibold leading-tight sm:text-5xl">Rasa rumahan, dibuat sepenuh hati.</h2>
+                <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#a84127]">{{ $homepage['story_eyebrow'] }}</p>
+                <h2 class="mt-4 font-serif text-4xl font-semibold leading-tight sm:text-5xl">{{ $homepage['story_title'] }}</h2>
             </div>
             <div class="scroll-reveal space-y-5 text-base leading-8 text-[#695850]" style="--reveal-delay: 120ms">
-                <p>{{ ($business['description'] ?: (($business['name'] ?: "Kami")) . ' percaya hidangan yang baik dimulai dari bahan yang baik dan dibuat dengan penuh perhatian. Setiap sajian kami siapkan agar terasa hangat, nyaman, dan selalu ingin dinikmati lagi.') }}</p>
-                <p>Kami menyambut Anda untuk menikmati dimsum bersama keluarga, teman, atau sebagai teman istirahat di tengah kesibukan.</p>
+                <p>{{ $homepage['story_body'] }}</p>
+                <p>{{ $homepage['story_second'] }}</p>
                 <a href="#menu" class="inline-flex items-center gap-2 font-semibold text-[#a84127] hover:text-[#87351f]">Kenali menu kami <x-icon name="arrow-up-right" size="{{ 18 }}" /></a>
             </div>
         </section>
@@ -65,8 +56,8 @@
                 <div class="scroll-reveal mb-8">
                     <p class="text-xs font-bold uppercase tracking-[0.2em] text-[#a84127]">Menu</p>
                     <div class="mt-2 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                        <div><h2 class="font-serif text-4xl font-semibold sm:text-5xl">Dimsum, lumpia &amp; lainnya.</h2><p class="mt-3 text-sm text-[#75645c]">Pilih kategori untuk melihat menu dan harga.</p></div>
-                        <a href="{{ $gofoodUrl }}" target="_blank" rel="noreferrer" class="inline-flex w-fit items-center gap-2 rounded-full bg-[#a84127] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#87351f]">Pesan lewat GoFood <x-icon name="arrow-up-right" size="{{ 17 }}" /></a>
+                        <div><h2 class="font-serif text-4xl font-semibold sm:text-5xl">{{ $homepage['menu_title'] }}</h2><p class="mt-3 text-sm text-[#75645c]">{{ $homepage['menu_caption'] }}</p></div>
+                        <a href="{{ $orderUrl }}" target="_blank" rel="noreferrer" class="inline-flex w-fit items-center gap-2 rounded-full bg-[#a84127] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#87351f]">{{ $orderLabel }} <x-icon name="arrow-up-right" size="{{ 17 }}" /></a>
                     </div>
                 </div>
                 @include('livewire.public-site.partials.menu-prices')
@@ -75,7 +66,7 @@
 
         <section id="outlet" class="border-t border-[#ead9c8] bg-white px-5 py-24 sm:px-8 md:py-28">
             <div class="mx-auto max-w-7xl">
-                <div class="scroll-reveal mb-8 max-w-xl"><p class="text-xs font-bold uppercase tracking-[0.2em] text-[#a84127]">Kami menanti Anda</p><h2 class="mt-3 font-serif text-4xl font-semibold sm:text-5xl">Mampir atau sapa kami.</h2><p class="mt-3 text-sm leading-6 text-[#75645c]">Pilih cabang terdekat dan cek jam buka kami.</p></div>
+                <div class="scroll-reveal mb-8 max-w-xl"><p class="text-xs font-bold uppercase tracking-[0.2em] text-[#a84127]">Lokasi dan jam buka</p><h2 class="mt-3 font-serif text-4xl font-semibold sm:text-5xl">{{ $homepage['outlet_title'] }}</h2><p class="mt-3 text-sm leading-6 text-[#75645c]">{{ $homepage['outlet_caption'] }}</p></div>
                 <div class="grid gap-3 sm:grid-cols-2">
                     @foreach ($displayBranches as $branch)
 
@@ -110,7 +101,7 @@
                 <div class="scroll-reveal mt-6 flex flex-col justify-between gap-6 rounded-3xl bg-[#34251f] p-7 text-white sm:flex-row sm:items-center sm:p-9">
                     <div class="flex items-start gap-4">
                         <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-[#f0c3a7]"><x-icon name="phone" size="{{ 23 }}" /></span>
-                        <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-[#e9b99f]">Kontak</p><h3 class="mt-1 font-serif text-2xl font-semibold">Kami siap menyapa.</h3><div class="mt-3 flex flex-col gap-1 text-sm text-white/75 sm:flex-row sm:gap-5"><a href="{{ 'tel:' . ($phone) }}" class="transition hover:text-white">{{ $phone }}</a><a href="{{ 'mailto:' . ($email) }}" class="transition hover:text-white">{{ $email }}</a></div></div>
+                        <div><p class="text-xs font-bold uppercase tracking-[0.18em] text-[#e9b99f]">Kontak</p><h3 class="mt-1 font-serif text-2xl font-semibold">Hubungi Weigu.</h3><div class="mt-3 flex flex-col gap-1 text-sm text-white/75 sm:flex-row sm:gap-5"><a href="{{ 'tel:' . ($phone) }}" class="transition hover:text-white">{{ $phone }}</a><a href="{{ 'mailto:' . ($email) }}" class="transition hover:text-white">{{ $email }}</a></div></div>
                     </div>
                     <div class="w-full space-y-3 sm:max-w-xl">
                         <a href="{{ 'https://wa.me/' . ($whatsappNumber) }}" target="_blank" rel="noreferrer" class="inline-flex items-center justify-center rounded-full bg-[#a84127] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#87351f]">Hubungi CS via WhatsApp</a>
@@ -143,7 +134,7 @@
                                         </label>
                                     </div>
                                     <label class="block text-sm font-semibold">Ceritakan kendala atau aduan
-                                        <textarea required minlength="10" maxlength="1000" rows="{{ 4 }}" x-model="report.details" placeholder="Tuliskan kondisi produk dan kronologi singkat…" class="mt-1.5 w-full resize-y rounded-xl border border-[#e2d3c6] bg-white px-3 py-2.5 font-normal text-[#34251f] placeholder:text-[#a89589] focus:border-[#a84127] focus:outline-none focus:ring-2 focus:ring-[#a84127]/15"></textarea>
+                                        <textarea required minlength="10" maxlength="1000" rows="{{ 4 }}" x-model="report.details" placeholder="Tuliskan kondisi produk dan kronologi singkatâ€¦" class="mt-1.5 w-full resize-y rounded-xl border border-[#e2d3c6] bg-white px-3 py-2.5 font-normal text-[#34251f] placeholder:text-[#a89589] focus:border-[#a84127] focus:outline-none focus:ring-2 focus:ring-[#a84127]/15"></textarea>
                                     </label>
                                     <label class="flex items-start gap-2.5 text-xs leading-5 text-[#695850]">
                                         <input required type="checkbox" x-model="report.agreed" class="mt-1 h-4 w-4 shrink-0 accent-[#a84127]" />
@@ -162,16 +153,34 @@
 
     <footer class="border-t border-white/10 bg-[#2e211c] px-5 py-10 text-white sm:px-8">
         <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 text-center sm:flex-row sm:text-left">
-            <div class="flex items-center gap-4"><img src="/assets/logo/logo-square.png" alt="Logo Weigu Dimsum &amp; Gyoza" class="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-black/20" /><div><p class="font-serif text-xl font-semibold">{{ ($business['name'] ?: "Weigu Dimsum & Gyoza") }}</p><p class="mt-1 text-sm text-white/60">Dimsum hangat, dinikmati bersama.</p></div></div>
+            <div class="flex items-center gap-4"><img src="/assets/logo/logo-square.png" alt="Logo Weigu Dimsum &amp; Gyoza" class="h-14 w-14 rounded-2xl object-cover shadow-lg shadow-black/20" /><div><p class="font-serif text-xl font-semibold">{{ ($business['name'] ?: "Weigu Dimsum & Gyoza") }}</p><p class="mt-1 text-sm text-white/60">Dimsum Â· lumpia Â· Chiquro</p></div></div>
             <nav aria-label="Navigasi footer" class="flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm text-white/70">
                 <a href="#menu" class="transition hover:text-white">Lihat menu</a>
                 <a href="#outlet" class="transition hover:text-white">Lokasi cabang</a>
                 <a href="{{ 'https://wa.me/' . ($whatsappNumber) }}" target="_blank" rel="noreferrer" class="transition hover:text-white">WhatsApp CS</a>
                 <a href="{{ 'mailto:' . ($email) }}" class="transition hover:text-white">Email</a>
             </nav>
-            <p class="text-xs text-white/50">© {{ now()->year }} {{ ($business['name'] ?: "Dimsum") }}</p>
+            <p class="text-xs text-white/50">Â© {{ now()->year }} {{ ($business['name'] ?: "Dimsum") }}</p>
         </div>
     </footer>
+    <nav class="homepage-bottom-nav" aria-label="Navigasi homepage">
+        <a href="#beranda" aria-current="location" data-homepage-nav-link>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" /></svg>
+            <span>Beranda</span>
+        </a>
+        <a href="#menu" data-homepage-nav-link>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+            <span>Menu</span>
+        </a>
+        <a href="#outlet" data-homepage-nav-link>
+            <x-icon name="map-pin" size="{{ 21 }}" />
+            <span>Outlet</span>
+        </a>
+        <a href="{{ 'https://wa.me/' . ($whatsappNumber) }}" target="_blank" rel="noreferrer">
+            <x-icon name="phone" size="{{ 21 }}" />
+            <span>WhatsApp</span>
+        </a>
+    </nav>
 </div>
 @assets
 <script src="{{ \App\Support\StaticAssets::url('homepage.js') }}"></script>

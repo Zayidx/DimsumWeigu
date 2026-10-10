@@ -61,7 +61,8 @@ class OperationalActivitySeeder extends Seeder
                 throw new RuntimeException('Simulasi sebelumnya belum selesai. Periksa serah terima kas sebelum mengulang.');
             }
             $this->seedCashierRestock($central);
-            $this->command?->info('Simulasi penjualan sudah ada; stok untuk uji POS tersedia di setiap outlet.');
+            $this->seedAllMenuComponentStock($central);
+            $this->command?->info('Simulasi penjualan sudah ada; stok dimsum, lumpia, dan Chiquro tersedia di setiap outlet.');
 
             return;
         }
@@ -122,7 +123,9 @@ class OperationalActivitySeeder extends Seeder
                     ], '[SIMULASI] Produksi dimsum wortel dan beef setengah jadi untuk '.$outlet->name, self::PREFIX.':request:'.$code);
 
                     $this->as($finance, $outlet);
-                    $purchase = $production->approveAndPurchase($finance, $request->id, $supplier->id);
+                    $purchase = in_array($request->status, ['requested', 'purchasing'], true)
+                        ? $production->approveAndPurchase($finance, $request->id, $supplier->id)
+                        : null;
                     if ($purchase) {
                         $this->as($warehouse, $outlet);
                         $production->receive($warehouse, $purchase->id, $purchase->items->map(fn ($item) => [
@@ -204,7 +207,107 @@ class OperationalActivitySeeder extends Seeder
         }
 
         $this->seedCashierRestock($central);
-        $this->command?->info('Simulasi selesai: 4 outlet menerima stok POS tambahan dimsum wortel dan beef setengah jadi untuk paket isi 4.');
+        $this->seedAllMenuComponentStock($central);
+        $this->command?->info('Simulasi selesai: 4 outlet menerima stok komponen dimsum, lumpia, dan Chiquro untuk uji POS.');
+    }
+
+    /** Produce and transfer the semi-finished components needed by every configured POS menu. */
+    private function seedAllMenuComponentStock(Warehouse $central): void
+    {
+        $requestPrefix = self::PREFIX.':all-menu-stock:request:';
+        $existingCount = ProductionRequest::query()->where('idempotency_key', 'like', $requestPrefix.'%')->count();
+        if ($existingCount === count(self::OUTLETS)) {
+            return;
+        }
+        if ($existingCount !== 0) {
+            throw new RuntimeException('Penambahan stok menu POS sebelumnya belum lengkap. Periksa permintaan dengan awalan '.$requestPrefix);
+        }
+
+        $previousUser = Auth::user();
+        $previousOutlet = session('active_outlet_id');
+        $previousConfirmation = session('auth.password_confirmed_at');
+
+        try {
+            DB::transaction(function () use ($central, $requestPrefix): void {
+                $this->call(TestDataSeeder::class);
+                $outlets = Outlet::query()->whereIn('code', array_keys(self::OUTLETS))->get()->keyBy('code');
+                $warehouse = $this->actor('warehouse', $outlets->pluck('id')->all());
+                $finance = $this->actor('finance', $outlets->pluck('id')->all());
+                $supplier = Supplier::query()->firstOrCreate(['code' => 'DEMO-OPERASIONAL'], [
+                    'name' => 'Pemasok Simulasi Operasional', 'is_active' => true,
+                ]);
+                $productSkus = ['TEST-DPL', 'TEST-DWO', 'TEST-DBE', 'TEST-LPS', 'TEST-CHB', 'TEST-CHS'];
+                $products = Product::query()->whereIn('sku', $productSkus)->get()->keyBy('sku');
+                if ($products->count() !== count($productSkus)) {
+                    throw new RuntimeException('Komponen setengah jadi dimsum, lumpia, dan Chiquro belum lengkap.');
+                }
+
+                $production = app(ProductionRequestService::class);
+                $orders = app(ProductionOrderService::class);
+                $transfers = app(StockTransferService::class);
+                foreach (self::OUTLETS as $code => $warehouseCode) {
+                    $outlet = $outlets[$code];
+                    $branch = Warehouse::query()->where('code', $warehouseCode)->where('outlet_id', $outlet->id)
+                        ->where('is_sales_enabled', true)->firstOrFail();
+                    $requestKey = $requestPrefix.$code;
+                    $quantity = '30';
+                    $lines = collect($productSkus)->map(fn ($sku) => [
+                        'product_id' => $products[$sku]->id, 'quantity' => $quantity,
+                    ])->all();
+
+                    $this->as($warehouse, $outlet);
+                    $request = $production->create(
+                        $warehouse, $outlet->id, $central->id, $lines,
+                        '[SIMULASI] Produksi komponen menu dimsum, lumpia, dan Chiquro untuk '.$outlet->name,
+                        $requestKey,
+                    );
+
+                    $this->as($finance, $outlet);
+                    $purchase = in_array($request->status, ['requested', 'purchasing'], true)
+                        ? $production->approveAndPurchase($finance, $request->id, $supplier->id)
+                        : null;
+                    if ($purchase) {
+                        $this->as($warehouse, $outlet);
+                        $production->receive($warehouse, $purchase->id, $purchase->items->map(fn ($item) => [
+                            'purchase_order_item_id' => $item->id,
+                            'sent_quantity' => (string) $item->quantity,
+                            'accepted_quantity' => (string) $item->quantity,
+                            'qc_status' => 'good',
+                            'notes' => '[SIMULASI] Bahan produksi menu uji diterima.',
+                        ])->all(), 'SIM-MENU-'.$code, '[SIMULASI] Penerimaan bahan komponen POS', $requestKey.':material-receive');
+                    }
+
+                    $this->as($warehouse, $outlet);
+                    $order = $orders->startFromRequest($warehouse, $request->id);
+                    $orders->complete($warehouse, $order->id,
+                        $order->items->flatMap->materials->map(fn ($row) => [
+                            'production_order_material_id' => $row->id,
+                            'actual_quantity' => (string) $row->planned_quantity,
+                        ])->all(),
+                        $order->items->map(fn ($row) => [
+                            'production_order_item_id' => $row->id,
+                            'actual_output' => (string) $row->planned_quantity,
+                        ])->all(),
+                    );
+
+                    $transfer = $transfers->createDraft($central->id, $branch->id, collect($productSkus)->map(fn ($sku) => [
+                        'product_id' => $products[$sku]->id, 'quantity' => $quantity,
+                    ])->all(), '[SIMULASI] Komponen menu POS dikirim ke '.$outlet->name);
+                    $transfers->send($transfer->id);
+                    $transfers->receive($transfer->id, self::PREFIX.':all-menu-stock:transfer:'.$code);
+                }
+            }, attempts: 3);
+        } finally {
+            if ($previousUser) {
+                Auth::login($previousUser);
+            } else {
+                Auth::logout();
+            }
+            session()->put('active_outlet_id', $previousOutlet);
+            session()->put('auth.password_confirmed_at', $previousConfirmation);
+        }
+
+        $this->command?->info('Stok POS siap: masing-masing outlet menerima 30 pcs per komponen dimsum, lumpia, dan Chiquro.');
     }
 
     private function seedCashierRestock(Warehouse $central): void
@@ -249,7 +352,9 @@ class OperationalActivitySeeder extends Seeder
                     ], '[SIMULASI] Stok komponen paket POS untuk '.$outlet->name, $requestKey);
 
                     $this->as($finance, $outlet);
-                    $purchase = $production->approveAndPurchase($finance, $request->id, $supplier->id);
+                    $purchase = in_array($request->status, ['requested', 'purchasing'], true)
+                        ? $production->approveAndPurchase($finance, $request->id, $supplier->id)
+                        : null;
                     if ($purchase) {
                         $this->as($warehouse, $outlet);
                         $production->receive($warehouse, $purchase->id, $purchase->items->map(fn ($item) => [
@@ -331,6 +436,9 @@ class OperationalActivitySeeder extends Seeder
                 continue;
             }
             $balance = DB::table('ingredient_warehouses')->where('ingredient_id', $ingredient->id)->where('warehouse_id', $branch->id)->first();
+            if ($balance && (float) $balance->stock >= $quantity) {
+                continue;
+            }
             if ($balance && (float) $balance->stock !== 0.0) {
                 throw new RuntimeException('Stok outlet '.$ingredient->name.' sudah terisi; saldo simulasi tidak ditambahkan ulang.');
             }

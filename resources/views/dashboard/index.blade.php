@@ -13,7 +13,7 @@
             <input type="hidden" name="period" value="{{ $trendDays }}"><button class="btn btn-outline-primary" type="submit">Terapkan lokasi</button>
         </div></form>
     @endif
-    <p class="text-muted small mb-3">Angka dan antrean untuk {{ $selectedWarehouse?->name ?? $scopeLabel }}. Penjualan menghitung transaksi selesai, termasuk yang belum lunas.</p>
+    <p class="dashboard-context text-muted small mb-3">Angka dan antrean untuk <strong>{{ $selectedWarehouse?->name ?? $scopeLabel }}</strong>. Penjualan menghitung transaksi selesai, termasuk yang belum lunas.</p>
     <div class="row g-3 mb-4 dashboard-metrics">
         <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body"><h2 class="dashboard-metric-label">Penjualan hari ini</h2><p class="dashboard-metric-value mb-0">Rp{{ \App\Support\DisplayNumber::format($todaySales, 0, ',', '.') }}</p><small class="text-muted">Nilai transaksi selesai, belum tentu diterima tunai.</small></div></div></div>
         <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body"><h2 class="dashboard-metric-label">Transaksi hari ini</h2><p class="dashboard-metric-value mb-0">{{ \App\Support\DisplayNumber::format($todayTransactions) }}</p><small class="text-muted">Transaksi selesai sejak pukul 00.00.</small></div></div></div>
@@ -96,7 +96,7 @@
 
 @if ($trendMaximum > 0)
     @push('scripts')
-        <script src="{{ asset('mazer/extensions/apexcharts/apexcharts.min.js') }}" defer></script>
+        <script src="{{ asset('assets/vendor/apexcharts.min.js') }}" defer></script>
         <script>
             document.addEventListener('DOMContentLoaded', () => {
                 const target = document.querySelector('#dashboard-sales-trend');
@@ -125,28 +125,28 @@
 
                 const rupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 });
                 const shortRupiah = new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 });
-                const darkMode = () => document.documentElement.getAttribute('data-bs-theme') === 'dark';
+                const darkMode = () => document.documentElement.dataset.workspaceTheme === 'dark';
                 const reportUrls = @js($salesTrend->map(fn ($day) => auth()->user()->can('reports-access') ? route('reports.sales', array_filter(['from' => $day['from'], 'to' => $day['to'], 'warehouse' => $selectedWarehouse?->id, 'outlet' => $selectedOutlet?->id])) : null)->values());
                 const chart = new ApexCharts(target, {
                     chart: { type: 'bar', height: 260, background: 'transparent', toolbar: { show: false }, fontFamily: 'Nunito, sans-serif', animations: { enabled: false }, events: { dataPointSelection: (event, context, config) => { const url = reportUrls[config.dataPointIndex]; if (url) window.location.assign(url); } } },
                     series: [{ name: 'Penjualan', data: @js($salesTrend->pluck('total')->values()) }],
                     theme: { mode: darkMode() ? 'dark' : 'light' },
-                    colors: [darkMode() ? '#c7987e' : '#805945'],
+                    colors: [darkMode() ? '#f5f5f5' : '#171717'],
                     plotOptions: { bar: { borderRadius: 5, columnWidth: '42%' } },
                     dataLabels: { enabled: false },
                     xaxis: { categories: @js($salesTrend->pluck('label')->values()), axisBorder: { show: false }, axisTicks: { show: false } },
-                    yaxis: { labels: { formatter: value => `Rp${shortRupiah.format(value)}`, style: { colors: darkMode() ? '#c2b6a9' : '#746b63' } } },
-                    grid: { borderColor: darkMode() ? '#4b4138' : '#e4ded7', strokeDashArray: 4, padding: { left: 8, right: 8 } },
+                    yaxis: { labels: { formatter: value => `Rp${shortRupiah.format(value)}`, style: { colors: darkMode() ? '#c4c4c4' : '#666666' } } },
+                    grid: { borderColor: darkMode() ? '#404040' : '#dededc', strokeDashArray: 4, padding: { left: 8, right: 8 } },
                     tooltip: { y: { formatter: value => rupiah.format(value) } },
                     responsive: [{ breakpoint: 576, options: { chart: { height: 220 }, plotOptions: { bar: { columnWidth: '55%' } } } }]
                 });
                 chart.render().then(() => {
                     new MutationObserver(() => chart.updateOptions({
                         theme: { mode: darkMode() ? 'dark' : 'light' },
-                        colors: [darkMode() ? '#c7987e' : '#805945'],
-                        yaxis: { labels: { formatter: value => `Rp${shortRupiah.format(value)}`, style: { colors: darkMode() ? '#c2b6a9' : '#746b63' } } },
-                        grid: { borderColor: darkMode() ? '#4b4138' : '#e4ded7' }
-                    })).observe(document.documentElement, { attributes: true, attributeFilter: ['data-bs-theme'] });
+                        colors: [darkMode() ? '#f5f5f5' : '#171717'],
+                        yaxis: { labels: { formatter: value => `Rp${shortRupiah.format(value)}`, style: { colors: darkMode() ? '#c4c4c4' : '#666666' } } },
+                        grid: { borderColor: darkMode() ? '#404040' : '#dededc' }
+                    })).observe(document.documentElement, { attributes: true, attributeFilter: ['data-workspace-theme'] });
                 }).catch(showDataTable);
             });
         </script>

@@ -2,18 +2,20 @@
 
 namespace App\Livewire\Pos;
 
-use App\Models\BankAccount;
 use App\Models\Cart;
 use App\Models\CashierShift;
 use App\Models\Customer;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\ProductUnit;
 use App\Models\Setting;
 use App\Services\Cashier\CartService;
+use App\Services\Cashier\CashierStockAvailability;
 use App\Services\Cashier\CheckoutService;
 use App\Support\FixedDecimal;
 use App\Support\OutletAccess;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -24,9 +26,9 @@ class Checkout extends Component
 
     public string $search = '';
 
-    public string $cashReceived = '';
+    public bool $favoritesOnly = false;
 
-    public string $qrisReference = '';
+    public string $cashReceived = '';
 
     public string $holdLabel = '';
 
@@ -34,12 +36,30 @@ class Checkout extends Component
 
     public string $notes = '';
 
-    public ?string $lastTransaction = null;
-
-    public ?int $lastTransactionId = null;
-
     public function updatingSearch(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatingFavoritesOnly(): void
+    {
+        $this->resetPage();
+    }
+
+    public function toggleFavorite(int $productId): void
+    {
+        $this->authorizePos();
+        Product::query()->whereKey($productId)->where('is_active', true)->where('is_sellable', true)->firstOrFail();
+
+        $favorite = DB::table('cashier_favorite_products')->where('user_id', auth()->id())->where('product_id', $productId)->exists();
+        if ($favorite) {
+            DB::table('cashier_favorite_products')->where('user_id', auth()->id())->where('product_id', $productId)->delete();
+        } else {
+            DB::table('cashier_favorite_products')->insertOrIgnore([
+                'user_id' => auth()->id(), 'product_id' => $productId, 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+
         $this->resetPage();
     }
 
@@ -57,14 +77,49 @@ class Checkout extends Component
     {
         $this->authorizePos();
         $carts->add($this->activeCart($carts), $productId);
-        $this->search = '';
     }
 
     public function addProductUnit(int $productId, int $unitId, CartService $carts): void
     {
         $this->authorizePos();
         $carts->add($this->activeCart($carts), $productId, $unitId);
-        $this->search = '';
+    }
+
+    public function scanProduct(CartService $carts): void
+    {
+        $this->authorizePos();
+        $barcode = trim($this->search);
+
+        if ($barcode === '' || mb_strlen($barcode) > 120) {
+            return;
+        }
+
+        $unit = ProductUnit::query()
+            ->where('barcode', $barcode)
+            ->whereHas('product', fn (Builder $query) => $query->where('is_active', true)->where('is_sellable', true))
+            ->first(['product_id', 'unit_id']);
+
+        if ($unit) {
+            $carts->add($this->activeCart($carts), (int) $unit->product_id, (int) $unit->unit_id);
+            $this->search = '';
+
+            return;
+        }
+
+        $product = Product::query()
+            ->where(fn (Builder $query) => $query->where('barcode', $barcode)->orWhere('sku', $barcode))
+            ->where('is_active', true)
+            ->where('is_sellable', true)
+            ->first(['id', 'allow_single_unit_sale']);
+
+        if ($product && $product->allow_single_unit_sale) {
+            $carts->add($this->activeCart($carts), (int) $product->id);
+            $this->search = '';
+
+            return;
+        }
+
+        $this->dispatch('toast', type: 'warning', message: __('Produk tidak cocok. Pilih produk dari hasil pencarian.'));
     }
 
     public function setQuantity(int $itemId, string $quantity, CartService $carts): void
@@ -123,12 +178,7 @@ class Checkout extends Component
         $this->validate(['cashReceived' => ['required', 'numeric', 'min:0', 'max:9999999999999.99']]);
         $this->persistDetails($carts);
         $transaction = $checkout->cash($this->activeCart($carts), $this->cashReceived);
-        $this->lastTransaction = $transaction->number;
-        $this->lastTransactionId = $transaction->id;
-        $this->cashReceived = '';
-        $this->customerId = null;
-        $this->notes = '';
-        $this->dispatch('toast', type: 'success', message: __('Pembayaran berhasil. Transaksi :number', ['number' => $transaction->number]));
+        $this->redirectRoute('transactions.show', ['transaction' => $transaction->id, 'from' => 'pos'], navigate: true);
     }
 
     public function payLater(CheckoutService $checkout, CartService $carts): void
@@ -136,26 +186,15 @@ class Checkout extends Component
         $this->authorizePos('pos-checkout');
         $this->persistDetails($carts);
         $transaction = $checkout->payLater($this->activeCart($carts));
-        $this->lastTransaction = $transaction->number;
-        $this->lastTransactionId = $transaction->id;
-        $this->customerId = null;
-        $this->notes = '';
-        $this->dispatch('toast', type: 'success', message: __('Transaksi dicatat sebagai piutang.'));
+        $this->redirectRoute('transactions.show', ['transaction' => $transaction->id, 'from' => 'pos'], navigate: true);
     }
 
     public function payQris(CheckoutService $checkout, CartService $carts): void
     {
         $this->authorizePos('pos-checkout');
-        $data = $this->validate(['qrisReference' => ['nullable', 'string', 'max:160']]);
-        $bankAccount = BankAccount::query()->where('is_active', true)->orderBy('sort_order')->orderBy('id')->firstOrFail();
         $this->persistDetails($carts);
-        $transaction = $checkout->qris($this->activeCart($carts), $bankAccount->id, $data['qrisReference'] ?? null);
-        $this->lastTransaction = $transaction->number;
-        $this->lastTransactionId = $transaction->id;
-        $this->qrisReference = '';
-        $this->customerId = null;
-        $this->notes = '';
-        $this->dispatch('toast', type: 'success', message: __('Pembayaran QRIS tercatat ke rekening finance. Transaksi :number', ['number' => $transaction->number]));
+        $transaction = $checkout->qris($this->activeCart($carts));
+        $this->redirectRoute('transactions.show', ['transaction' => $transaction->id, 'from' => 'pos'], navigate: true);
     }
 
     public function render(CartService $carts)
@@ -165,7 +204,7 @@ class Checkout extends Component
         if (! $shift) {
             $outlets = app(OutletAccess::class)->outletsFor(auth()->user())->orderBy('name')->get(['id', 'name']);
 
-            return view('livewire.pos.checkout', ['shift' => null, 'products' => collect(), 'cart' => null, 'heldCarts' => collect(), 'customers' => collect(), 'previewTotal' => 0, 'previewLines' => [], 'payLaterEnabled' => false, 'qrisEnabled' => false, 'bankAccounts' => collect(), 'outlets' => $outlets])
+            return view('livewire.pos.checkout', ['shift' => null, 'products' => collect(), 'cart' => null, 'heldCarts' => collect(), 'customers' => collect(), 'previewTotal' => 0, 'previewLines' => [], 'payLaterEnabled' => false, 'qrisEnabled' => false, 'outlets' => $outlets, 'favoriteProductIds' => [], 'stockAvailability' => []])
                 ->layout('layouts.dashboard', ['title' => __('Kasir')]);
         }
         $cart = $carts->activeFor($shift)->load('items.product.unit', 'items.product.productUnits', 'items.unit');
@@ -173,16 +212,28 @@ class Checkout extends Component
         $products = Product::query()->with(['unit:id,name,symbol', 'productUnits.unit:id,name,symbol', 'warehouseStocks' => fn ($query) => $query->where('warehouse_id', $warehouseId)])
             ->where('is_active', true)->where('is_sellable', true)
             ->when($this->search !== '', fn (Builder $q) => $q->where(fn (Builder $sub) => $sub->where('title', 'like', '%'.$this->search.'%')->orWhere('sku', 'like', '%'.$this->search.'%')->orWhere('barcode', 'like', '%'.$this->search.'%')->orWhereHas('productUnits', fn (Builder $unit) => $unit->where('barcode', 'like', '%'.$this->search.'%'))))
-            ->where(function (Builder $query) use ($warehouseId) {
-                $query->where('track_stock', false)
-                    ->orWhereHas('warehouseStocks', fn (Builder $stock) => $stock->where('warehouse_id', $warehouseId)->whereColumn('stock', '>', 'reserved_stock'))
-                    ->orWhereHas('recipeVersions', fn (Builder $recipe) => $recipe->where('is_active', true)->whereHas('productItems'));
-            })->orderBy('title')->paginate(12);
+            ->when($this->favoritesOnly, fn (Builder $query) => $query->whereIn('products.id', DB::table('cashier_favorite_products')->join('products as favorite_products', 'favorite_products.id', '=', 'cashier_favorite_products.product_id')->where('cashier_favorite_products.user_id', auth()->id())->whereNull('favorite_products.deleted_at')->where('favorite_products.is_active', true)->where('favorite_products.is_sellable', true)->select('cashier_favorite_products.product_id')))
+            ->orderBy('title')->paginate(12);
+        $favoriteProductIds = DB::table('cashier_favorite_products')->join('products as favorite_products', 'favorite_products.id', '=', 'cashier_favorite_products.product_id')
+            ->where('cashier_favorite_products.user_id', auth()->id())->whereNull('favorite_products.deleted_at')->where('favorite_products.is_active', true)->where('favorite_products.is_sellable', true)
+            ->pluck('cashier_favorite_products.product_id')->map(fn ($id) => (int) $id)->all();
+        $stockAvailability = [];
+        foreach ($products as $product) {
+            $saleUnits = $product->productUnits->filter(fn (ProductUnit $unit) => $unit->unit_id !== $product->unit_id || $product->allow_single_unit_sale);
+            foreach ($saleUnits as $unit) {
+                $availability = app(CashierStockAvailability::class)->forSale($product, (int) $unit->unit_id, $warehouseId);
+                $cartItem = $cart->items->first(fn ($item) => $item->product_id === $product->id && $item->unit_id === $unit->unit_id);
+                $inCartMilli = $cartItem ? FixedDecimal::quantity((string) $cartItem->quantity) : 0;
+                $availability['remaining_milli'] = $availability['quantity_milli'] === null
+                    ? null
+                    : max(0, $availability['quantity_milli'] - $inCartMilli);
+                $stockAvailability[$product->id][$unit->unit_id] = $availability;
+            }
+        }
         $heldCarts = Cart::query()->withCount('items')->where('user_id', auth()->id())->where('cashier_shift_id', $shift->id)->where('status', 'held')->orderByDesc('held_at')->get();
         $customers = Customer::query()->where('is_active', true)->orderBy('name')->limit(500)->get(['id', 'name', 'phone']);
         $payLaterEnabled = PaymentMethod::query()->where('code', 'pay-later')->where('is_enabled', true)->exists();
         $qrisEnabled = PaymentMethod::query()->where('code', 'qris')->where('is_enabled', true)->exists();
-        $bankAccounts = $qrisEnabled ? BankAccount::query()->where('is_active', true)->orderBy('sort_order')->orderBy('bank_name')->get() : collect();
         $defaultTaxRate = (float) Setting::value('default_tax_rate', 0, $shift->outlet_id);
         $defaultTaxInclusive = Setting::value('tax_mode', 'exclusive', $shift->outlet_id) === 'inclusive';
         $previewLines = [];
@@ -203,7 +254,7 @@ class Checkout extends Component
 
         $outlets = app(OutletAccess::class)->outletsFor(auth()->user())->orderBy('name')->get(['id', 'name']);
 
-        return view('livewire.pos.checkout', compact('shift', 'products', 'cart', 'heldCarts', 'customers', 'previewTotal', 'previewLines', 'payLaterEnabled', 'qrisEnabled', 'bankAccounts', 'outlets'))
+        return view('livewire.pos.checkout', compact('shift', 'products', 'cart', 'heldCarts', 'customers', 'previewTotal', 'previewLines', 'payLaterEnabled', 'qrisEnabled', 'outlets', 'favoriteProductIds', 'stockAvailability'))
             ->layout('layouts.dashboard', ['title' => __('Kasir')]);
     }
 

@@ -11,8 +11,6 @@ use App\Livewire\Pos\Checkout as CheckoutComponent;
 use App\Livewire\Purchasing\GoodsReceivingsIndex;
 use App\Livewire\Purchasing\PurchaseOrdersIndex;
 use App\Livewire\Purchasing\SuppliersIndex;
-use App\Models\BankAccount;
-use App\Models\BankAccountLedger;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\CashierShift;
@@ -120,21 +118,19 @@ class PointOfSaleCheckoutTest extends TestCase
         $this->assertDatabaseHas('carts', ['id' => $cart->id, 'status' => 'completed']);
     }
 
-    public function test_qris_checkout_credits_finance_bank_account_without_adding_warehouse_cash(): void
+    public function test_qris_checkout_records_manual_payment_without_a_bank_account_or_cash_entry(): void
     {
-        PaymentMethod::query()->create(['code' => 'qris', 'name' => 'QRIS', 'provider' => 'qris', 'is_enabled' => true, 'requires_confirmation' => true]);
-        $account = BankAccount::query()->create(['bank_name' => 'Bank Test', 'account_name' => 'Finance', 'account_number' => '123456', 'sort_order' => 1, 'is_active' => true]);
+        PaymentMethod::query()->create(['code' => 'qris', 'name' => 'QRIS', 'provider' => null, 'is_enabled' => true, 'requires_confirmation' => true]);
         $cart = Cart::query()->create(['uuid' => (string) Str::uuid(), 'user_id' => $this->user->id, 'cashier_shift_id' => $this->shift->id, 'outlet_id' => $this->outlet->id, 'warehouse_id' => $this->warehouse->id, 'status' => 'active']);
         CartItem::query()->create(['cart_id' => $cart->id, 'product_id' => $this->product->id, 'unit_id' => $this->packageUnit->id, 'quantity' => 2]);
 
-        $sale = app(CheckoutService::class)->qris($cart, $account->id, 'QRIS-REF-1');
-        app(CheckoutService::class)->qris($cart, $account->id, 'QRIS-REF-1');
+        $sale = app(CheckoutService::class)->qris($cart);
+        app(CheckoutService::class)->qris($cart);
 
         $this->assertSame('paid', $sale->payment_status);
-        $this->assertDatabaseHas('transaction_tenders', ['transaction_id' => $sale->id, 'method' => 'qris', 'status' => 'paid', 'bank_account_id' => $account->id, 'provider_reference' => 'QRIS-REF-1']);
-        $this->assertDatabaseHas('bank_account_ledgers', ['bank_account_id' => $account->id, 'type' => 'qris_sale', 'amount' => '20000.00', 'balance_after' => '20000.00']);
+        $this->assertDatabaseHas('transaction_tenders', ['transaction_id' => $sale->id, 'method' => 'qris', 'status' => 'paid', 'bank_account_id' => null, 'provider_reference' => null]);
+        $this->assertDatabaseCount('bank_account_ledgers', 0);
         $this->assertDatabaseMissing('warehouse_cash_ledgers', ['reference_type' => Transaction::class, 'reference_id' => $sale->id, 'type' => 'sale_cash']);
-        $this->assertSame(1, BankAccountLedger::query()->where('type', 'qris_sale')->count());
     }
 
     public function test_transaction_detail_and_thermal_receipt_are_scoped_to_active_outlet(): void

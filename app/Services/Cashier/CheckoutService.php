@@ -2,7 +2,6 @@
 
 namespace App\Services\Cashier;
 
-use App\Models\BankAccount;
 use App\Models\Cart;
 use App\Models\CashierShift;
 use App\Models\Customer;
@@ -17,7 +16,6 @@ use App\Models\Setting;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
 use App\Models\TransactionTender;
-use App\Services\Finance\BankAccountLedgerService;
 use App\Services\Inventory\StockMutationService;
 use App\Services\Production\RecipeCostService;
 use App\Support\AuditLogger;
@@ -41,12 +39,12 @@ class CheckoutService
         return $this->complete($cart, 'pay-later', '0');
     }
 
-    public function qris(Cart $cart, int $bankAccountId, ?string $reference = null): Transaction
+    public function qris(Cart $cart): Transaction
     {
-        return $this->complete($cart, 'qris', '0', $bankAccountId, $reference);
+        return $this->complete($cart, 'qris', '0');
     }
 
-    private function complete(Cart $cart, string $method, string $received, ?int $bankAccountId = null, ?string $reference = null): Transaction
+    private function complete(Cart $cart, string $method, string $received): Transaction
     {
         if (! in_array($method, ['cash', 'pay-later', 'qris'], true)) {
             throw ValidationException::withMessages(['payment' => __('Metode pembayaran belum didukung.')]);
@@ -56,15 +54,14 @@ class CheckoutService
             throw ValidationException::withMessages(['received' => __('Jumlah pembayaran tidak valid.')]);
         }
 
-        return DB::transaction(function () use ($cart, $receivedCents, $method, $bankAccountId, $reference) {
+        return DB::transaction(function () use ($cart, $receivedCents, $method) {
             $cart = Cart::query()->with('items')->whereKey($cart->id)->lockForUpdate()->firstOrFail();
             abort_unless($cart->user_id === auth()->id() && auth()->user()?->can('pos-access') && auth()->user()?->can('pos-checkout'), 403);
             app(OutletAccess::class)->require(auth()->user(), $cart->outlet_id);
             $existing = Transaction::where('client_uuid', $cart->uuid)->first();
             if ($existing) {
                 $tender = $existing->tenders()->where('method', $method)->first();
-                if (! $tender || ($method === 'cash' && FixedDecimal::money((string) ($tender->metadata['received'] ?? '0')) !== $receivedCents)
-                    || ($method === 'qris' && (int) $tender->bank_account_id !== $bankAccountId)) {
+                if (! $tender || ($method === 'cash' && FixedDecimal::money((string) ($tender->metadata['received'] ?? '0')) !== $receivedCents)) {
                     throw ValidationException::withMessages(['payment' => __('Keranjang sudah dibayar dengan rincian pembayaran berbeda.')]);
                 }
 
@@ -81,7 +78,6 @@ class CheckoutService
             if (! $paymentMethod) {
                 throw ValidationException::withMessages(['payment' => __('Metode pembayaran belum diaktifkan.')]);
             }
-            $bankAccount = $method === 'qris' ? BankAccount::query()->whereKey($bankAccountId)->where('is_active', true)->firstOrFail() : null;
             $creditCustomer = null;
             $creditBefore = 0;
             if ($method === 'pay-later') {
@@ -184,15 +180,11 @@ class CheckoutService
             }
 
             TransactionTender::query()->create([
-                'transaction_id' => $transaction->id, 'bank_account_id' => $bankAccount?->id, 'method' => $method, 'amount' => FixedDecimal::moneyText($total),
+                'transaction_id' => $transaction->id, 'method' => $method, 'amount' => FixedDecimal::moneyText($total),
                 'status' => in_array($method, ['cash', 'qris'], true) ? 'paid' : 'pending', 'idempotency_key' => $method.':'.$cart->uuid,
-                'provider_reference' => $method === 'qris' ? $reference : null,
                 'confirmed_at' => in_array($method, ['cash', 'qris'], true) ? now() : null,
-                'metadata' => $method === 'cash' ? ['received' => FixedDecimal::moneyText($receivedCents), 'change' => FixedDecimal::moneyText($receivedCents - $total)] : ($method === 'qris' ? ['settlement' => 'finance-bank-account'] : ['settlement' => 'receivable']),
+                'metadata' => $method === 'cash' ? ['received' => FixedDecimal::moneyText($receivedCents), 'change' => FixedDecimal::moneyText($receivedCents - $total)] : ($method === 'qris' ? ['settlement' => 'manual-external-qris'] : ['settlement' => 'receivable']),
             ]);
-            if ($method === 'qris') {
-                app(BankAccountLedgerService::class)->credit($bankAccount, $total, 'qris_sale', Transaction::class, $transaction->id, 'qris:'.$cart->uuid, __('QRIS POS :number', ['number' => $transaction->number]));
-            }
             if ($method === 'pay-later') {
                 Receivable::query()->create([
                     'customer_id' => $creditCustomer->id, 'transaction_id' => $transaction->id,

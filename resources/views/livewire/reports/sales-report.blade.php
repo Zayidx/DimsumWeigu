@@ -21,7 +21,7 @@
 
     <div class="row g-3 mb-4" aria-label="Penerimaan menurut jenis dana">
         <div class="col-12 col-md-6"><section class="card h-100 border-start border-4 border-success"><div class="card-body"><span class="dashboard-metric-label">Penerimaan tunai · kas outlet</span><h2 class="h4 mb-0">Rp {{ \App\Support\DisplayNumber::format($cashSales, 0, ',', '.') }}</h2><small class="text-muted">Pembayaran tunai yang tercatat pada shift kasir.</small></div></section></div>
-        <div class="col-12 col-md-6"><section class="card h-100 border-start border-4 border-primary"><div class="card-body"><span class="dashboard-metric-label">Penerimaan QRIS · rekening finance</span><h2 class="h4 mb-0">Rp {{ \App\Support\DisplayNumber::format($qrisSales, 0, ',', '.') }}</h2><small class="text-muted">QRIS langsung dicatat ke rekening dan tidak masuk kas gudang.</small>@if($qrisByAccount->isNotEmpty())<ul class="small mt-2 mb-0">@foreach($qrisByAccount as $account)<li>{{ $account->bank_name }} · {{ $account->account_name }} ({{ $account->account_number }}): <strong>Rp {{ \App\Support\DisplayNumber::format($account->total, 0, ',', '.') }}</strong></li>@endforeach</ul>@endif</div></section></div>
+        <div class="col-12 col-md-6"><section class="card h-100 border-start border-4 border-primary"><div class="card-body"><span class="dashboard-metric-label">QRIS manual · dibayar di luar aplikasi</span><h2 class="h4 mb-0">Rp {{ \App\Support\DisplayNumber::format($qrisSales, 0, ',', '.') }}</h2><small class="text-muted">Kasir mengonfirmasi pembayaran QRIS yang sudah diterima. Nilainya tidak masuk kas tunai atau rekening finance.</small></div></section></div>
     </div>
 
     @if($totalTransactions > 0)
@@ -49,6 +49,6 @@
 </div>
 
 @push('scripts')
-    <script src="{{ asset('mazer/extensions/apexcharts/apexcharts.min.js') }}" defer></script>
+    <script src="{{ asset('assets/vendor/apexcharts.min.js') }}" defer></script>
     <script src="{{ asset('assets/sales-report-charts.js') }}?v={{ filemtime(public_path('assets/sales-report-charts.js')) }}" defer></script>
 @endpush
