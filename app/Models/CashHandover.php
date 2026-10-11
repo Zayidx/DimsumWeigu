@@ -11,7 +11,7 @@ class CashHandover extends Model
 
     protected function casts(): array
     {
-        return ['amount' => 'decimal:2', 'approved_at' => 'datetime', 'confirmed_at' => 'datetime'];
+        return ['amount' => 'decimal:2', 'actual_amount' => 'decimal:2', 'variance_amount' => 'decimal:2', 'approved_at' => 'datetime', 'confirmed_at' => 'datetime'];
     }
 
     public function source(): BelongsTo

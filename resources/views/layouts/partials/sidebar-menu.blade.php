@@ -1,8 +1,8 @@
 @php
     $user = auth()->user();
     $salesActive = request()->routeIs('pos.*', 'shifts.*', 'transactions.*', 'customers.*', 'cashier-sales-report');
-    $inventoryActive = request()->routeIs('products.*', 'categories.*', 'units.*', 'inventory.*', 'semi-finished-stock.*', 'replenishment-suggestions.*', 'ingredients.*', 'recipes.*', 'production-requests.*', 'production-orders.*', 'transfers.*', 'stock-opnames.*', 'waste.*');
-    $financeActive = request()->routeIs('suppliers.*', 'purchase-orders.*', 'goods-receivings.*', 'supplier-returns.*', 'expenses.*', 'cash-management.*', 'qris-reconciliations.*', 'payables.*', 'receivables.*', 'transaction-correction-requests.*');
+    $inventoryActive = request()->routeIs('products.*', 'categories.*', 'units.*', 'inventory.*', 'semi-finished-stock.*', 'replenishment-suggestions.*', 'ingredients.*', 'recipes.*', 'production-requests.*', 'production-orders.*', 'transfers.*', 'cashier-stock-transfers.*', 'warehouse-cash-receipts.*', 'stock-opnames.*', 'waste.*');
+    $financeActive = request()->routeIs('suppliers.*', 'purchase-orders.*', 'goods-receivings.*', 'supplier-returns.*', 'expenses.*', 'cash-management.*', 'warehouse-finance-handovers.*', 'qris-reconciliations.*', 'payables.*', 'receivables.*', 'transaction-correction-requests.*');
     $reportsActive = request()->routeIs('reports.*');
 @endphp
 
@@ -25,7 +25,7 @@
         </li>
     @endif
 
-    @if ($user->canAny(['products-access', 'categories-access', 'units-access', 'inventory-access', 'replenishment-access', 'ingredients-access', 'recipes-access', 'production-requests-access', 'production-orders-access', 'transfers-access', 'stock-opnames-access', 'waste-access']))
+    @if ($user->canAny(['products-access', 'categories-access', 'units-access', 'inventory-access', 'replenishment-access', 'ingredients-access', 'recipes-access', 'production-requests-access', 'production-orders-access', 'transfers-access', 'cashier-stock-move', 'cash-handovers-confirm', 'stock-opnames-access', 'waste-access']))
         <li class="sidebar-item has-sub {{ $inventoryActive ? 'active' : '' }}">
             <a href="#" class="sidebar-link" aria-expanded="{{ $inventoryActive ? 'true' : 'false' }}"><i class="bi bi-boxes" aria-hidden="true"></i><span>Stok &amp; produksi</span></a>
             <ul class="submenu {{ $inventoryActive ? 'submenu-open' : 'submenu-closed' }}">
@@ -37,15 +37,17 @@
                 @if (Route::has('ingredients.index') && $user->can('ingredients-access'))<li class="submenu-item {{ request()->routeIs('ingredients.*') ? 'active' : '' }}"><a href="{{ route('ingredients.index') }}" class="submenu-link">Master bahan</a></li>@endif
                 @if (Route::has('recipes.index') && $user->can('recipes-access'))<li class="submenu-item {{ request()->routeIs('recipes.*') ? 'active' : '' }}"><a href="{{ route('recipes.index') }}" class="submenu-link">Resep &amp; HPP</a></li>@endif
                 @if (Route::has('production-requests.index') && $user->can('production-requests-access'))<li class="submenu-item {{ request()->routeIs('production-requests.*') ? 'active' : '' }}"><a href="{{ route('production-requests.index') }}" class="submenu-link">Permintaan produksi</a></li>@endif
-                @if (Route::has('production-orders.index') && $user->can('production-orders-access'))<li class="submenu-item {{ request()->routeIs('production-orders.*') ? 'active' : '' }}"><a href="{{ route('production-orders.index') }}" class="submenu-link">Produksi</a></li>@endif
+                @if (Route::has('production-orders.index') && $user->can('production-orders-access') && (! $user->hasRole('finance') || $user->hasRole('super-admin')))<li class="submenu-item {{ request()->routeIs('production-orders.*') ? 'active' : '' }}"><a href="{{ route('production-orders.index') }}" class="submenu-link">Produksi Warehouse</a></li>@endif
                 @if (Route::has('transfers.index') && $user->can('transfers-access'))<li class="submenu-item {{ request()->routeIs('transfers.*') ? 'active' : '' }}"><a href="{{ route('transfers.index') }}" class="submenu-link">Transfer stok</a></li>@endif
+                @can('cashier-stock-move')<li class="submenu-item {{ request()->routeIs('cashier-stock-transfers.*') ? 'active' : '' }}"><a href="{{ route('cashier-stock-transfers.index') }}" class="submenu-link">Ambil &amp; kembalikan stok</a></li>@endcan
+                @if($user->can('cash-handovers-confirm') && $user->hasAnyRole(['warehouse', 'super-admin']))<li class="submenu-item {{ request()->routeIs('warehouse-cash-receipts.*') ? 'active' : '' }}"><a href="{{ route('warehouse-cash-receipts.index') }}" class="submenu-link">Terima kas outlet</a></li>@endif
                 @if (Route::has('stock-opnames.index') && $user->can('stock-opnames-access'))<li class="submenu-item {{ request()->routeIs('stock-opnames.*') ? 'active' : '' }}"><a href="{{ route('stock-opnames.index') }}" class="submenu-link">Stok opname</a></li>@endif
                 @can('waste-access')<li class="submenu-item {{ request()->routeIs('waste.*') ? 'active' : '' }}"><a href="{{ route('waste.index') }}" class="submenu-link">Waste</a></li>@endcan
             </ul>
         </li>
     @endif
 
-    @if ($user->canAny(['suppliers-access', 'purchase-orders-access', 'goods-receivings-access', 'supplier-returns-access', 'expenses-access', 'cash-management-access', 'qris-reconciliations-access', 'payables-access', 'receivables-access', 'transaction-corrections-access']))
+    @if ($user->canAny(['suppliers-access', 'purchase-orders-access', 'goods-receivings-access', 'supplier-returns-access', 'expenses-access', 'cash-management-access', 'warehouse-finance-handovers-access', 'qris-reconciliations-access', 'payables-access', 'receivables-access', 'transaction-corrections-access']))
         <li class="sidebar-item has-sub {{ $financeActive ? 'active' : '' }}">
             <a href="#" class="sidebar-link" aria-expanded="{{ $financeActive ? 'true' : 'false' }}"><i class="bi bi-wallet2" aria-hidden="true"></i><span>Pembelian &amp; keuangan</span></a>
             <ul class="submenu {{ $financeActive ? 'submenu-open' : 'submenu-closed' }}">
@@ -57,6 +59,7 @@
                     @can('expenses-access')<li class="submenu-item {{ request()->routeIs('expenses.*') ? 'active' : '' }}"><a href="{{ route('expenses.index') }}" class="submenu-link">Pengeluaran</a></li>@endcan
                 @endif
                 @can('cash-management-access')<li class="submenu-item {{ request()->routeIs('cash-management.*', 'cashier-cash-management.*') ? 'active' : '' }}"><a href="{{ auth()->user()->hasRole('cashier') && ! auth()->user()->hasRole('super-admin') ? route('cashier-cash-management.index') : route('cash-management.index') }}" class="submenu-link">Manajemen kas</a></li>@endcan
+                @can('warehouse-finance-handovers-access')<li class="submenu-item {{ request()->routeIs('warehouse-finance-handovers.*') ? 'active' : '' }}"><a href="{{ route('warehouse-finance-handovers.index') }}" class="submenu-link">Kas Warehouse → Finance</a></li>@endcan
                 @can('qris-reconciliations-access')<li class="submenu-item {{ request()->routeIs('qris-reconciliations.*') ? 'active' : '' }}"><a href="{{ route('qris-reconciliations.index') }}" class="submenu-link">Rekonsiliasi QRIS</a></li>@endcan
                 @if (Route::has('payables.index') && $user->can('payables-access'))<li class="submenu-item {{ request()->routeIs('payables.*') ? 'active' : '' }}"><a href="{{ route('payables.index') }}" class="submenu-link">Hutang</a></li>@endif
                 @if (Route::has('receivables.index') && $user->can('receivables-access'))<li class="submenu-item {{ request()->routeIs('receivables.*') ? 'active' : '' }}"><a href="{{ route('receivables.index') }}" class="submenu-link">Piutang</a></li>@endif
@@ -72,6 +75,7 @@
                 @foreach ([['reports.sales', 'Penjualan', 'reports.sales'], ['reports.profit', 'Laba', 'reports.profit'], ['reports.inventory', 'Stok', 'reports.inventory'], ['reports.aging', 'Aging', 'reports.aging']] as [$routeName, $label, $routePattern])
                     <li class="submenu-item {{ request()->routeIs($routePattern) ? 'active' : '' }}"><a href="{{ route($routeName) }}" class="submenu-link">{{ $label }}</a></li>
                 @endforeach
+                @if ($user->can('production-orders-access') && $user->hasAnyRole(['finance', 'super-admin']))<li class="submenu-item {{ request()->routeIs('reports.warehouse-production') ? 'active' : '' }}"><a href="{{ route('reports.warehouse-production') }}" class="submenu-link">Produksi Warehouse</a></li>@endif
             </ul>
         </li>
     @endcan

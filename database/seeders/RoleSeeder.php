@@ -70,6 +70,10 @@ class RoleSeeder extends Seeder
 
         $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
         $this->grant($superAdminRole, Permission::all());
+        $superAdminRole->givePermissionTo(Permission::whereIn('name', [
+            'cashier-stock-move', 'warehouse-finance-handovers-access',
+            'warehouse-finance-handovers-create', 'warehouse-finance-handovers-confirm',
+        ])->get());
 
         // Create cashier role with basic permissions for public registration
         $cashierRole = Role::firstOrCreate(['name' => 'cashier']);
@@ -94,6 +98,7 @@ class RoleSeeder extends Seeder
         // Existing cashier roles receive only the new read-only report permission.
         $cashierRole->givePermissionTo(Permission::where('name', 'cashier-sales-report-access')->get());
         $cashierRole->givePermissionTo(Permission::where('name', 'transaction-corrections-create')->get());
+        $cashierRole->givePermissionTo(Permission::where('name', 'cashier-stock-move')->get());
 
         $this->createManagerRole();
         $this->createFinanceRole();
@@ -192,6 +197,8 @@ class RoleSeeder extends Seeder
             'cash-management-access',
             'cash-management-approve',
             'cash-handovers-confirm',
+            'warehouse-finance-handovers-access',
+            'warehouse-finance-handovers-confirm',
         ])->get());
     }
 
@@ -246,6 +253,9 @@ class RoleSeeder extends Seeder
             'recipes-import',
             'inventory-opening-stock-import',
             'replenishment-access',
+        ])->get());
+        $role->givePermissionTo(Permission::whereIn('name', [
+            'warehouse-finance-handovers-access', 'warehouse-finance-handovers-create',
         ])->get());
     }
 

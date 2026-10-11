@@ -23,6 +23,11 @@ class ProductionRequest extends Model
         return $this->hasOne(ProductionOrder::class);
     }
 
+    public function purchaseOrders()
+    {
+        return $this->hasMany(IngredientPurchaseOrder::class);
+    }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);

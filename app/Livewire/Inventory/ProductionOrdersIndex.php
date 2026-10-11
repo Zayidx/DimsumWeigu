@@ -83,7 +83,7 @@ class ProductionOrdersIndex extends Component
         abort_unless(auth()->user()->can('production-orders-create'), 403);
         $this->visibleRequest($requestId);
         $request = ProductionRequest::query()->findOrFail($requestId);
-        $shift = ProductionShift::query()->where('user_id', auth()->id())->where('warehouse_id', $request->warehouse_id)->where('status', 'open')->first();
+        $shift = ProductionShift::query()->where('user_id', auth()->id())->where('warehouse_id', $request->warehouse_id)->where('outlet_id', $request->outlet_id)->where('status', 'open')->first();
         if (! $shift) {
             throw ValidationException::withMessages(['shift' => __('Buka shift produksi untuk gudang permintaan ini terlebih dahulu.')]);
         }
@@ -107,7 +107,7 @@ class ProductionOrdersIndex extends Component
         $this->outputLines = $order->items->map(fn ($item) => [
             'production_order_item_id' => $item->id, 'name' => $item->product->title,
             'unit' => $item->product->unit?->symbol, 'planned_quantity' => (string) $item->planned_quantity,
-            'actual_output' => (string) $item->planned_quantity,
+            'actual_output' => (string) $item->planned_quantity, 'variance_note' => '',
         ])->all();
         $this->showForm = true;
     }
@@ -122,7 +122,8 @@ class ProductionOrdersIndex extends Component
             'materialLines.*.actual_quantity' => ['required', 'numeric', 'min:0', 'max:999999999999.999', 'regex:/^\d+(?:\.\d{1,3})?$/'],
             'outputLines' => ['required', 'array', 'min:1'],
             'outputLines.*.production_order_item_id' => ['required', 'integer'],
-            'outputLines.*.actual_output' => ['required', 'numeric', 'gt:0', 'max:999999999999.999', 'regex:/^\d+(?:\.\d{1,3})?$/'],
+            'outputLines.*.actual_output' => ['required', 'numeric', 'min:0', 'max:999999999999.999', 'regex:/^\d+(?:\.\d{1,3})?$/'],
+            'outputLines.*.variance_note' => ['nullable', 'string', 'max:2000'],
         ]);
         $order = $this->visibleOrder($this->selectedOrderId);
         $service->complete(User::query()->findOrFail(auth()->id()), $order->id, $this->materialLines, $this->outputLines);
@@ -146,12 +147,13 @@ class ProductionOrdersIndex extends Component
 
     public function render()
     {
+        abort_if(auth()->user()->hasRole('finance') && ! auth()->user()->hasRole('super-admin'), 403);
         $outletIds = app(OutletAccess::class)->outletsFor(auth()->user())->select('outlets.id');
 
         return view('livewire.inventory.production-orders-index', [
             'warehouses' => Warehouse::query()->where('is_active', true)->where('type', 'central')->whereNull('outlet_id')->orderBy('name')->get(),
-            'openShifts' => ProductionShift::query()->with('warehouse')->whereIn('outlet_id', $outletIds)->where('user_id', auth()->id())->where('status', 'open')->latest('opened_at')->get(),
-            'todayShifts' => ProductionShift::query()->with(['warehouse', 'user:id,name', 'orders.items.product.unit'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->whereDate('opened_at', $this->productionDate ?: today()->toDateString())->latest('opened_at')->get(),
+            'openShifts' => ProductionShift::query()->with(['warehouse', 'orders.items.materials.ingredient.unit'])->whereIn('outlet_id', $outletIds)->where('user_id', auth()->id())->where('status', 'open')->latest('opened_at')->get(),
+            'todayShifts' => ProductionShift::query()->with(['warehouse', 'user:id,name', 'orders.items.product.unit', 'orders.items.materials.ingredient.unit'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->whereDate('opened_at', $this->productionDate ?: today()->toDateString())->latest('opened_at')->get(),
             'requests' => ProductionRequest::query()->with(['items.product'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->whereIn('status', ['approved', 'received'])->whereDoesntHave('productionOrder')->latest()->get(),
             'orders' => ProductionOrder::query()->with(['items.product.unit', 'items.materials.ingredient.unit'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->latest()->limit(100)->get(),
         ])->layout('layouts.dashboard', ['title' => __('Produksi')]);

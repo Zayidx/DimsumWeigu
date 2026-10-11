@@ -158,12 +158,13 @@
                             @if ($handover->approver || $handover->receiver)
                                 <small class="text-muted d-block">Disetujui {{ $handover->approver?->name ?? '—' }} · Diterima {{ $handover->receiver?->name ?? '—' }}</small>
                             @endif
+                            @if($handover->actual_amount !== null)<small class="text-muted d-block">Fisik: Rp {{ \App\Support\DisplayNumber::format((float) $handover->actual_amount, 2, ',', '.') }} · Selisih: Rp {{ \App\Support\DisplayNumber::format((float) $handover->variance_amount, 2, ',', '.') }} · {{ $handover->verification_note }}</small>@endif
                         </div>
                         <span class="badge align-self-start {{ $handover->status === 'confirmed' ? 'bg-light-success' : ($handover->status === 'cancelled' ? 'bg-light-danger' : 'bg-light-secondary') }}">{{ __(['pending' => 'Menunggu persetujuan', 'approved' => 'Menunggu penerimaan', 'confirmed' => 'Diterima', 'cancelled' => 'Dibatalkan'][$handover->status] ?? $handover->status) }}</span>
                     </div>
                     <div class="d-flex flex-wrap gap-2 mt-3">
                         @if ($handover->status === 'pending' && $currentIds->contains($handover->source_warehouse_id))
-                            @can('cash-management-approve')<button wire:click="approve({{ $handover->id }})" wire:confirm="Setujui dan keluarkan uang dari kas sumber?" class="btn btn-sm btn-primary">Setujui dan kirim</button>@endcan
+                            @if(! ($handover->source?->outlet_id && $handover->destination?->type === 'central'))@can('cash-management-approve')<button wire:click="approve({{ $handover->id }})" wire:confirm="Setujui dan keluarkan uang dari kas sumber?" class="btn btn-sm btn-primary">Setujui dan kirim</button>@endcan @endif
                             @can('cash-management-create')@if ($handover->requested_by === auth()->id() || auth()->user()->can('cash-management-approve'))<button wire:click="cancelHandover({{ $handover->id }})" wire:confirm="Batalkan permintaan ini?" class="btn btn-sm btn-outline-danger">Batalkan</button>@endif @endcan
                         @endif
                         @if ($handover->status === 'approved' && $currentIds->contains($handover->destination_warehouse_id) && auth()->user()->canAny(['cash-management-create', 'cash-handovers-confirm']))

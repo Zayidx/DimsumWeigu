@@ -1,0 +1,88 @@
+Progress implementasi PRODUKSI_INTRUCTION.md
+Tanggal mulai: 2026-10-11
+Urutan kerja: Tahap 1 analisis -> Tahap 2 rancangan -> Tahap 3 implementasi -> Tahap 4 pengujian.
+
+DAFTAR KERJA / TO DO (diperbarui setiap bagian selesai)
+[x] T1 Audit skema, routes, role, modul existing, dan konflik alur.
+[x] T2 Rancang pemakaian tabel existing, status, ledger, akses, dan urutan implementasi.
+[x] I1 Resep khusus setengah jadi: hasil standar, bahan master, tambah/edit/detail/nonaktif, konversi dan HPP per hasil.
+[x] I2 Produksi Warehouse: katalog/rencana gabungan, cek stok, shift, konsumsi saat mulai, output aktual, selisih, laporan Finance.
+[x] I3 Restock: permintaan kekurangan, keputusan Finance, harga/biaya desimal, penolakan, penerimaan parsial/penuh, histori.
+[x] I4 Cashier ambil/kembalikan stok langsung: outlet otomatis, QC pengembalian, transfer atomik, histori Warehouse/POS.
+[x] I5 Kas Cashier -> Warehouse: nominal fisik/selisih, ledger, saldo dan laporan.
+[x] I6 Kas Warehouse -> Finance: dana pending, konfirmasi fisik/selisih, ledger, saldo dan laporan.
+[x] I7 Sidebar, route, izin backend per role dan tampilan responsif.
+[ ] V1 Uji fitur resep, produksi, restock, transfer, kas, akses role, transaksi ulang dan konkurensi.
+Status: [x] selesai; [ ] belum selesai. Catatan hasil tiap bagian ditambahkan di bawah.
+
+[1] Tahap 1 - Analisis sistem existing: SELESAI
+- Repo awal bersih; PRODUKSI_INTRUCTION.md adalah berkas instruksi baru yang belum masuk Git. Isi berkas berakhir di tengah kalimat terakhir Tahap 4, tetapi seluruh Flow A-F dan daftar pengujian utama terbaca.
+- Laravel 12, Livewire 3, Blade. Routes operasional di routes/web.php memakai middleware login, konteks outlet, dan permission; hak aksi juga diperiksa di komponen/service. User memakai Spatie roles dan OutletAccess untuk membatasi outlet.
+- Sudah ada produk setengah jadi, master bahan mentah, versi resep, shift produksi, permintaan produksi, order produksi, bahan per order, ledger bahan, ledger stok produk, pembelian bahan, penerimaan bahan, transfer stok, cash handover, dan warehouse cash ledger. Struktur ini dipakai kembali tanpa menghapus data lama.
+- Konflik produksi: resep saat ini dicatat per 1 unit; yield_quantity tersedia tetapi tidak dipakai saat menghitung target. Bahan baru dipotong di ProductionOrderService::complete, sedangkan instruksi meminta saat start. ProductionOrdersIndex juga mengizinkan output hanya lebih dari nol dan belum menyediakan catatan selisih.
+- Konflik restock: ProductionRequestService sudah menggabungkan kebutuhan bahan dan mendukung approval/pembelian/penerimaan parsial serta idempotency. UI Finance dan Warehouse masih berbagi halaman permintaan produksi; status dan rincian biaya perlu dipisah sesuai peran. Harga usulan memakai desimal pada service, tetapi total pratinjau UI memakai float.
+- Konflik transfer: StockTransferService hanya mengizinkan Gudang Bersama -> outlet dan memakai draft -> send -> receive. Cashier belum dapat mengambil langsung atau mengembalikan stok dari outlet melalui alur yang diminta. Tabel outlet_stock_returns ada tetapi belum digunakan sebagai alur cashier baru.
+- Konflik kas: CashHandoverService sudah memakai idempotency dan ledger, tetapi alurnya pending -> approved -> confirmed tanpa jumlah fisik aktual/selisih. Belum ada serah terima Warehouse -> Finance sebagai tanggung jawab kas terpisah; pencatatan bank deposit yang ada berbeda.
+- Permission role warehouse/finance/cashier sudah ada sebagai dasar. Perlu izin aksi baru yang spesifik agar Finance hanya membaca laporan produksi dan cashier hanya mengubah stok/kas outlet sendiri.
+- Pemeriksaan Tahap 1: pembacaan kode, skema migration, routes, role seeder, dan service; belum ada migrasi, seeding, atau perubahan stok/kas yang dijalankan.
+
+[2] Tahap 2 - Rancangan sistem: SELESAI
+- Pakai tabel recipe_versions/items untuk versi resep. yield_quantity berarti jumlah hasil standar resep; formula bahan = target / yield x kuantitas resep, dengan pembulatan tiga desimal yang aman. Versi lama tetap menjadi snapshot historis pada production_request_items/order_items. UI Warehouse menampilkan hanya produk setengah jadi dan bahan mentah aktif; hasil produksi menggunakan unit produk.
+- Rencana produksi boleh berisi beberapa produk dalam satu production_request. Semua kebutuhan bahan digabung menurut ingredient_id sebelum dibandingkan dengan stok gudang bersama. Status permintaan: requested (kekurangan; menunggu Finance), purchasing (PO disetujui/belum diterima), approved atau received (stok cukup), in_production, completed; rejected/cancelled perlu melepas reservasi. Tabel bahan permintaan menyimpan required/available/purchase/reserved.
+- Mulai produksi harus mengunci request, shift, seluruh saldo bahan, memvalidasi ulang stok total, menulis konsumsi bahan dan snapshot harga ke production_order_materials serta ingredient_inventory_ledgers secara atomik. Satu request hanya dapat membuat satu order; order yang sudah ada menjadi hasil idempotent. Saat selesai, hasil aktual masuk ke ProductWarehouse melalui StockMutationService; konsumsi bahan tidak diulang. Selisih dan alasan disimpan bersama order/item. Shift hanya ditutup setelah order aktif selesai; ringkasan dibaca dari order dan material historis.
+- Pembelian memakai ingredient_purchase_orders/items dan ingredient_goods_receivings/items yang sudah ada. Finance mengubah harga/kuantitas sebelum approval; perubahan dicatat audit. PO ordered dipresentasikan sebagai Stok Sedang Diantar secara operasional, belum dianggap barang diterima. Penerimaan parsial/final tetap hanya menambah kuantitas lolos QC dan punya idempotency key. Biaya Finance dihitung dengan FixedDecimal; estimasi, persetujuan, dan realisasi ditampilkan terpisah.
+- Transfer langsung memakai stock_transfers/items dan StockMutationService dengan transaksi tunggal: Cashier mengambil pusat -> gudang outlet otomatis dari akunnya, atau mengembalikan gudang outlet -> pusat setelah kondisi layak diverifikasi. Status baru completed langsung; transaksi lama draft/sent/received tetap dapat dibaca. Batch asli dan baru harus terhubung. Aksi selalu mengunci saldo dan memverifikasi peran serta outlet di service; kasir tidak memilih gudang/outlet.
+- Kas outlet -> Warehouse menggunakan cash_handovers dan warehouse_cash_ledgers. Permintaan pending tidak mengubah saldo. Warehouse mencatat nominal fisik, selisih, alasan, lalu mengonfirmasi; kas outlet berkurang dan kas gudang bertambah pada tahap fisik yang benar. Kas Warehouse -> Finance menggunakan transaksi serah terima khusus dengan status pending/in_transit/confirmed dan ledger tanggung jawab; nominal pending mengurangi saldo tersedia untuk pengajuan berikutnya tanpa dianggap pendapatan baru. Gunakan integer sen via FixedDecimal untuk semua perhitungan uang.
+- Tambahkan migration maju hanya untuk atribut yang belum ada: snapshot pemakaian di awal/order, alasan selisih hasil, nominal aktual/selisih kas, serta catatan status/aktor yang dibutuhkan. Jangan mengubah tabel lama atau menghapus histori. API baru tidak diperlukan untuk UI Livewire; routes web, permission aksi, dan sidebar per peran mencukupi.
+- Pelaksanaan Tahap 3 berurutan: (1) resep dan perhitungan kebutuhan, (2) mulai/selesai produksi dan shift/laporan, (3) restock Finance dan penerimaan, (4) transfer cashier dua arah, (5) kas dua tahap, (6) navigasi/izin. Setelah setiap bagian selesai, tambahkan hasil dan pemeriksaan ke berkas ini.
+
+[3] I1 - Resep setengah jadi dan hasil standar: SELESAI
+- RecipesIndex menampilkan resep dan pilihan produk setengah jadi bagi role Warehouse, membaca bahan dari Master Bahan aktif, menampilkan satuan master, menyediakan tambah/hapus bahan, edit melalui versi baru, detail komposisi pada daftar, dan nonaktifkan resep. Harga tidak diinput pada form resep Warehouse.
+- yield_quantity kini dapat diisi sebagai jumlah hasil standar. RecipeCostService menghitung HPP per unit hasil. ProductionRequestService dan ProductionOrderService memakai formula kebutuhan = takaran resep x target / hasil standar, dibulatkan ke atas pada ketelitian stok 0,001. Versi resep lama tetap tersimpan pada permintaan/order sehingga perubahan berikutnya tidak menimpa riwayat.
+- Satuan bahan mengikuti unit Master Bahan; form tidak mengizinkan input unit bebas. Konversi tambahan belum diperlukan untuk contoh bahan yang memakai unit master.
+- Pemeriksaan: Pint lulus untuk 4 file PHP; Blade view:cache berhasil. Uji alur/angka dilakukan pada V1 setelah perubahan transaksi produksi selesai.
+
+[4] I2 - Produksi Warehouse: SELESAI
+- Audit menemukan production_order_materials dipakai service/model tetapi tidak dibuat oleh migration lama. Migration maju baru menambah tabel tersebut, waktu mulai produksi, dan kolom hasil aktual/selisih/catatan. Migrasi lama serta data operasional tidak dihapus.
+- Migrasi pertama gagal di MySQL karena nama indeks otomatis terlalu panjang; MySQL sudah membuat tabel sebelum gagal. Saya memeriksa tabel dan status migrasi, menghapus indeks gabungan yang tidak diperlukan karena indeks foreign key sudah tersedia, lalu menjalankan ulang migrasi secara aman. Hasil akhir: php artisan migrate --force DONE.
+- ProductionOrderService mulai memotong bahan saat mulai produksi dan mencatat ledger dengan ID order. Penyelesaian menyesuaikan hanya beda konsumsi aktual dan rencana; order lama tanpa started_at tetap memakai jalur konsumsi lama. Hasil aktual, selisih, persentase, dan alasan diisi saat selesai; output nol didukung.
+- Form permintaan menampilkan katalog produk setengah jadi, menghitung kebutuhan bahan gabungan dan kekurangan stok. Shift aktif diwajibkan sebelum order mulai, lalu hasil aktual dan selisih disimpan saat selesai. Shift tidak bisa ditutup selama ada order berjalan; ringkasan harian dan laporan Finance memiliki filter tanggal, produk, shift, status serta akses baca saja.
+- Seeder OperationalActivitySeeder membuka shift simulasi sebelum produksi. TestDataSeeder memisahkan kategori produk setengah jadi dari menu jadi tanpa mengubah takaran sumber; HppWorkbookSeeder tetap mempertahankan resep Chiquro Cheese mentah yang belum lengkap sebagai belum aktif, karena takaran kejunya tidak tersedia.
+- Pemeriksaan: migrasi maju MySQL berhasil; Pint dan Blade view:cache lulus; uji fokus resep dan alur produksi lulus 6 test, 47 assertions. Seeder simulasi tidak dijalankan pada database operasional.
+
+[5] I3 - Restock Finance: SELESAI
+- Audit awal: approval PO dan penerimaan QC sudah tersedia, tetapi penolakan Finance dengan alasan belum ada. Ringkasan harga awal pada form belum terisi dan estimasi total memakai float; keduanya sudah diperbaiki agar input harga awal terlihat dan total dihitung dengan bilangan desimal tetap.
+- Migration maju menambah aktor, waktu, dan alasan penolakan. Service menolak hanya request berstatus requested, mengunci saldo, melepas seluruh reservasi terkait secara atomik, dan menulis audit. Finance mendapat formulir alasan; Warehouse dapat membaca alasan pada daftar. Migrasi MySQL berhasil.
+- Persetujuan Finance menyimpan detail harga awal, harga disetujui, kekurangan, jumlah disetujui, dan nilai per bahan pada audit PO. Perubahan harga/jumlah pada form menghitung ulang estimasi secara langsung. Ringkasan Finance memisahkan estimasi bahan, nilai PO disetujui, serta realisasi barang lolos QC yang masuk hutang pemasok.
+- Penerimaan dua batch diuji: batch pertama memberi status partially_received, batch berikutnya received; stok bahan pertama tidak bertambah dua kali. Barang tidak lolos QC tetap bernilai nol dalam stok dan hutang. Idempotency penerimaan lama tetap berlaku.
+- Pemeriksaan akhir I3: 7 feature tests / 59 assertions lulus; Pint dan view:cache lulus. Seeder simulasi tidak dijalankan pada database operasional.
+
+[6] I4 - Ambil dan kembali stok oleh Cashier: SELESAI
+- Halaman kasir baru menyediakan Pengambilan dan Pengembalian tanpa pilihan gudang/outlet. Service menggunakan gudang pusat dan gudang outlet pada sesi akun yang telah diverifikasi OutletAccess. Hanya produk setengah jadi aktif yang dilacak stok dapat dipindahkan.
+- Saat konfirmasi, stok sumber dan tujuan, batch FEFO, transfer, serta ledger berubah dalam satu transaksi. Jumlah melebihi stok bebas ditolak; transaksi ulang memakai kunci dan payload hash. Pengembalian wajib alasan dan pernyataan barang layak; produk rusak/tidak layak tidak masuk stok tersedia. Riwayat kasir dan halaman transfer Warehouse memuat jenis serta pelaku.
+- Migration maju menambah arah, kondisi, dan payload hash transfer. Permission khusus cashier-stock-move ditambahkan; PermissionSeeder dan RoleSeeder aman dijalankan pada database ini tanpa menjalankan seeder demo.
+- Uji fokus: 3 test / 16 assertions untuk pengambilan, pengembalian, rollback stok kurang, dan identitas batch; alur HPP Warehouse -> pickup Cashier -> POS juga lulus. Migrasi MySQL, Pint, dan view:cache lulus.
+- Berkas PointOfSaleCheckoutTest lama masih memiliki 9 kegagalan terkait fixture produk jadi/stok outlet dan transfer outlet-ke-outlet. Aturan yang menyebabkan kegagalan itu sudah ada pada HEAD sebelum perubahan ini; tidak dilonggarkan demi fixture. Sisa test pada perintah gabungan lulus 26.
+
+[7] I5 - Kas Cashier ke Warehouse: SELESAI
+- Service lama memakai pending -> approved -> confirmed tanpa hitungan fisik. Migration maju menambah actual_amount, variance_amount, verification_note tanpa mengubah riwayat lama.
+- Cashier tetap mengajukan kas dari shift outlet aktif. Jumlah pengajuan pending lain diperhitungkan agar kas yang sama tidak diajukan dua kali. Warehouse mendapat halaman pemeriksaan fisik; nominal aktual dan catatan wajib saat selisih. Konfirmasi mengurangi saldo outlet, menambah saldo Gudang Bersama, menulis ledger dan mutasi shift sekaligus. Transaksi ulang dengan nominal sama idempotent.
+- Shift biasa tidak dapat ditutup saat serah-terima pending; force close membatalkan pengajuan pending dan mencatat audit. Halaman Cashier, Warehouse, dan Finance menampilkan status/nominal/selisih sesuai hak akses. Alur outlet ke pusat tidak lagi perlu persetujuan Finance sebelum hitung fisik Warehouse; alur lama antaroutlet tetap dapat dibaca/diproses.
+- Pemeriksaan: migrasi MySQL berhasil; 3 uji fokus/7 assertions lulus (fisik dan selisih, pengajuan ganda, shift pending); Pint dan view:cache lulus. CashManagementTest penuh masih memiliki kegagalan fixture kas awal lama (mengasumsikan Rp1.000, sedangkan service saat ini membuka Rp50.000) dan pengujian ekspor yang menganggap XLSX sebagai CSV.
+
+[8] I6 - Kas Warehouse ke Finance: SELESAI
+- Migration maju membuat warehouse_finance_cash_handovers dan finance_cash_ledgers. Warehouse dapat mengajukan uang dari saldo kas Gudang Bersama; dana pending mengurangi saldo tersedia untuk pengajuan lain tanpa mengurangi saldo ledger sebelum uang fisik diterima. Pengajuan yang dibatalkan tidak mengubah ledger.
+- Finance mencatat nominal fisik, selisih, catatan wajib saat berbeda, penerima, dan waktu. Konfirmasi atomik menulis finance_handover_out pada ledger Warehouse serta penerimaan pada finance_cash_ledgers. Perpindahan ini tidak dicatat sebagai omzet baru. Transaksi ulang dengan nominal sama aman; aktor pengirim tidak dapat menerima sendiri kecuali super-admin.
+- Halaman Warehouse/Finance menampilkan saldo Warehouse, pending, saldo bebas, total diterima Finance, dan riwayat. Permission dan seeder role/permission diperbarui. Migration MySQL, PermissionSeeder, dan RoleSeeder aman berhasil; seeder demo tidak dijalankan pada database operasional.
+- Pemeriksaan: 3 test / 18 assertions lulus, termasuk alur kasir -> Warehouse -> Finance; Pint, view:cache, route:list lulus.
+
+[9] I7 - Sidebar, route, izin backend: SELESAI
+- Link baru untuk stok kasir, penerimaan kas Warehouse, kas Warehouse -> Finance, dan laporan produksi Finance terpasang sesuai permission. Aksi mutasi juga membatasi role dan outlet di backend; Finance hanya membaca laporan produksi.
+- Seeder PermissionSeeder, RoleSeeder, RolePermissionSeeder, TestDataSeeder, dan OperationalActivitySeeder diperbarui. Simulasi memakai shift produksi, pickup kasir, serta serah terima kas fisik hingga Finance. Chiquro Cheese mentah tetap menunggu takaran keju sumber; seeder tidak membuat resep atau hasil produksi rekaan.
+- Uji akses lintas role lulus 1 test / 9 assertions. Uji SourceSeederTest lulus 6 test / 60 assertions, OperationalActivitySeederTest lulus 3 test / 47 assertions, dan HppWorkbookSeederTest lulus 2 test / 10 assertions. Seeder demo tidak dijalankan pada database operasional.
+- Migrasi MySQL seluruhnya berstatus Ran. Pint file PHP berubah, Blade view:cache, route:list, dan git diff --check lulus.
+
+[10] V1 - Pengujian akhir: DALAM PROSES
+- Uji fokus resep, produksi, restock, pickup/return, kas, akses role, dan seeder lulus 20 test / 161 assertions dalam satu perintah gabungan. SourceSeederTest terpisah lulus 6 test / 60 assertions.
+- Suite lengkap: 80 lulus, 39 gagal, 670 assertions. Kegagalan tersisa pada AdminReportsTest, CashManagementTest, MobilePosApiTest, OperatingCostsTest, PointOfSaleCheckoutTest, dan SupplierReturnsTest. Sebagian besar fixture masih mengasumsikan pembelian/stok produk jadi di outlet, saldo awal kas lama, atau format ekspor CSV; AdminReportsTest juga mencari migration lama yang tidak ada. Hasil lengkap tersimpan di storage/app/warehouse-final-suite.txt.
+- Belum ada pengujian transaksi paralel MySQL; SQLite in-memory tidak memverifikasi perilaku lock MySQL. V1 tetap terbuka sampai kegagalan suite dan uji konkurensi yang relevan dipilah dan diselesaikan.

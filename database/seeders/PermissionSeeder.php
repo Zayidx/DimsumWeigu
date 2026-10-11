@@ -143,6 +143,10 @@ class PermissionSeeder extends Seeder
 
         // stock transfers
         $create('stock-transfers-access');
+        $create('cashier-stock-move');
+        $create('warehouse-finance-handovers-access');
+        $create('warehouse-finance-handovers-create');
+        $create('warehouse-finance-handovers-confirm');
         $create('production-requests-access');
         $create('production-requests-create');
         $create('production-requests-approve');

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductWarehouse;
 use App\Models\StockMutation;
+use App\Models\StockTransfer;
 use App\Models\Warehouse;
 use App\Support\AuditLogger;
 use App\Support\FixedDecimal;
@@ -54,9 +55,28 @@ class StockMutationService
 
             $product = Product::query()->when(in_array($type, ['supplier_return', 'waste'], true), fn ($query) => $query->withTrashed())->lockForUpdate()->findOrFail($productId);
             $warehouse = Warehouse::query()->whereKey($warehouseId)->where('is_active', true)->firstOrFail();
-            $this->assertWarehouseScope($warehouse);
-            if ($deltaUnits > 0 && (! $product->is_semi_finished || ($warehouse->outlet_id !== null && $type !== 'transfer_in'))) {
+            $cashierDirect = in_array($type, ['cashier_pickup_out', 'cashier_pickup_in', 'cashier_return_out', 'cashier_return_in'], true);
+            if ($cashierDirect) {
+                $transfer = $referenceType === StockTransfer::class && $referenceId
+                    ? StockTransfer::query()->whereKey($referenceId)->where('created_by', auth()->id())->where('status', 'draft')->first()
+                    : null;
+                abort_unless(auth()->user()?->can('cashier-stock-move') && $transfer
+                    && $transfer->items()->where('product_id', $productId)->exists(), 403);
+                $expected = match ($type) {
+                    'cashier_pickup_out' => ['pickup', $transfer->source_warehouse_id, -1],
+                    'cashier_pickup_in' => ['pickup', $transfer->destination_warehouse_id, 1],
+                    'cashier_return_out' => ['return', $transfer->source_warehouse_id, -1],
+                    'cashier_return_in' => ['return', $transfer->destination_warehouse_id, 1],
+                };
+                abort_unless($transfer->direction === $expected[0] && $warehouseId === $expected[1]
+                    && ($deltaUnits < 0 ? -1 : 1) === $expected[2], 403);
+            }
+            $this->assertWarehouseScope($warehouse, $cashierDirect);
+            if ($deltaUnits > 0 && (! $product->is_semi_finished || ($warehouse->outlet_id !== null && ! in_array($type, ['transfer_in', 'cashier_pickup_in'], true)))) {
                 throw ValidationException::withMessages(['stock' => __('Gudang outlet hanya dapat menerima produk setengah jadi melalui transfer dari Gudang Bersama.')]);
+            }
+            if ($type === 'cashier_return_in' && ($warehouse->type !== 'central' || $warehouse->outlet_id !== null || ! $product->is_semi_finished)) {
+                throw ValidationException::withMessages(['stock' => __('Pengembalian hanya dapat masuk ke Gudang Bersama sebagai produk setengah jadi.')]);
             }
             if ($type === 'production_output' && ($warehouse->type !== 'central' || $warehouse->outlet_id !== null || ! $product->is_semi_finished)) {
                 throw ValidationException::withMessages(['stock' => __('Hasil produksi hanya boleh menambah stok setengah jadi di Gudang Bersama.')]);
@@ -189,7 +209,7 @@ class StockMutationService
         ]);
     }
 
-    private function assertWarehouseScope(Warehouse $warehouse): void
+    private function assertWarehouseScope(Warehouse $warehouse, bool $cashierDirect = false): void
     {
         $user = auth()->user();
         if ($user?->hasRole('super-admin')) {
@@ -201,7 +221,7 @@ class StockMutationService
         }
 
         if (! $warehouse->outlet_id) {
-            abort_unless($warehouse->type === 'central' && $user->can('warehouses-access'), 404);
+            abort_unless($warehouse->type === 'central' && ($user->can('warehouses-access') || $cashierDirect), 404);
 
             return;
         }

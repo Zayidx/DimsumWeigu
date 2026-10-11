@@ -9,8 +9,10 @@ use App\Models\Supplier;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Production\ProductionRequestService;
+use App\Support\FixedDecimal;
 use App\Support\OutletAccess;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class ProductionRequestsIndex extends Component
@@ -21,7 +23,11 @@ class ProductionRequestsIndex extends Component
 
     public bool $showReceiving = false;
 
+    public bool $showRejection = false;
+
     public array $lines = [];
+
+    public array $catalogQuantities = [];
 
     public string $notes = '';
 
@@ -41,6 +47,8 @@ class ProductionRequestsIndex extends Component
 
     public string $invoiceReference = '';
 
+    public string $rejectionReason = '';
+
     public string $idempotencyKey = '';
 
     public function create(): void
@@ -56,6 +64,25 @@ class ProductionRequestsIndex extends Component
     {
         abort_unless(auth()->user()->can('production-requests-create'), 403);
         $this->lines[] = ['product_id' => '', 'quantity' => ''];
+    }
+
+    public function addCatalogProduct(int $productId): void
+    {
+        abort_unless(auth()->user()->can('production-requests-create'), 403);
+        Product::query()->whereKey($productId)->where('is_active', true)->where('is_semi_finished', true)->firstOrFail();
+        $quantity = (string) ($this->catalogQuantities[$productId] ?? '1');
+        try {
+            if (FixedDecimal::quantity($quantity) < 1) {
+                throw new \InvalidArgumentException;
+            }
+        } catch (\InvalidArgumentException) {
+            throw ValidationException::withMessages(['catalogQuantities.'.$productId => __('Isi target produksi yang valid.')]);
+        }
+        if (collect($this->lines)->contains(fn ($line) => (int) ($line['product_id'] ?? 0) === $productId)) {
+            throw ValidationException::withMessages(['lines' => __('Produk sudah ada dalam rencana. Ubah jumlah pada daftar rencana.')]);
+        }
+        $this->lines = array_values(array_filter($this->lines, fn ($line) => filled($line['product_id'] ?? null)));
+        $this->lines[] = ['product_id' => (string) $productId, 'quantity' => $quantity];
     }
 
     public function removeLine(int $index): void
@@ -97,6 +124,7 @@ class ProductionRequestsIndex extends Component
         $this->approvalMaterials = $request->materials->map(fn ($line) => [
             'ingredient_id' => $line->ingredient_id, 'name' => $line->ingredient->name,
             'unit' => $line->ingredient->unit?->symbol, 'quantity' => (string) $line->purchase_quantity,
+            'unit_cost' => (string) $line->unit_cost,
         ])->values()->all();
         $this->unitCosts = $request->materials->mapWithKeys(fn ($line) => [$line->ingredient_id => (string) $line->unit_cost])->all();
         $this->purchaseQuantities = $request->materials->mapWithKeys(fn ($line) => [$line->ingredient_id => (string) $line->purchase_quantity])->all();
@@ -118,16 +146,51 @@ class ProductionRequestsIndex extends Component
         $this->dispatch('toast', type: 'success', message: $message);
     }
 
-    public function getPurchaseTotalProperty(): float
+    public function openRejection(int $id): void
+    {
+        abort_unless(auth()->user()->can('production-requests-reject'), 403);
+        $request = $this->visibleRequest($id);
+        abort_unless($request->status === 'requested', 422);
+        $this->selectedRequestId = $id;
+        $this->rejectionReason = '';
+        $this->showRejection = true;
+    }
+
+    public function reject(ProductionRequestService $service): void
+    {
+        abort_unless(auth()->user()->can('production-requests-reject'), 403);
+        $this->validate([
+            'selectedRequestId' => ['required', 'integer', 'exists:production_requests,id'],
+            'rejectionReason' => ['required', 'string', 'max:2000'],
+        ]);
+        $this->visibleRequest($this->selectedRequestId);
+        $service->reject(User::query()->findOrFail(auth()->id()), $this->selectedRequestId, $this->rejectionReason);
+        $this->showRejection = false;
+        $this->dispatch('toast', type: 'success', message: __('Permintaan ditolak dan reservasi stok dilepas.'));
+    }
+
+    public function getPurchaseTotalProperty(): string
     {
         if (! $this->selectedRequestId) {
-            return 0;
+            return '0.00';
         }
 
         $materials = ProductionRequest::query()->with('materials')->find($this->selectedRequestId)?->materials ?? collect();
+        $totalCents = 0;
+        foreach ($materials as $material) {
+            try {
+                $quantity = FixedDecimal::quantity((string) ($this->purchaseQuantities[$material->ingredient_id] ?? '0'));
+                $price = FixedDecimal::toScaled((string) ($this->unitCosts[$material->ingredient_id] ?? $material->unit_cost), 8);
+                if ($quantity < 0 || $price < 0 || ($price > 0 && $quantity > intdiv(PHP_INT_MAX - 500000000, $price))) {
+                    return '0.00';
+                }
+                $totalCents += intdiv($quantity * $price + 500000000, 1000000000);
+            } catch (\InvalidArgumentException) {
+                return '0.00';
+            }
+        }
 
-        return $materials->sum(fn ($material) => (float) ($this->purchaseQuantities[$material->ingredient_id] ?? 0)
-            * (float) ($this->unitCosts[$material->ingredient_id] ?? $material->unit_cost));
+        return FixedDecimal::moneyText($totalCents);
     }
 
     public function openReceiving(int $purchaseId): void
@@ -176,11 +239,40 @@ class ProductionRequestsIndex extends Component
     {
         $outletIds = app(OutletAccess::class)->outletsFor(auth()->user())->select('outlets.id');
 
+        $preview = [];
+        if (auth()->user()->can('production-requests-create') && collect($this->lines)->every(fn ($line) => filled($line['product_id'] ?? null) && filled($line['quantity'] ?? null))) {
+            try {
+                $warehouseId = Warehouse::query()->where('code', 'PUSAT')->where('type', 'central')->whereNull('outlet_id')->value('id');
+                if ($warehouseId) {
+                    $preview = app(ProductionRequestService::class)->preview(auth()->user(), $warehouseId, $this->lines);
+                }
+            } catch (ValidationException) {
+                // The form displays validation when submitted; an incomplete draft has no stock preview.
+            }
+        }
+
+        $requests = ProductionRequest::query()->with(['items.product', 'materials.ingredient.unit', 'items.recipe', 'purchaseOrders.receivings.payable'])
+            ->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))
+            ->latest()->limit(100)->get();
+        $restockTotals = $requests->mapWithKeys(function (ProductionRequest $request): array {
+            $estimate = $request->materials->sum(fn ($material) => FixedDecimal::money((string) $material->estimated_cost));
+            $approved = $request->purchaseOrders->sum(fn ($order) => FixedDecimal::money((string) $order->total));
+            $received = $request->purchaseOrders->flatMap->receivings->sum(fn ($receiving) => FixedDecimal::money((string) ($receiving->payable?->amount ?? '0')));
+
+            return [$request->id => [
+                'estimated' => FixedDecimal::moneyText($estimate),
+                'approved' => FixedDecimal::moneyText($approved),
+                'received' => FixedDecimal::moneyText($received),
+            ]];
+        });
+
         return view('livewire.inventory.production-requests-index', [
-            'requests' => ProductionRequest::query()->with(['items.product', 'materials.ingredient.unit', 'items.recipe'])->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id'))->latest()->limit(100)->get(),
+            'requests' => $requests,
+            'restockTotals' => $restockTotals,
             'purchases' => IngredientPurchaseOrder::query()->with(['request', 'items.ingredient.unit'])->whereHas('request', fn ($q) => $q->whereIn('outlet_id', $outletIds)->whereHas('warehouse', fn ($warehouse) => $warehouse->where('type', 'central')->whereNull('outlet_id')))->whereIn('status', ['ordered', 'partially_received'])->latest()->get(),
-            'products' => Product::query()->where('is_active', true)->where('is_semi_finished', true)->whereHas('recipeVersions', fn ($q) => $q->whereColumn('recipe_versions.unit_id', 'products.unit_id')->where('is_active', true))->orderBy('title')->get(),
+            'products' => Product::query()->with('unit:id,symbol')->where('is_active', true)->where('is_semi_finished', true)->whereHas('recipeVersions', fn ($q) => $q->whereColumn('recipe_versions.unit_id', 'products.unit_id')->where('is_active', true))->orderBy('title')->get(),
             'suppliers' => Supplier::query()->where('is_active', true)->orderBy('name')->get(),
+            'previewMaterials' => $preview,
         ])->layout('layouts.dashboard', ['title' => __('Permintaan produksi')]);
     }
 }

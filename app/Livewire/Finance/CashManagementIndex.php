@@ -187,7 +187,7 @@ class CashManagementIndex extends Component
                 ->when($cashierOnly, fn ($q) => $q->where(fn ($mine) => $mine->where('requested_by', auth()->id())
                     ->orWhere('confirmed_by', auth()->id())
                     ->orWhere(fn ($incoming) => $incoming->where('destination_warehouse_id', $shift?->warehouse_id ?? 0)->where('status', 'approved'))))
-                ->with(['source:id,name', 'destination:id,name', 'requester:id,name', 'approver:id,name', 'receiver:id,name'])->latest()->paginate(20, ['*'], 'handoverPage'),
+                ->with(['source:id,name,outlet_id', 'destination:id,name,type,outlet_id', 'requester:id,name', 'approver:id,name', 'receiver:id,name'])->latest()->paginate(20, ['*'], 'handoverPage'),
             'ledger' => $this->ledgerQuery()->with(['warehouse:id,name', 'user:id,name'])->latest('id')->paginate(25, ['*'], 'ledgerPage'),
             'sources' => $this->currentWarehouses()->where('is_active', true)->when($cashierOnly, fn ($q) => $q->whereKey($shift?->warehouse_id ?? 0))->orderBy('name')->get(), 'destinations' => $destinations,
             'warehouses' => $this->currentWarehouses()->orderBy('name')->get(), 'currentIds' => $currentIds,

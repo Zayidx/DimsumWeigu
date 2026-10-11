@@ -22,6 +22,10 @@ class RecipesIndex extends Component
 
     public string $recipeUnitId = '';
 
+    public string $yieldQuantity = '1';
+
+    public ?int $editingRecipeId = null;
+
     public string $notes = '';
 
     public array $lines = [];
@@ -31,9 +35,45 @@ class RecipesIndex extends Component
         $this->authorizePermission('recipes-create');
         $this->productId = '';
         $this->recipeUnitId = '';
+        $this->yieldQuantity = '1';
+        $this->editingRecipeId = null;
         $this->notes = '';
         $this->lines = [['type' => 'ingredient', 'ingredient_id' => '', 'component_product_id' => '', 'quantity' => '1', 'waste_percent' => '0']];
         $this->showForm = true;
+    }
+
+    public function edit(int $id): void
+    {
+        $this->authorizePermission('recipes-create');
+        $recipe = RecipeVersion::query()->with('items', 'productItems', 'product')->where('is_active', true)->findOrFail($id);
+        $this->requireWarehouseRecipe($recipe->product);
+        $this->editingRecipeId = $recipe->id;
+        $this->productId = (string) $recipe->product_id;
+        $this->recipeUnitId = (string) $recipe->unit_id;
+        $this->yieldQuantity = (string) $recipe->yield_quantity;
+        $this->notes = (string) $recipe->notes;
+        $this->lines = $recipe->items->map(fn ($item) => [
+            'type' => 'ingredient', 'ingredient_id' => (string) $item->ingredient_id,
+            'component_product_id' => '', 'quantity' => (string) $item->quantity,
+            'waste_percent' => (string) $item->waste_percent,
+        ])->concat($recipe->productItems->map(fn ($item) => [
+            'type' => 'product', 'ingredient_id' => '',
+            'component_product_id' => (string) $item->product_id, 'quantity' => (string) $item->quantity,
+            'waste_percent' => (string) $item->waste_percent,
+        ]))->values()->all();
+        $this->showForm = true;
+    }
+
+    public function deactivate(int $id, AuditLogger $audit): void
+    {
+        $this->authorizePermission('recipes-create');
+        DB::transaction(function () use ($id, $audit): void {
+            $recipe = RecipeVersion::query()->with('product')->where('is_active', true)->lockForUpdate()->findOrFail($id);
+            $this->requireWarehouseRecipe($recipe->product);
+            $recipe->update(['is_active' => false, 'ends_at' => now()]);
+            $audit->record('recipe.deactivated', $recipe, ['is_active' => true], ['is_active' => false]);
+        });
+        $this->dispatch('toast', type: 'success', message: __('Resep dinonaktifkan. Riwayat produksi tetap tersimpan.'));
     }
 
     public function addLine(): void
@@ -57,6 +97,7 @@ class RecipesIndex extends Component
         $data = $this->validate([
             'productId' => ['required', 'integer', 'exists:products,id'],
             'recipeUnitId' => ['required', 'integer', 'exists:units,id'],
+            'yieldQuantity' => ['required', 'numeric', 'gt:0', 'max:999999999999.999', 'regex:/^\d+(?:\.\d{1,3})?$/'],
             'notes' => ['nullable', 'string', 'max:2000'],
             'lines' => ['required', 'array', 'min:1', 'max:100'],
             'lines.*.type' => ['required', 'in:ingredient,product'],
@@ -77,6 +118,7 @@ class RecipesIndex extends Component
             throw ValidationException::withMessages(['lines' => __('Resep hanya dapat memakai bahan aktif dan produk setengah jadi aktif.')]);
         }
         $output = Product::query()->whereKey($data['productId'])->firstOrFail();
+        $this->requireWarehouseRecipe($output);
         if ($output->is_semi_finished && $componentIds->filter()->isNotEmpty()) {
             throw ValidationException::withMessages(['lines' => __('Resep produk setengah jadi harus langsung memakai bahan baku. Produk setengah jadi digunakan pada resep menu outlet.')]);
         }
@@ -91,7 +133,7 @@ class RecipesIndex extends Component
             }
             $recipe = RecipeVersion::query()->create([
                 'product_id' => $product->id, 'unit_id' => $data['recipeUnitId'], 'version' => $version,
-                'starts_at' => now(), 'is_active' => true, 'yield_quantity' => 1,
+                'starts_at' => now(), 'is_active' => true, 'yield_quantity' => $data['yieldQuantity'],
                 'notes' => $data['notes'] ?: null, 'created_by' => auth()->id(),
             ]);
             foreach ($data['lines'] as $line) {
@@ -114,7 +156,7 @@ class RecipesIndex extends Component
         });
 
         $this->showForm = false;
-        $this->dispatch('toast', type: 'success', message: __('Versi resep per satu unit berhasil disimpan.'));
+        $this->dispatch('toast', type: 'success', message: __('Versi resep berhasil disimpan.'));
     }
 
     protected function authorizePermission(string $permission): void
@@ -122,14 +164,24 @@ class RecipesIndex extends Component
         abort_unless(auth()->user()?->can($permission), 403);
     }
 
+    private function requireWarehouseRecipe(Product $product): void
+    {
+        if (auth()->user()?->hasRole('warehouse') && ! auth()->user()?->hasRole('super-admin')) {
+            abort_unless($product->is_semi_finished, 403);
+        }
+    }
+
     public function render(RecipeCostService $costs)
     {
-        $recipes = RecipeVersion::query()->with(['product.unit', 'unit', 'items.ingredient.unit', 'productItems.product.unit'])->where('is_active', true)->latest('id')->paginate(20);
+        $warehouseMode = auth()->user()?->hasRole('warehouse') && ! auth()->user()?->hasRole('super-admin');
+        $recipes = RecipeVersion::query()->with(['product.unit', 'unit', 'items.ingredient.unit', 'productItems.product.unit'])
+            ->where('is_active', true)->when($warehouseMode, fn ($query) => $query->whereHas('product', fn ($products) => $products->where('is_semi_finished', true)))->latest('id')->paginate(20);
         foreach ($recipes as $recipe) {
             $recipe->setAttribute('estimated_hpp', $costs->estimate($recipe));
         }
 
-        $products = Product::query()->with(['unit', 'productUnits.unit'])->where('is_active', true)->where(fn ($q) => $q->where('is_sellable', true)->orWhere('is_semi_finished', true))->orderBy('title')->get();
+        $products = Product::query()->with(['unit', 'productUnits.unit'])->where('is_active', true)->where(fn ($q) => $q->where('is_sellable', true)->orWhere('is_semi_finished', true))
+            ->when($warehouseMode, fn ($query) => $query->where('is_semi_finished', true))->orderBy('title')->get();
 
         return view('livewire.inventory.recipes-index', [
             'recipes' => $recipes,
@@ -137,6 +189,7 @@ class RecipesIndex extends Component
             'selectedProduct' => $products->firstWhere('id', (int) $this->productId),
             'semiFinishedProducts' => Product::query()->with('unit')->where('is_active', true)->where('is_semi_finished', true)->orderBy('title')->get(['id', 'title', 'sku', 'unit_id']),
             'ingredients' => Ingredient::query()->with('unit')->where('is_active', true)->orderBy('name')->get(),
-        ])->layout('layouts.dashboard', ['title' => __('Resep & HPP')]);
+            'warehouseMode' => $warehouseMode,
+        ])->layout('layouts.dashboard', ['title' => $warehouseMode ? __('Resep Bahan Setengah Jadi') : __('Resep & HPP')]);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\CashHandover;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Ingredient;
@@ -11,17 +10,20 @@ use App\Models\Payable;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\ProductionRequest;
+use App\Models\ProductionShift;
 use App\Models\Receivable;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseFinanceCashHandover;
 use App\Services\Cashier\CartService;
 use App\Services\Cashier\CashHandoverService;
 use App\Services\Cashier\CashierShiftService;
 use App\Services\Cashier\CheckoutService;
 use App\Services\Finance\SettlementService;
-use App\Services\Inventory\StockTransferService;
+use App\Services\Finance\WarehouseFinanceHandoverService;
+use App\Services\Inventory\CashierStockMovementService;
 use App\Services\Production\ProductionOrderService;
 use App\Services\Production\ProductionRequestService;
 use App\Services\Purchasing\PurchasingService;
@@ -56,7 +58,7 @@ class OperationalActivitySeeder extends Seeder
         }
 
         $finalKey = self::PREFIX.':finance-pickup';
-        if ($completed = CashHandover::query()->where('idempotency_key', $finalKey)->first()) {
+        if ($completed = WarehouseFinanceCashHandover::query()->where('idempotency_key', $finalKey)->first()) {
             if ($completed->status !== 'confirmed') {
                 throw new RuntimeException('Simulasi sebelumnya belum selesai. Periksa serah terima kas sebelum mengulang.');
             }
@@ -93,7 +95,6 @@ class OperationalActivitySeeder extends Seeder
 
                 $production = app(ProductionRequestService::class);
                 $orders = app(ProductionOrderService::class);
-                $transfers = app(StockTransferService::class);
                 $shifts = app(CashierShiftService::class);
                 $carts = app(CartService::class);
                 $checkout = app(CheckoutService::class);
@@ -138,18 +139,17 @@ class OperationalActivitySeeder extends Seeder
                     }
 
                     $this->as($warehouse, $outlet);
-                    $order = $orders->startFromRequest($warehouse, $request->id);
+                    $order = $orders->startFromRequest($warehouse, $request->id, $this->productionShiftId($warehouse, $outlet, $central));
                     $orders->complete($warehouse, $order->id,
                         $order->items->flatMap->materials->map(fn ($row) => ['production_order_material_id' => $row->id, 'actual_quantity' => (string) $row->planned_quantity])->all(),
                         $order->items->map(fn ($row) => ['production_order_item_id' => $row->id, 'actual_output' => (string) $row->planned_quantity])->all(),
                     );
 
-                    $transfer = $transfers->createDraft($central->id, $branch->id, [
+                    $this->as($cashiers[$code], $outlet);
+                    app(CashierStockMovementService::class)->move($cashiers[$code], $outlet->id, 'pickup', [
                         ['product_id' => $products['TEST-DPL']->id, 'quantity' => '100'],
                         ['product_id' => $products['TEST-DWO']->id, 'quantity' => '100'],
-                    ], '[SIMULASI] Kirim komponen dimsum setengah jadi ke '.$outlet->name);
-                    $transfers->send($transfer->id);
-                    $transfers->receive($transfer->id, self::PREFIX.':transfer:'.$code);
+                    ], '[SIMULASI] Kasir mengambil komponen dimsum untuk '.$outlet->name, self::PREFIX.':transfer:'.$code);
 
                     $this->as($cashiers[$code], $outlet);
                     $shift = $shifts->open($outlet->id, $branch->id, '100000');
@@ -173,10 +173,8 @@ class OperationalActivitySeeder extends Seeder
 
                     $this->as($cashiers[$code], $outlet);
                     $handover = $cash->request($branch->id, $central->id, '500000', '[SIMULASI] Setoran omset tunai '.$outlet->name, self::PREFIX.':handover:'.$code);
-                    $this->as($finance, $outlet);
-                    $cash->approve($handover->id);
                     $this->as($warehouse, $outlet);
-                    $cash->confirm($handover->id);
+                    $cash->confirmPhysical($handover->id, '500000');
                 }
 
                 // Enable pay-later only while seeding credit-sale examples.
@@ -186,15 +184,11 @@ class OperationalActivitySeeder extends Seeder
                     $payLaterMethod->forceFill(['is_enabled' => false])->save();
                 }
 
-                $financeVault = Warehouse::query()->firstOrCreate(['code' => 'DEMO-KAS-FINANCE'], [
-                    'name' => 'Kas Finance (Simulasi)', 'type' => 'central', 'outlet_id' => null,
-                    'is_active' => true, 'is_sales_enabled' => false,
-                ]);
                 $this->as($warehouse, $outlets['GAL-BP']);
-                $pickup = $cash->request($central->id, $financeVault->id, '1500000', '[SIMULASI] Pengambilan kas gudang oleh finance', $finalKey);
+                $financeCash = app(WarehouseFinanceHandoverService::class);
+                $pickup = $financeCash->request('1500000', '[SIMULASI] Penyerahan kas gudang kepada Finance', $finalKey);
                 $this->as($finance, $outlets['GAL-BP']);
-                $cash->approve($pickup->id);
-                $cash->confirm($pickup->id);
+                $financeCash->confirm($pickup->id, '1500000');
             }, attempts: 3);
         } finally {
             if ($previousUser) {
@@ -236,7 +230,8 @@ class OperationalActivitySeeder extends Seeder
                 $supplier = Supplier::query()->firstOrCreate(['code' => 'DEMO-OPERASIONAL'], [
                     'name' => 'Pemasok Simulasi Operasional', 'is_active' => true,
                 ]);
-                $productSkus = ['TEST-DPL', 'TEST-DWO', 'TEST-DBE', 'TEST-LPS', 'TEST-CHB', 'TEST-CHS'];
+                // CHS has no trusted cheese ratio in the HPP source, so it has no active production recipe.
+                $productSkus = ['TEST-DPL', 'TEST-DWO', 'TEST-DBE', 'TEST-LPS', 'TEST-CHB'];
                 $products = Product::query()->whereIn('sku', $productSkus)->get()->keyBy('sku');
                 if ($products->count() !== count($productSkus)) {
                     throw new RuntimeException('Komponen setengah jadi dimsum, lumpia, dan Chiquro belum lengkap.');
@@ -244,7 +239,6 @@ class OperationalActivitySeeder extends Seeder
 
                 $production = app(ProductionRequestService::class);
                 $orders = app(ProductionOrderService::class);
-                $transfers = app(StockTransferService::class);
                 foreach (self::OUTLETS as $code => $warehouseCode) {
                     $outlet = $outlets[$code];
                     $branch = Warehouse::query()->where('code', $warehouseCode)->where('outlet_id', $outlet->id)
@@ -278,7 +272,7 @@ class OperationalActivitySeeder extends Seeder
                     }
 
                     $this->as($warehouse, $outlet);
-                    $order = $orders->startFromRequest($warehouse, $request->id);
+                    $order = $orders->startFromRequest($warehouse, $request->id, $this->productionShiftId($warehouse, $outlet, $central));
                     $orders->complete($warehouse, $order->id,
                         $order->items->flatMap->materials->map(fn ($row) => [
                             'production_order_material_id' => $row->id,
@@ -290,11 +284,11 @@ class OperationalActivitySeeder extends Seeder
                         ])->all(),
                     );
 
-                    $transfer = $transfers->createDraft($central->id, $branch->id, collect($productSkus)->map(fn ($sku) => [
+                    $cashier = $this->actor('cashier', [$outlet->id], $code);
+                    $this->as($cashier, $outlet);
+                    app(CashierStockMovementService::class)->move($cashier, $outlet->id, 'pickup', collect($productSkus)->map(fn ($sku) => [
                         'product_id' => $products[$sku]->id, 'quantity' => $quantity,
-                    ])->all(), '[SIMULASI] Komponen menu POS dikirim ke '.$outlet->name);
-                    $transfers->send($transfer->id);
-                    $transfers->receive($transfer->id, self::PREFIX.':all-menu-stock:transfer:'.$code);
+                    ])->all(), '[SIMULASI] Kasir mengambil komponen menu untuk '.$outlet->name, self::PREFIX.':all-menu-stock:transfer:'.$code);
                 }
             }, attempts: 3);
         } finally {
@@ -307,7 +301,7 @@ class OperationalActivitySeeder extends Seeder
             session()->put('auth.password_confirmed_at', $previousConfirmation);
         }
 
-        $this->command?->info('Stok POS siap: masing-masing outlet menerima 30 pcs per komponen dimsum, lumpia, dan Chiquro.');
+        $this->command?->info('Stok POS siap: masing-masing outlet menerima 30 pcs per komponen yang memiliki resep produksi aktif. Chiquro Cheese mentah menunggu takaran keju sumber.');
     }
 
     private function seedCashierRestock(Warehouse $central): void
@@ -337,7 +331,6 @@ class OperationalActivitySeeder extends Seeder
                 $products = Product::query()->whereIn('sku', ['TEST-DPL', 'TEST-DWO'])->get()->keyBy('sku');
                 $production = app(ProductionRequestService::class);
                 $orders = app(ProductionOrderService::class);
-                $transfers = app(StockTransferService::class);
 
                 foreach (self::OUTLETS as $code => $warehouseCode) {
                     $outlet = $outlets[$code];
@@ -367,18 +360,18 @@ class OperationalActivitySeeder extends Seeder
                     }
 
                     $this->as($warehouse, $outlet);
-                    $order = $orders->startFromRequest($warehouse, $request->id);
+                    $order = $orders->startFromRequest($warehouse, $request->id, $this->productionShiftId($warehouse, $outlet, $central));
                     $orders->complete($warehouse, $order->id,
                         $order->items->flatMap->materials->map(fn ($row) => ['production_order_material_id' => $row->id, 'actual_quantity' => (string) $row->planned_quantity])->all(),
                         $order->items->map(fn ($row) => ['production_order_item_id' => $row->id, 'actual_output' => (string) $row->planned_quantity])->all(),
                     );
 
-                    $transfer = $transfers->createDraft($central->id, $branch->id, [
+                    $cashier = $this->actor('cashier', [$outlet->id], $code);
+                    $this->as($cashier, $outlet);
+                    app(CashierStockMovementService::class)->move($cashier, $outlet->id, 'pickup', [
                         ['product_id' => $products['TEST-DPL']->id, 'quantity' => '50'],
                         ['product_id' => $products['TEST-DWO']->id, 'quantity' => '50'],
-                    ], '[SIMULASI] Stok komponen paket POS tambahan untuk '.$outlet->name);
-                    $transfers->send($transfer->id);
-                    $transfers->receive($transfer->id, $stockKey.':transfer');
+                    ], '[SIMULASI] Kasir mengambil stok tambahan untuk '.$outlet->name, $stockKey.':transfer');
                 }
             }, attempts: 3);
         } finally {
@@ -397,11 +390,12 @@ class OperationalActivitySeeder extends Seeder
     private function seedQualityControl(Warehouse $central, Supplier $supplier, User $warehouse, User $finance): void
     {
         $product = Product::query()->firstOrCreate(['sku' => 'DEMO-QC-ITEM'], [
-            'title' => 'Produk untuk contoh QC', 'category_id' => Category::query()->where('name', 'Dimsum')->value('id'),
+            'title' => 'Produk untuk contoh QC', 'category_id' => Category::query()->where('slug', 'setengah-jadi-dimsum')->value('id'),
             'unit_id' => Unit::query()->where('code', 'PCS')->value('id'), 'buy_price' => '1500', 'sell_price' => '0',
-            'stock' => 0, 'is_active' => true, 'is_sellable' => false, 'track_stock' => true, 'track_batches' => false,
+            'stock' => 0, 'is_active' => true, 'is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true, 'track_batches' => false,
             'description' => '[SIMULASI] Produk khusus untuk latihan penerimaan dan QC.',
         ]);
+        $product->forceFill(['is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true])->save();
         $outlet = Outlet::query()->where('code', 'GAL-BP')->firstOrFail();
         $this->as($finance, $outlet);
         $purchasing = app(PurchasingService::class);
@@ -425,6 +419,14 @@ class OperationalActivitySeeder extends Seeder
         $purchasing->receive($unpaidOrder->id, [$unpaidOrder->items->first()->id => [
             'quantity' => '10', 'accepted' => '10', 'qc_note' => '[SIMULASI] Seluruh barang diterima.',
         ]], self::PREFIX.':ap-unpaid', '[SIMULASI] Hutang pemasok masih terbuka');
+    }
+
+    private function productionShiftId(User $actor, Outlet $outlet, Warehouse $central): int
+    {
+        return ProductionShift::query()->firstOrCreate(
+            ['user_id' => $actor->id, 'outlet_id' => $outlet->id, 'warehouse_id' => $central->id, 'status' => 'open'],
+            ['opened_at' => now()],
+        )->id;
     }
 
     private function seedOutletMenuIngredients(Warehouse $branch, User $warehouseActor): void
@@ -471,9 +473,9 @@ class OperationalActivitySeeder extends Seeder
             $user->outlets()->syncWithoutDetaching([$outletId => ['is_default' => $index === 0]]);
         }
         $extra = match ($role) {
-            'finance' => ['warehouses-access', 'production-requests-approve', 'purchase-orders-create', 'purchase-orders-order', 'payables-pay', 'receivables-access', 'receivables-collect', 'cash-management-approve', 'cash-management-create'],
-            'warehouse' => ['warehouses-access', 'production-requests-create', 'production-orders-create', 'production-orders-complete', 'transfers-create', 'transfers-send', 'transfers-receive', 'goods-receivings-create', 'cash-handovers-confirm', 'cash-management-create'],
-            default => ['cashier-shifts-open', 'pos-access', 'pos-checkout', 'cash-management-create'],
+            'finance' => ['warehouses-access', 'production-requests-approve', 'purchase-orders-create', 'purchase-orders-order', 'payables-pay', 'receivables-access', 'receivables-collect', 'cash-management-approve', 'cash-management-create', 'warehouse-finance-handovers-confirm'],
+            'warehouse' => ['warehouses-access', 'production-requests-create', 'production-orders-create', 'production-orders-complete', 'transfers-create', 'transfers-send', 'transfers-receive', 'goods-receivings-create', 'cash-handovers-confirm', 'cash-management-create', 'warehouse-finance-handovers-create'],
+            default => ['cashier-shifts-open', 'pos-access', 'pos-checkout', 'cash-management-create', 'cashier-stock-move'],
         };
         $user->givePermissionTo($extra);
 

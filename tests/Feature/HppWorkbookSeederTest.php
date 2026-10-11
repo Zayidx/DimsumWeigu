@@ -34,8 +34,8 @@ class HppWorkbookSeederTest extends TestCase
         $this->assertDatabaseHas('products', ['sku' => 'HPP-MENU-018-02', 'title' => 'Chikuro Mentai']);
         $menuId = Product::query()->where('sku', 'HPP-MENU-001')->value('id');
         $this->assertDatabaseHas('recipe_versions', ['product_id' => $menuId, 'is_active' => true, 'yield_quantity' => 1]);
-        $recipe = RecipeVersion::query()->with('items.ingredient')->where('product_id', $menuId)->where('is_active', true)->firstOrFail();
-        $this->assertSame(1, $recipe->items->filter(fn ($line) => str_contains(mb_strtolower($line->ingredient->name), 'cup'))->count());
+        $recipe = RecipeVersion::query()->with('productItems.product')->where('product_id', $menuId)->where('is_active', true)->firstOrFail();
+        $this->assertGreaterThan(0, $recipe->productItems->filter(fn ($line) => $line->product?->is_semi_finished)->count());
     }
 
     public function test_importer_runs_in_production_environment_for_explicit_seeding(): void

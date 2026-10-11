@@ -23,6 +23,11 @@ class IngredientGoodsReceiving extends Model
         return $this->belongsTo(IngredientPurchaseOrder::class, 'ingredient_purchase_order_id');
     }
 
+    public function payable()
+    {
+        return $this->hasOne(Payable::class, 'ingredient_goods_receiving_id');
+    }
+
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);

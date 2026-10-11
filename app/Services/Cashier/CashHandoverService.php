@@ -40,7 +40,9 @@ class CashHandoverService
                 return $existing;
             }
             $shift = $source->outlet_id ? $this->ownShift($source) : null;
-            if ($shift && $this->shifts->expectedCashCents($shift) < FixedDecimal::money($data['amount'])) {
+            $pendingCents = $shift ? CashHandover::query()->where('cashier_shift_id', $shift->id)->where('status', 'pending')
+                ->get(['amount'])->sum(fn (CashHandover $item) => FixedDecimal::money((string) $item->amount)) : 0;
+            if ($shift && $this->shifts->expectedCashCents($shift) - $pendingCents < FixedDecimal::money($data['amount'])) {
                 throw ValidationException::withMessages(['amount' => __('Kas shift sumber tidak cukup.')]);
             }
             $handover = CashHandover::create($data + ['number' => 'CH-'.now()->format('ymdHis').'-'.Str::upper(Str::random(6)), 'cashier_shift_id' => $shift?->id, 'requested_by' => auth()->id(), 'status' => 'pending', 'request_fingerprint' => $fingerprint]);
@@ -58,7 +60,10 @@ class CashHandoverService
         return DB::transaction(function () use ($id) {
             $handover = CashHandover::lockForUpdate()->findOrFail($id);
             $source = $this->warehouse($handover->source_warehouse_id, true);
-            $this->warehouse($handover->destination_warehouse_id);
+            $destination = $this->warehouse($handover->destination_warehouse_id);
+            if ($source->outlet_id && $destination->type === 'central' && $handover->status === 'pending') {
+                throw ValidationException::withMessages(['handover' => __('Penerimaan kas outlet harus diverifikasi secara fisik oleh Warehouse.')]);
+            }
             if (in_array($handover->status, ['approved', 'confirmed'], true)) {
                 return $handover;
             }
@@ -117,6 +122,68 @@ class CashHandoverService
         }, attempts: 3);
     }
 
+    public function confirmPhysical(int $id, string $actualAmount, ?string $verificationNote = null): CashHandover
+    {
+        abort_unless(auth()->user()?->can('cash-handovers-confirm')
+            && auth()->user()?->hasAnyRole(['warehouse', 'super-admin']), 403);
+        PasswordStepUp::requireRecent();
+        try {
+            $actualCents = FixedDecimal::money($actualAmount);
+        } catch (\InvalidArgumentException) {
+            throw ValidationException::withMessages(['actualAmount' => __('Nominal fisik tidak valid.')]);
+        }
+        $verificationNote = trim((string) $verificationNote);
+        if ($actualCents < 1 || mb_strlen($verificationNote) > 2000) {
+            throw ValidationException::withMessages(['actualAmount' => __('Nominal fisik harus lebih dari nol dan catatan maksimal 2.000 karakter.')]);
+        }
+
+        return DB::transaction(function () use ($id, $actualCents, $verificationNote): CashHandover {
+            $handover = CashHandover::query()->lockForUpdate()->findOrFail($id);
+            $source = $this->warehouse($handover->source_warehouse_id);
+            $destination = $this->warehouse($handover->destination_warehouse_id, true);
+            abort_unless($source->outlet_id !== null && $destination->type === 'central' && $destination->outlet_id === null, 403);
+            app(OutletAccess::class)->require(auth()->user(), $source->outlet_id);
+            if ($handover->status === 'confirmed') {
+                if (FixedDecimal::money((string) ($handover->actual_amount ?? '0')) !== $actualCents) {
+                    throw ValidationException::withMessages(['actualAmount' => __('Serah-terima ini sudah dikonfirmasi dengan nominal lain.')]);
+                }
+
+                return $handover;
+            }
+            if ($handover->status !== 'pending') {
+                throw ValidationException::withMessages(['handover' => __('Hanya pengajuan kas yang menunggu pemeriksaan fisik dapat dikonfirmasi.')]);
+            }
+            if ($handover->requested_by === auth()->id() && ! auth()->user()->hasRole('super-admin')) {
+                throw ValidationException::withMessages(['handover' => __('Pengirim tidak dapat menerima kasnya sendiri.')]);
+            }
+            $declaredCents = FixedDecimal::money((string) $handover->amount);
+            $varianceCents = $actualCents - $declaredCents;
+            if ($varianceCents !== 0 && mb_strlen($verificationNote) < 3) {
+                throw ValidationException::withMessages(['verificationNote' => __('Selisih kas wajib disertai catatan pemeriksaan.')]);
+            }
+            $shift = CashierShift::query()->whereKey($handover->cashier_shift_id)->where('warehouse_id', $source->id)
+                ->where('outlet_id', $source->outlet_id)->where('status', 'open')->lockForUpdate()->first();
+            if (! $shift || $this->shifts->expectedCashCents($shift) < $actualCents) {
+                throw ValidationException::withMessages(['handover' => __('Shift kasir sudah tutup atau saldo kas tidak mencukupi nominal fisik.')]);
+            }
+            $this->cash->append($source->id, $shift->id, 'handover_out', $actualCents, CashHandover::class, $handover->id, $verificationNote ?: $handover->notes);
+            $this->movement($shift, $handover, 'out', $actualCents);
+            $this->cash->append($destination->id, null, 'handover_in', $actualCents, CashHandover::class, $handover->id, $verificationNote ?: $handover->notes);
+            $handover->update([
+                'status' => 'confirmed', 'approved_by' => auth()->id(), 'approved_at' => now(),
+                'confirmed_by' => auth()->id(), 'confirmed_at' => now(),
+                'actual_amount' => FixedDecimal::moneyText($actualCents),
+                'variance_amount' => FixedDecimal::moneyText($varianceCents), 'verification_note' => $verificationNote ?: null,
+            ]);
+            $this->audit->record('cash_handover.physically_confirmed', $handover, ['status' => 'pending'], [
+                'status' => 'confirmed', 'declared_amount' => $handover->amount,
+                'actual_amount' => $handover->actual_amount, 'variance_amount' => $handover->variance_amount,
+            ], ['outlet_id' => $source->outlet_id]);
+
+            return $handover->refresh();
+        }, attempts: 3);
+    }
+
     public function cancel(int $id): void
     {
         $this->permit('cash-management-create');
@@ -136,9 +203,9 @@ class CashHandoverService
         }, attempts: 3);
     }
 
-    private function movement(CashierShift $shift, CashHandover $handover, string $direction): void
+    private function movement(CashierShift $shift, CashHandover $handover, string $direction, ?int $amountCents = null): void
     {
-        ShiftCashMovement::create(['cashier_shift_id' => $shift->id, 'user_id' => auth()->id(), 'type' => $direction, 'amount' => $handover->amount, 'reference' => CashHandover::class.':'.$handover->id, 'note' => $handover->notes]);
+        ShiftCashMovement::create(['cashier_shift_id' => $shift->id, 'user_id' => auth()->id(), 'type' => $direction, 'amount' => FixedDecimal::moneyText($amountCents ?? FixedDecimal::money((string) $handover->amount)), 'reference' => CashHandover::class.':'.$handover->id, 'note' => $handover->notes]);
         $shift->update(['expected_cash' => FixedDecimal::moneyText($this->shifts->expectedCashCents($shift))]);
     }
 

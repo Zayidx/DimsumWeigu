@@ -10,7 +10,7 @@ class ProductionOrderItem extends Model
 
     protected function casts(): array
     {
-        return ['planned_quantity' => 'decimal:3', 'produced_quantity' => 'decimal:3', 'unit_cost' => 'decimal:2'];
+        return ['planned_quantity' => 'decimal:3', 'produced_quantity' => 'decimal:3', 'variance_quantity' => 'decimal:3', 'yield_percent' => 'decimal:2', 'unit_cost' => 'decimal:2'];
     }
 
     public function order()

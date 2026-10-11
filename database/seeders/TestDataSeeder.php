@@ -193,6 +193,13 @@ class TestDataSeeder extends Seeder
         foreach (['Dimsum', 'Lumpia', 'Chiquro', 'Paket Besar'] as $name) {
             Category::firstOrCreate(['name' => $name], ['slug' => Str::slug($name)]);
         }
+
+        $parent = Category::firstOrCreate(['slug' => 'setengah-jadi'], ['name' => 'Setengah Jadi', 'is_active' => true]);
+        foreach (['Dimsum', 'Lumpia', 'Chiquro'] as $name) {
+            Category::firstOrCreate(['slug' => 'setengah-jadi-'.Str::slug($name)], [
+                'name' => $name, 'parent_id' => $parent->id, 'is_active' => true,
+            ]);
+        }
     }
 
     private function seedProducts(): void
@@ -258,7 +265,8 @@ class TestDataSeeder extends Seeder
             }
             $this->products[$code] = $product;
             if (in_array($code, ['DPL', 'DWO', 'DBE', 'LPS', 'CHB', 'CHS'], true)) {
-                $product->forceFill(['is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true])->save();
+                $semiCategory = Category::query()->where('slug', 'setengah-jadi-'.Str::slug($category))->firstOrFail();
+                $product->forceFill(['category_id' => $semiCategory->id, 'is_sellable' => false, 'is_semi_finished' => true, 'track_stock' => true])->save();
             } elseif ($code === 'DMX') {
                 $product->forceFill(['is_sellable' => false])->save();
             }

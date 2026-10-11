@@ -1,4 +1,4 @@
-﻿<div>
+<div>
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
         <div>
             <h2 class="h4 mb-1">Kas outlet</h2>
@@ -40,7 +40,7 @@
         <section class="card mb-3" aria-labelledby="cash-handover-form-title">
             <div class="card-header"><h3 id="cash-handover-form-title" class="h5 mb-0">Permintaan serah-terima kas</h3></div>
             <div class="card-body">
-                <p class="text-muted">Kas dikirim dari gudang outlet pada shift aktif ke gudang bersama. Kas baru berpindah setelah finance menyetujui permintaan.</p>
+                <p class="text-muted">Ajukan uang dari shift aktif kepada Warehouse. Saldo berpindah setelah petugas Warehouse menghitung dan mengonfirmasi uang fisik.</p>
                 <form wire:submit="requestHandover">
                     <div class="row g-3">
                         <div class="col-12 col-md-6"><span class="form-label d-block">Gudang sumber</span><div class="form-control-plaintext">{{ $shift->warehouse?->name }} · Outlet aktif</div></div>
@@ -87,20 +87,22 @@
                         @if ($handover->status === 'cancelled')
                             <span class="badge bg-light-danger align-self-start">Dibatalkan</span>
                         @else
-                            <span class="badge align-self-start {{ $handover->status === 'confirmed' ? 'bg-light-success' : 'bg-light-warning' }}">{{ __(['pending' => 'Menunggu persetujuan finance', 'approved' => 'Kas dikirim · menunggu diterima', 'confirmed' => 'Selesai · kas diterima'][$handover->status] ?? $handover->status) }}</span>
+                            <span class="badge align-self-start {{ $handover->status === 'confirmed' ? 'bg-light-success' : 'bg-light-warning' }}">{{ __(['pending' => 'Menunggu pemeriksaan Warehouse', 'approved' => 'Kas dikirim · menunggu diterima', 'confirmed' => 'Selesai · kas diterima'][$handover->status] ?? $handover->status) }}</span>
                         @endif
                     </div>
                     @if ($handover->status !== 'cancelled')
                         @php($progress = ['pending' => 1, 'approved' => 2, 'confirmed' => 3][$handover->status] ?? 1)
                         <ol class="d-flex flex-wrap gap-2 list-unstyled small mt-3 mb-0" aria-label="Progres serah-terima kas">
-                            @foreach (['Permintaan dibuat', 'Disetujui dan dikirim', 'Diterima gudang bersama'] as $step => $label)
+                            @foreach (['Permintaan dibuat', 'Menunggu hitung fisik', 'Diterima gudang bersama'] as $step => $label)
                                 <li class="px-2 py-1 rounded {{ $step + 1 <= $progress ? 'bg-light-success text-success' : 'bg-light text-muted' }}" @if ($step + 1 === $progress) aria-current="step" @endif>{{ $step + 1 }}. {{ $label }}</li>
                             @endforeach
                         </ol>
                         @if ($handover->status === 'pending')
-                            <small class="text-muted d-block mt-2">Saldo petty cash belum berubah. Saldo outlet berkurang setelah finance menyetujui dan mengirim kas.</small>
+                            <small class="text-muted d-block mt-2">Saldo outlet belum berubah. Warehouse akan mencatat nominal fisik dan selisih saat menerima kas.</small>
                         @elseif ($handover->status === 'approved')
                             <small class="text-muted d-block mt-2">Saldo outlet sudah berkurang. Gudang bersama mencatat saldo setelah penerimaan dikonfirmasi.</small>
+                        @elseif ($handover->actual_amount !== null)
+                            <small class="text-muted d-block mt-2">Diterima fisik: Rp {{ \App\Support\DisplayNumber::format((float) $handover->actual_amount, 2, ',', '.') }} · Selisih: Rp {{ \App\Support\DisplayNumber::format((float) $handover->variance_amount, 2, ',', '.') }}. {{ $handover->verification_note }}</small>
                         @endif
                     @endif
                     <div class="d-flex flex-wrap gap-2 mt-2">

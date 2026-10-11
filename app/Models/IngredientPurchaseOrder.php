@@ -18,6 +18,11 @@ class IngredientPurchaseOrder extends Model
         return $this->belongsTo(ProductionRequest::class, 'production_request_id');
     }
 
+    public function receivings()
+    {
+        return $this->hasMany(IngredientGoodsReceiving::class, 'ingredient_purchase_order_id');
+    }
+
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);

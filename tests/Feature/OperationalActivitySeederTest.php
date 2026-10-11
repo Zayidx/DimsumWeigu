@@ -15,6 +15,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseCashLedger;
+use App\Models\WarehouseFinanceCashHandover;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\OperationalActivitySeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,28 +43,26 @@ class OperationalActivitySeederTest extends TestCase
         $this->seed(OperationalActivitySeeder::class);
         $this->assertSame(4, ProductionRequest::query()->where('idempotency_key', 'like', 'operational-demo-v2:request:%')->count());
         $this->assertSame(4, ProductionRequest::query()->where('idempotency_key', 'like', 'operational-demo-v2:cashier-stock:request:%')->count());
-        $this->assertSame(8, ProductionOrder::query()->where('status', 'completed')->count());
+        $this->assertSame(12, ProductionOrder::query()->where('status', 'completed')->count());
         $this->assertSame(100, Transaction::query()->where('source', 'pos')->count());
         $this->assertSame(4, CashHandover::query()->where('idempotency_key', 'like', 'operational-demo-v2:handover:%')->where('status', 'confirmed')->count());
-        $this->assertDatabaseHas('cash_handovers', ['idempotency_key' => 'operational-demo-v2:finance-pickup', 'status' => 'confirmed']);
-        $this->assertDatabaseHas('warehouses', ['code' => 'DEMO-KAS-FINANCE', 'name' => 'Kas Finance (Simulasi)']);
+        $this->assertDatabaseHas('warehouse_finance_cash_handovers', ['idempotency_key' => 'operational-demo-v2:finance-pickup', 'status' => 'confirmed']);
         $this->assertDatabaseHas('goods_receiving_items', ['qc_status' => 'partial', 'rejected_quantity' => '1.000']);
         $this->assertSame(1, Payable::query()->where('status', 'partial')->count());
-        $this->assertSame(9, Payable::query()->where('status', 'unpaid')->count());
+        $this->assertSame(2, Payable::query()->where('status', 'unpaid')->count());
         $this->assertSame(4, Receivable::query()->where('status', 'partial')->count());
         $this->assertSame(4, DB::table('receivable_payments')->where('idempotency_key', 'like', 'operational-demo-v2:receivable:%')->count());
-        $this->assertSame(5, WarehouseCashLedger::query()->where('type', 'handover_in')->count());
+        $this->assertSame(4, WarehouseCashLedger::query()->where('type', 'handover_in')->count());
         $central = Warehouse::query()->where('code', 'PUSAT')->firstOrFail();
-        $financeVault = Warehouse::query()->where('code', 'DEMO-KAS-FINANCE')->firstOrFail();
         $this->assertSame('500000.00', (string) WarehouseCashLedger::query()->where('warehouse_id', $central->id)->latest('id')->value('balance_after'));
-        $this->assertSame('1500000.00', (string) WarehouseCashLedger::query()->where('warehouse_id', $financeVault->id)->latest('id')->value('balance_after'));
+        $this->assertDatabaseHas('finance_cash_ledgers', ['warehouse_finance_cash_handover_id' => WarehouseFinanceCashHandover::query()->where('idempotency_key', 'operational-demo-v2:finance-pickup')->value('id'), 'balance_after' => 1500000]);
         $plain = Product::query()->where('sku', 'TEST-DPL')->firstOrFail();
         $wortel = Product::query()->where('sku', 'TEST-DWO')->firstOrFail();
         foreach (['GAL-BP', 'GAL-HER', 'PEK-JAYA', 'JL-RAYA-PEK'] as $outletCode) {
             $outlet = Outlet::query()->where('code', $outletCode)->firstOrFail();
             $branch = Warehouse::query()->where('outlet_id', $outlet->id)->where('is_sales_enabled', true)->firstOrFail();
-            $this->assertSame('75.000', (string) ProductWarehouse::query()->where('warehouse_id', $branch->id)->where('product_id', $plain->id)->value('stock'));
-            $this->assertSame('125.000', (string) ProductWarehouse::query()->where('warehouse_id', $branch->id)->where('product_id', $wortel->id)->value('stock'));
+            $this->assertSame('105.000', (string) ProductWarehouse::query()->where('warehouse_id', $branch->id)->where('product_id', $plain->id)->value('stock'));
+            $this->assertSame('155.000', (string) ProductWarehouse::query()->where('warehouse_id', $branch->id)->where('product_id', $wortel->id)->value('stock'));
             $sold = DB::table('transaction_details')->join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
                 ->where('transactions.outlet_id', $outlet->id)->where('transactions.source', 'pos')->sum('transaction_details.quantity');
             $this->assertSame(25.0, round((float) $sold, 3));
@@ -71,7 +70,7 @@ class OperationalActivitySeederTest extends TestCase
             $this->assertSame(0, DB::table('transaction_details')->join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id')
                 ->where('transactions.outlet_id', $outlet->id)->where('transactions.source', 'pos')->where('transaction_details.quantity', '<>', '1.000')->count());
             $this->assertSame(1, DB::table('stock_transfers')->where('destination_warehouse_id', $branch->id)
-                ->where('receive_idempotency_key', 'operational-demo-v2:cashier-stock:'.$outletCode.':transfer')->count());
+                ->where('idempotency_key', 'operational-demo-v2:cashier-stock:'.$outletCode.':transfer')->count());
         }
         $this->assertSame('0.000', (string) ProductWarehouse::query()->where('warehouse_id', $central->id)->where('product_id', $plain->id)->value('stock'));
         $this->assertSame('0.000', (string) ProductWarehouse::query()->where('warehouse_id', $central->id)->where('product_id', $wortel->id)->value('stock'));
@@ -97,6 +96,6 @@ class OperationalActivitySeederTest extends TestCase
         app(OperationalActivitySeeder::class)->run();
 
         $this->assertDatabaseHas('transactions', ['number' => 'EXISTING-SALE']);
-        $this->assertDatabaseHas('cash_handovers', ['idempotency_key' => 'operational-demo-v2:finance-pickup', 'status' => 'confirmed']);
+        $this->assertDatabaseHas('warehouse_finance_cash_handovers', ['idempotency_key' => 'operational-demo-v2:finance-pickup', 'status' => 'confirmed']);
     }
 }

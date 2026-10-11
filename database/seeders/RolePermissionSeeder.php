@@ -44,6 +44,7 @@ class RolePermissionSeeder extends Seeder
             'api-tokens-access', 'api-tokens-manage', 'audit-logs-access', 'notifications-access', 'notifications-manage',
             'ingredients-access', 'ingredients-manage', 'recipes-access', 'recipes-manage',
             'production-access', 'production-request', 'production-approve', 'production-complete',
+            'cashier-stock-move', 'warehouse-finance-handovers-access', 'warehouse-finance-handovers-create', 'warehouse-finance-handovers-confirm',
             'discount-approvals-access', 'discount-approvals-decide',
         ];
 
@@ -56,14 +57,14 @@ class RolePermissionSeeder extends Seeder
 
         $roleMap = [
             'manager' => fn (string $name) => ! str_starts_with($name, 'users-') && ! str_starts_with($name, 'roles-') && ! str_starts_with($name, 'payment-settings-') && ! str_starts_with($name, 'api-tokens-') && ! str_starts_with($name, 'transaction-corrections-') && ! str_starts_with($name, 'qris-reconciliations-') && $name !== 'cashier-shifts-force-close',
-            'finance' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'reports-', 'payables-', 'receivables-', 'expenses-', 'cash-management-', 'payment-settings-', 'bank-accounts-', 'transactions-', 'customers-', 'audit-logs-', 'notifications-', 'qris-reconciliations-']) || in_array($name, ['transaction-corrections-access', 'transaction-corrections-update', 'supplier-returns-access', 'supplier-returns-approve', 'waste-access'], true),
+            'finance' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'reports-', 'payables-', 'receivables-', 'expenses-', 'cash-management-', 'payment-settings-', 'bank-accounts-', 'transactions-', 'customers-', 'audit-logs-', 'notifications-', 'qris-reconciliations-']) || in_array($name, ['transaction-corrections-access', 'transaction-corrections-update', 'supplier-returns-access', 'supplier-returns-approve', 'waste-access', 'warehouse-finance-handovers-access', 'warehouse-finance-handovers-confirm'], true),
             'cashier' => fn (string $name) => in_array($name, [
                 'dashboard-access', 'pos-access', 'pos-checkout', 'pos-hold', 'pos-discount',
                 'cashier-shifts-access', 'cashier-shifts-open', 'cashier-shifts-close',
                 'customers-access', 'customers-create', 'transactions-access', 'cashier-sales-report-access', 'transaction-corrections-create',
-                'cash-management-access', 'cash-management-create',
+                'cash-management-access', 'cash-management-create', 'cashier-stock-move',
             ], true),
-            'warehouse' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'inventory-', 'batches-', 'transfers-', 'stock-opnames-', 'products-access', 'categories-access', 'units-access', 'suppliers-', 'purchase-orders-', 'goods-receivings-', 'supplier-returns-', 'ingredients-', 'recipes-', 'production-', 'waste-', 'reports-access', 'reports-export', 'replenishment-']),
+            'warehouse' => fn (string $name) => self::startsWithAny($name, ['dashboard-', 'inventory-', 'batches-', 'transfers-', 'stock-opnames-', 'products-access', 'categories-access', 'units-access', 'suppliers-', 'purchase-orders-', 'goods-receivings-', 'supplier-returns-', 'ingredients-', 'recipes-', 'production-', 'waste-', 'reports-access', 'reports-export', 'replenishment-']) || in_array($name, ['warehouse-finance-handovers-access', 'warehouse-finance-handovers-create'], true),
         ];
 
         foreach ($roleMap as $roleName => $allows) {

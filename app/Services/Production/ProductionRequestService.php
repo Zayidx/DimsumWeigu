@@ -23,6 +23,64 @@ use Illuminate\Validation\ValidationException;
 
 class ProductionRequestService
 {
+    /** Read live warehouse availability for a draft plan without reserving or changing stock. */
+    public function preview(User $actor, int $warehouseId, array $lines): array
+    {
+        $this->assertActor($actor);
+        abort_unless($actor->can('production-requests-create') && $actor->can('warehouses-access'), 403);
+        $this->assertSharedWarehouse($warehouseId);
+        $required = [];
+        foreach ($lines as $line) {
+            $product = Product::query()->whereKey((int) ($line['product_id'] ?? 0))
+                ->where('is_active', true)->where('is_semi_finished', true)->first();
+            $target = $this->quantity((string) ($line['quantity'] ?? '0'));
+            if (! $product || $target < 1) {
+                throw ValidationException::withMessages(['lines' => __('Pilih produk setengah jadi dan target yang valid.')]);
+            }
+            $recipe = RecipeVersion::query()->where('product_id', $product->id)->where('unit_id', $product->unit_id)
+                ->where('is_active', true)->with('items.ingredient', 'productItems')->first();
+            if (! $recipe || $recipe->items->isEmpty() || $recipe->productItems->isNotEmpty()) {
+                throw ValidationException::withMessages(['lines' => __('Produk belum memiliki resep bahan mentah yang valid.')]);
+            }
+            foreach ($recipe->items as $item) {
+                if (! $item->ingredient?->is_active) {
+                    throw ValidationException::withMessages(['lines' => __('Resep memakai bahan yang tidak aktif.')]);
+                }
+                try {
+                    $quantity = RecipeCostService::requiredQuantityMilli(
+                        RecipeCostService::effectiveQuantityMilli(FixedDecimal::quantity((string) $item->quantity), (string) $item->waste_percent),
+                        $target, FixedDecimal::quantity((string) $recipe->yield_quantity),
+                    );
+                } catch (\InvalidArgumentException) {
+                    throw ValidationException::withMessages(['lines' => __('Kebutuhan bahan melewati batas aman.')]);
+                }
+                if (($required[$item->ingredient_id] ?? 0) > PHP_INT_MAX - $quantity) {
+                    throw ValidationException::withMessages(['lines' => __('Total kebutuhan bahan terlalu besar.')]);
+                }
+                $required[$item->ingredient_id] = ($required[$item->ingredient_id] ?? 0) + $quantity;
+            }
+        }
+
+        $ingredients = Ingredient::query()->with('unit')->whereIn('id', array_keys($required))->get()->keyBy('id');
+        $balances = DB::table('ingredient_warehouses')->where('warehouse_id', $warehouseId)
+            ->whereIn('ingredient_id', array_keys($required))->get()->keyBy('ingredient_id');
+
+        return collect($required)->map(function (int $needed, int $id) use ($ingredients, $balances): array {
+            $balance = $balances->get($id);
+            $stock = $balance ? FixedDecimal::quantity((string) $balance->stock) : 0;
+            $reserved = $balance ? FixedDecimal::quantity((string) $balance->reserved_stock) : 0;
+            $available = max(0, $stock - $reserved);
+
+            return [
+                'ingredient' => $ingredients[$id]->name, 'unit' => $ingredients[$id]->unit?->symbol,
+                'required' => FixedDecimal::quantityText($needed), 'stock' => FixedDecimal::quantityText($stock),
+                'available' => FixedDecimal::quantityText($available),
+                'shortage' => FixedDecimal::quantityText(max(0, $needed - $available)),
+                'status' => $available === 0 ? 'Habis' : ($available < $needed ? 'Kurang' : 'Cukup'),
+            ];
+        })->values()->all();
+    }
+
     public function create(User $actor, int $outletId, int $warehouseId, array $lines, ?string $notes = null, ?string $idempotencyKey = null): ProductionRequest
     {
         $this->assertActor($actor);
@@ -78,10 +136,13 @@ class ProductionRequestService
                         FixedDecimal::quantity((string) $recipeItem->quantity),
                         (string) ($recipeItem->waste_percent ?? '0'),
                     );
-                    if ($recipeMilli > intdiv(PHP_INT_MAX, $quantityMilli)) {
-                        throw ValidationException::withMessages(['items' => __('Jumlah produksi melebihi batas aman perhitungan.')]);
+                    try {
+                        $requiredMilli = RecipeCostService::requiredQuantityMilli(
+                            $recipeMilli, $quantityMilli, FixedDecimal::quantity((string) $recipe->yield_quantity),
+                        );
+                    } catch (\InvalidArgumentException) {
+                        throw ValidationException::withMessages(['items' => __('Jumlah produksi atau hasil standar resep tidak valid.')]);
                     }
-                    $requiredMilli = intdiv(($recipeMilli * $quantityMilli) + 500, 1000);
                     $ingredientId = $recipeItem->ingredient_id;
                     if (($requirements[$ingredientId] ?? 0) > PHP_INT_MAX - $requiredMilli) {
                         throw ValidationException::withMessages(['items' => __('Total kebutuhan bahan terlalu besar untuk dihitung dengan aman.')]);
@@ -121,6 +182,46 @@ class ProductionRequestService
         });
     }
 
+    /** Reject a pending restock request and release its reserved warehouse stock. */
+    public function reject(User $actor, int $requestId, string $reason): ProductionRequest
+    {
+        $this->assertActor($actor);
+        abort_unless($actor->can('production-requests-reject'), 403);
+        $reason = trim($reason);
+        if ($reason === '' || mb_strlen($reason) > 2000) {
+            throw ValidationException::withMessages(['rejectionReason' => __('Alasan penolakan wajib diisi (maksimal 2.000 karakter).')]);
+        }
+
+        return DB::transaction(function () use ($actor, $requestId, $reason): ProductionRequest {
+            $request = ProductionRequest::query()->with('materials')->lockForUpdate()->findOrFail($requestId);
+            app(OutletAccess::class)->require($actor, $request->outlet_id);
+            $this->assertSharedWarehouse($request->warehouse_id);
+            if ($request->status !== 'requested') {
+                throw ValidationException::withMessages(['request' => __('Hanya permintaan yang menunggu keputusan Finance yang dapat ditolak.')]);
+            }
+            foreach ($request->materials as $material) {
+                $reserved = FixedDecimal::quantity((string) $material->reserved_quantity);
+                if ($reserved === 0) {
+                    continue;
+                }
+                $balance = DB::table('ingredient_warehouses')->where('ingredient_id', $material->ingredient_id)
+                    ->where('warehouse_id', $request->warehouse_id)->lockForUpdate()->first();
+                if (! $balance || FixedDecimal::quantity((string) $balance->reserved_stock) < $reserved) {
+                    throw ValidationException::withMessages(['stock' => __('Reservasi bahan tidak sesuai. Periksa saldo gudang sebelum menolak.')]);
+                }
+                DB::table('ingredient_warehouses')->where('id', $balance->id)->update([
+                    'reserved_stock' => FixedDecimal::quantityText(FixedDecimal::quantity((string) $balance->reserved_stock) - $reserved),
+                    'updated_at' => now(),
+                ]);
+                $material->update(['reserved_quantity' => '0.000']);
+            }
+            $request->update(['status' => 'rejected', 'rejected_by' => $actor->id, 'rejected_at' => now(), 'rejection_reason' => $reason]);
+            app(AuditLogger::class)->record('production_request.rejected', $request, ['status' => 'requested'], ['status' => 'rejected', 'reason' => $reason]);
+
+            return $request;
+        });
+    }
+
     /** Finance approves and issues one raw-material purchase order for the live shortage. */
     public function approveAndPurchase(User $actor, int $requestId, ?int $supplierId, ?string $invoiceReference = null, array $unitCosts = [], array $purchaseQuantities = []): ?IngredientPurchaseOrder
     {
@@ -132,6 +233,9 @@ class ProductionRequestService
             $request = ProductionRequest::query()->with('materials')->lockForUpdate()->findOrFail($requestId);
             app(OutletAccess::class)->require($actor, $request->outlet_id);
             $this->assertSharedWarehouse($request->warehouse_id);
+            if ($request->status === 'approved' && ! $request->materials->contains(fn ($row) => FixedDecimal::quantity((string) $row->purchase_quantity) > 0)) {
+                return null;
+            }
             if (! in_array($request->status, ['requested', 'purchasing'], true)) {
                 throw ValidationException::withMessages(['request' => __('Permintaan ini sudah diproses.')]);
             }
@@ -141,6 +245,7 @@ class ProductionRequestService
             $warehouse = Warehouse::query()->whereKey($request->warehouse_id)->where('is_active', true)->firstOrFail();
             $totalCents = 0;
             $purchaseLines = [];
+            $approvalChanges = [];
             foreach ($request->materials as $material) {
                 $ingredient = Ingredient::query()->whereKey($material->ingredient_id)->lockForUpdate()->firstOrFail();
                 DB::table('ingredient_warehouses')->insertOrIgnore(['ingredient_id' => $ingredient->id, 'warehouse_id' => $warehouse->id, 'stock' => '0.000', 'reserved_stock' => '0.000', 'created_at' => now(), 'updated_at' => now()]);
@@ -171,6 +276,14 @@ class ProductionRequestService
                 }
                 $lineCents = self::costCents($purchaseQty, $priceMicro);
                 $purchaseLines[] = ['ingredient_id' => $ingredient->id, 'quantity' => $purchaseQty, 'unit_cost' => FixedDecimal::fromScaled($priceMicro, 8), 'line_total' => FixedDecimal::moneyText($lineCents)];
+                $approvalChanges[] = [
+                    'ingredient_id' => $ingredient->id,
+                    'requested_shortage' => FixedDecimal::quantityText($shortage),
+                    'approved_quantity' => FixedDecimal::quantityText($purchaseQty),
+                    'previous_unit_cost' => (string) $material->unit_cost,
+                    'approved_unit_cost' => FixedDecimal::fromScaled($priceMicro, 8),
+                    'approved_line_total' => FixedDecimal::moneyText($lineCents),
+                ];
                 $totalCents += $lineCents;
             }
             if ($purchaseLines === []) {
@@ -196,7 +309,9 @@ class ProductionRequestService
             }
             $order->update(['total' => FixedDecimal::moneyText($totalCents)]);
             $request->update(['approved_by' => $actor->id, 'status' => 'purchasing']);
-            app(AuditLogger::class)->record('ingredient_purchase.ordered', $order, null, ['request_id' => $request->id, 'total' => $order->total]);
+            app(AuditLogger::class)->record('ingredient_purchase.ordered', $order, null, [
+                'request_id' => $request->id, 'total' => $order->total, 'approval_changes' => $approvalChanges,
+            ]);
 
             return $order->load('items.ingredient');
         });

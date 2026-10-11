@@ -94,12 +94,11 @@ class SourceSeederTest extends TestCase
         $role->givePermissionTo('products-create');
         $cashier = User::where('email', 'cashier@gmail.com')->firstOrFail();
         $beforeCredential = hash('sha256', $cashier->password);
+        $ledgerCountBefore = DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count();
         $this->seed(DatabaseSeeder::class);
         $this->seed(UserSeeder::class);
         $this->seed(TestDataSeeder::class);
-        $ingredientCount = DB::table('ingredients')->where('code', 'like', 'TEST-%')->count();
-        $outletOpeningCount = DB::table('warehouses')->where('type', 'branch')->where('is_sales_enabled', true)->count() * 5;
-        $this->assertSame($ingredientCount + $outletOpeningCount, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
+        $this->assertSame($ledgerCountBefore, DB::table('ingredient_inventory_ledgers')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseCount('users', 8);
         $this->assertGreaterThan(100, DB::table('recipe_items')->whereIn('ingredient_id', DB::table('ingredients')->where('code', 'like', 'TEST-%')->select('id'))->count());
         $this->assertDatabaseHas('products', ['sku' => 'TEST-DOR', 'sell_price' => 4700]);

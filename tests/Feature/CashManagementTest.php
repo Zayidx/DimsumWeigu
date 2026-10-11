@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Cashier\CashHandoverService;
 use App\Services\Cashier\CashierShiftService;
+use App\Support\FixedDecimal;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -101,15 +102,40 @@ class CashManagementTest extends TestCase
         $receiver->givePermissionTo('warehouses-access', Permission::findOrCreate('cash-handovers-confirm', 'web'));
         $receiver->outlets()->attach($this->source->outlet_id, ['is_default' => true]);
 
+        $startingCents = FixedDecimal::money((string) $this->sourceShift->fresh()->expected_cash);
         $handover = app(CashHandoverService::class)->request($this->source->id, $central->id, '250', 'Setoran omzet hari ini', (string) Str::uuid());
-        $this->as($this->manager, $this->source);
-        app(CashHandoverService::class)->approve($handover->id);
         $this->as($receiver, $this->source);
-        app(CashHandoverService::class)->confirm($handover->id);
+        app(CashHandoverService::class)->confirmPhysical($handover->id, '240', 'Selisih kurang Rp10 setelah hitung fisik');
+        app(CashHandoverService::class)->confirmPhysical($handover->id, '240', 'Selisih kurang Rp10 setelah hitung fisik');
 
-        $this->assertDatabaseHas('cash_handovers', ['id' => $handover->id, 'status' => 'confirmed', 'confirmed_by' => $receiver->id]);
-        $this->assertDatabaseHas('warehouse_cash_ledgers', ['warehouse_id' => $central->id, 'type' => 'handover_in', 'amount' => 250]);
-        $this->assertSame('750.00', $this->sourceShift->fresh()->expected_cash);
+        $this->assertDatabaseHas('cash_handovers', ['id' => $handover->id, 'status' => 'confirmed', 'confirmed_by' => $receiver->id, 'actual_amount' => 240, 'variance_amount' => -10]);
+        $this->assertDatabaseHas('warehouse_cash_ledgers', ['warehouse_id' => $central->id, 'type' => 'handover_in', 'amount' => 240]);
+        $this->assertSame(FixedDecimal::moneyText($startingCents - 24000), $this->sourceShift->fresh()->expected_cash);
+    }
+
+    public function test_pending_handover_reserves_cash_against_duplicate_request(): void
+    {
+        $availableCents = app(CashierShiftService::class)->expectedCashCents($this->sourceShift);
+        $this->request(FixedDecimal::moneyText($availableCents - 100));
+        try {
+            $this->request('2');
+            $this->fail('Kas pending boleh diajukan dua kali.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('amount', $e->errors());
+        }
+        $this->assertSame(1, CashHandover::query()->count());
+    }
+
+    public function test_shift_stays_open_while_cash_is_awaiting_warehouse_count(): void
+    {
+        $this->request('100');
+        try {
+            app(CashierShiftService::class)->close($this->sourceShift->id, '0');
+            $this->fail('Shift ditutup saat serah-terima kas masih pending.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('shift', $e->errors());
+        }
+        $this->assertSame('open', $this->sourceShift->fresh()->status);
     }
 
     public function test_approval_rechecks_cash_and_closed_source_shift_atomically(): void

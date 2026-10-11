@@ -49,7 +49,25 @@ class RecipeCostService
             $costMicro += intdiv(($quantityMilli * $unitCostMicro) + 500, 1000);
         }
 
-        return FixedDecimal::moneyText((int) round($costMicro / 1000000));
+        $yieldMilli = FixedDecimal::quantity((string) $recipe->yield_quantity);
+        if ($yieldMilli < 1) {
+            throw ValidationException::withMessages(['yieldQuantity' => __('Hasil standar resep harus lebih dari nol.')]);
+        }
+
+        $centsDivisor = $yieldMilli * 1000;
+
+        return FixedDecimal::moneyText(intdiv($costMicro + intdiv($centsDivisor, 2), $centsDivisor));
+    }
+
+    /** Scale a recipe quantity to a target output; round up to the smallest stock unit. */
+    public static function requiredQuantityMilli(int $recipeQuantityMilli, int $targetMilli, int $yieldMilli): int
+    {
+        if ($recipeQuantityMilli < 0 || $targetMilli < 0 || $yieldMilli < 1
+            || ($targetMilli > 0 && $recipeQuantityMilli > intdiv(PHP_INT_MAX - $yieldMilli + 1, $targetMilli))) {
+            throw new \InvalidArgumentException('Kebutuhan resep melewati batas aman perhitungan.');
+        }
+
+        return intdiv(($recipeQuantityMilli * $targetMilli) + $yieldMilli - 1, $yieldMilli);
     }
 
     public static function effectiveQuantityMilli(int $quantityMilli, string $wastePercent): int

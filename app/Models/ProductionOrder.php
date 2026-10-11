@@ -10,7 +10,7 @@ class ProductionOrder extends Model
 
     protected function casts(): array
     {
-        return ['completed_at' => 'datetime'];
+        return ['started_at' => 'datetime', 'completed_at' => 'datetime'];
     }
 
     public function items()

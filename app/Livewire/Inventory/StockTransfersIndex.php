@@ -91,7 +91,7 @@ class StockTransfersIndex extends Component
                 ->orWhere(fn (Builder $central) => $central->whereNull('outlet_id')->where('type', 'central'));
         })->orderBy('name')->get(['id', 'name', 'outlet_id']);
         $ids = $warehouses->pluck('id');
-        $transfers = StockTransfer::query()->with(['sourceWarehouse:id,name', 'destinationWarehouse:id,name', 'items.product:id,title,sku'])
+        $transfers = StockTransfer::query()->with(['sourceWarehouse:id,name', 'destinationWarehouse:id,name', 'creator:id,name', 'items.product:id,title,sku'])
             ->where(fn (Builder $query) => $query->whereIn('source_warehouse_id', $ids)->orWhereIn('destination_warehouse_id', $ids))
             ->latest()->paginate(20);
 

@@ -3,6 +3,7 @@
 namespace App\Services\Cashier;
 
 use App\Models\Cart;
+use App\Models\CashHandover;
 use App\Models\CashierShift;
 use App\Models\ExpenseCategory;
 use App\Models\OutletExpense;
@@ -168,6 +169,14 @@ class CashierShiftService
                 $this->assertShiftAccess($shift);
             }
             abort_unless($shift->status === 'open', 422, __('Shift sudah ditutup.'));
+            $pendingHandovers = CashHandover::query()->where('cashier_shift_id', $shift->id)->where('status', 'pending')->lockForUpdate()->get();
+            if ($pendingHandovers->isNotEmpty() && ! $force) {
+                throw ValidationException::withMessages(['shift' => __('Tunggu Warehouse menerima atau batalkan serah-terima kas sebelum menutup shift.')]);
+            }
+            foreach ($pendingHandovers as $handover) {
+                $handover->update(['status' => 'cancelled']);
+                $this->audit->record('cash_handover.cancelled_on_force_close', $handover, ['status' => 'pending'], ['status' => 'cancelled'], ['outlet_id' => $shift->outlet_id]);
+            }
             $expectedCents = $this->expectedCashCents($shift);
             $difference = $actualCents - $expectedCents;
             if ($difference !== 0 && mb_strlen((string) $note) < 3) {
